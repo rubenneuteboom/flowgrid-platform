@@ -1748,45 +1748,44 @@ app.get('/api/auth/admin/users', requireAuth, requireAdmin, async (req: Request,
     const { page = 1, limit = 20, search, role, active } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
-    let query = `
-      SELECT u.id, u.email, u.name, u.role, u.is_active, u.mfa_enabled, 
-             u.email_verified, u.last_login_at, u.created_at
-      FROM users u
-      WHERE u.tenant_id = $1
-    `;
+    // Build WHERE clause
+    let whereClause = 'WHERE u.tenant_id = $1';
     const params: any[] = [req.user!.tenantId];
     let paramCount = 1;
 
     if (search) {
       paramCount++;
-      query += ` AND (u.email ILIKE $${paramCount} OR u.name ILIKE $${paramCount})`;
+      whereClause += ` AND (u.email ILIKE $${paramCount} OR u.name ILIKE $${paramCount})`;
       params.push(`%${search}%`);
     }
 
     if (role) {
       paramCount++;
-      query += ` AND u.role = $${paramCount}`;
+      whereClause += ` AND u.role = $${paramCount}`;
       params.push(role);
     }
 
     if (active !== undefined) {
       paramCount++;
-      query += ` AND u.is_active = $${paramCount}`;
+      whereClause += ` AND u.is_active = $${paramCount}`;
       params.push(active === 'true');
     }
 
-    // Count total
-    const countQuery = query.replace(
-      /SELECT u\.id.*FROM/,
-      'SELECT COUNT(*) FROM'
-    );
-    const countResult = await pool.query(countQuery, params);
+    // Count total (using same params without pagination)
+    const countQuery = `SELECT COUNT(*) FROM users u ${whereClause}`;
+    const countResult = await pool.query(countQuery, [...params]);
 
-    // Get paginated results
-    query += ` ORDER BY u.created_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
-    params.push(Number(limit), offset);
-
-    const usersResult = await pool.query(query, params);
+    // Build full query with pagination
+    const selectQuery = `
+      SELECT u.id, u.email, u.name, u.role, u.is_active, u.mfa_enabled, 
+             u.email_verified, u.last_login_at, u.created_at
+      FROM users u
+      ${whereClause}
+      ORDER BY u.created_at DESC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+    
+    const usersResult = await pool.query(selectQuery, [...params, Number(limit), offset]);
 
     res.json({
       users: usersResult.rows,
