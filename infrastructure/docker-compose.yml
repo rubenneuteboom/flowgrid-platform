@@ -168,6 +168,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/public:/usr/share/nginx/html:ro
     ports:
       - "8080:80"
       - "8443:443"

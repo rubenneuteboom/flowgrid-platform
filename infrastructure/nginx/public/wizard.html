@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧙‍♂️ Agent Design Wizard - Flowgrid Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.3); }
+
+        /* Progress Steps */
+        .progress-bar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            gap: 0;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            opacity: 0.5;
+        }
+        .step.active, .step.completed { opacity: 1; }
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .step.active .step-circle { background: #10b981; }
+        .step.completed .step-circle { background: #3b82f6; }
+        .step-line {
+            width: 80px;
+            height: 3px;
+            background: rgba(255,255,255,0.3);
+        }
+        .step.completed + .step .step-line { background: #3b82f6; }
+        .step-label {
+            position: absolute;
+            margin-top: 60px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        .card h2 {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card p { opacity: 0.9; margin-bottom: 1rem; }
+
+        /* Form elements */
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.2);
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+        textarea { min-height: 150px; resize: vertical; }
+
+        /* Upload zone */
+        .upload-zone {
+            border: 3px dashed rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1.5rem;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .upload-zone input { display: none; }
+        .upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .upload-zone.has-file { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .preview-image {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .tab:hover { background: rgba(255,255,255,0.2); }
+        .tab.active { background: #10b981; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Buttons */
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #10b981;
+            color: white;
+        }
+        .btn-primary:hover { background: #059669; }
+        .btn-primary:disabled {
+            background: rgba(255,255,255,0.2);
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.3); }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .loading.active { display: flex; }
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Results */
+        .capability-list, .agent-list {
+            display: grid;
+            gap: 1rem;
+        }
+        .capability-item, .agent-item {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .agent-item { flex-direction: column; }
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        .agent-name { font-weight: bold; font-size: 1.1rem; }
+        .agent-pattern {
+            background: #3b82f6;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        .agent-description { opacity: 0.8; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .agent-capabilities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .capability-tag {
+            background: rgba(255,255,255,0.15);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .pattern-tag {
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .pattern-orchestrator { background: #8b5cf6; }
+        .pattern-specialist { background: #10b981; }
+        .pattern-coordinator { background: #f59e0b; }
+        .pattern-gateway { background: #3b82f6; }
+        .pattern-monitor { background: #6366f1; }
+        .pattern-executor { background: #ef4444; }
+        .pattern-analyzer { background: #14b8a6; }
+        .pattern-aggregator { background: #f97316; }
+        .pattern-router { background: #ec4899; }
+
+        /* Summary */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .summary-item {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .summary-value { font-size: 2rem; font-weight: bold; }
+        .summary-label { opacity: 0.8; font-size: 0.9rem; }
+
+        /* Error */
+        .error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .error.active { display: block; }
+
+        /* Success */
+        .success-card {
+            text-align: center;
+            padding: 3rem;
+        }
+        .success-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .success-title { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .success-subtitle { opacity: 0.8; margin-bottom: 2rem; }
+
+        /* Hidden */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧙‍♂️ Agent Design Wizard</h1>
+            <a href="/" class="back-btn">← Back to Dashboard</a>
+        </header>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="step active" data-step="1">
+                <div class="step-circle">1</div>
+                <span class="step-label">Input</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="2">
+                <div class="step-circle">2</div>
+                <span class="step-label">Capabilities</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="3">
+                <div class="step-circle">3</div>
+                <span class="step-label">Agents</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="4">
+                <div class="step-circle">4</div>
+                <span class="step-label">Complete</span>
+            </div>
+        </div>
+
+        <!-- Step 1: Input -->
+        <section id="step1" class="step-content">
+            <div class="card">
+                <h2>📥 Provide Your Input</h2>
+                <p>Upload an image of your capability model, or describe your requirements in text.</p>
+
+                <div class="tabs">
+                    <button class="tab active" data-tab="image">📷 Upload Image</button>
+                    <button class="tab" data-tab="text">📝 Describe in Text</button>
+                </div>
+
+                <div id="tab-image" class="tab-content active">
+                    <div class="upload-zone" id="uploadZone">
+                        <input type="file" id="fileInput" accept="image/*">
+                        <div class="upload-icon">📁</div>
+                        <p><strong>Drop your image here</strong></p>
+                        <p style="opacity: 0.7;">or click to browse (JPG, PNG, GIF, WebP - max 20MB)</p>
+                        <img id="previewImage" class="preview-image hidden" alt="Preview">
+                    </div>
+                    <div class="input-group">
+                        <label for="customPrompt">Additional Context (optional)</label>
+                        <textarea id="customPrompt" placeholder="E.g., 'This is an IT4IT value stream diagram showing our IT service management capabilities...'"></textarea>
+                    </div>
+                </div>
+
+                <div id="tab-text" class="tab-content">
+                    <div class="input-group">
+                        <label for="textDescription">Describe your requirements</label>
+                        <textarea id="textDescription" placeholder="E.g., 'We need a multi-agent system for IT service management. The agents should handle incident response, change management, and problem analysis. They need to integrate with ServiceNow and Jira...'"></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="requirements">Specific Requirements (one per line)</label>
+                        <textarea id="requirements" placeholder="24/7 monitoring
+Auto-escalation after 30 minutes
+Integration with ServiceNow
+Slack notifications"></textarea>
+                    </div>
+                </div>
+
+                <div class="error" id="error1"></div>
+                <div class="loading" id="loading1">
+                    <div class="spinner"></div>
+                    <span>Analyzing your input with AI... This may take 30-60 seconds.</span>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="analyzeBtn">Analyze with AI ✨</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Capabilities -->
+        <section id="step2" class="step-content hidden">
+            <div class="card">
+                <h2>📊 Extracted Capabilities</h2>
+                <p>Review the capabilities extracted from your input. You can proceed to see the recommended agents.</p>
+
+                <div class="summary-grid" id="capabilitySummary"></div>
+                <div class="capability-list" id="capabilityList"></div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
+                    <button class="btn btn-primary" onclick="goToStep(3)">View Agents →</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Agents -->
+        <section id="step3" class="step-content hidden">
+            <div class="card">
+                <h2>🤖 Recommended Agents</h2>
+                <p>These agents were designed based on your capability model. Review and apply to create them.</p>
+
+                <div class="summary-grid" id="agentSummary"></div>
+                <div class="agent-list" id="agentList"></div>
+
+                <div class="error" id="error3"></div>
+                <div class="loading" id="loading3">
+                    <div class="spinner"></div>
+                    <span>Creating agents in the database...</span>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="goToStep(2)">← Back</button>
+                    <button class="btn btn-primary" id="applyBtn">Apply & Create Agents ✨</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 4: Complete -->
+        <section id="step4" class="step-content hidden">
+            <div class="card success-card">
+                <div class="success-icon">🎉</div>
+                <h2 class="success-title">Agents Created Successfully!</h2>
+                <p class="success-subtitle" id="successMessage">Your agents have been created and are ready to configure.</p>
+
+                <div class="summary-grid" id="finalSummary"></div>
+
+                <div class="btn-group" style="justify-content: center;">
+                    <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+                    <button class="btn btn-primary" onclick="location.reload()">Create More Agents</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // State
+        let currentStep = 1;
+        let sessionId = null;
+        let analysisResult = null;
+        const tenantId = '11111111-1111-1111-1111-111111111111'; // Demo tenant (would come from auth)
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // File upload handling
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewImage = document.getElementById('previewImage');
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFileSelect(e.target.files[0]);
+        });
+
+        function handleFileSelect(file) {
+            if (file.size > 20 * 1024 * 1024) {
+                showError('error1', 'File too large. Maximum size is 20MB.');
+                return;
+            }
+            uploadZone.classList.add('has-file');
+            previewImage.classList.remove('hidden');
+            previewImage.src = URL.createObjectURL(file);
+        }
+
+        // Analyze button
+        document.getElementById('analyzeBtn').addEventListener('click', async () => {
+            const activeTab = document.querySelector('.tab.active').dataset.tab;
+            
+            hideError('error1');
+            document.getElementById('loading1').classList.add('active');
+            document.getElementById('analyzeBtn').disabled = true;
+
+            try {
+                if (activeTab === 'image') {
+                    const file = fileInput.files[0];
+                    if (!file) {
+                        throw new Error('Please select an image file');
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('tenantId', tenantId);
+                    formData.append('customPrompt', document.getElementById('customPrompt').value);
+
+                    const response = await fetch('/api/wizard/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Analysis failed');
+                    }
+
+                    const data = await response.json();
+                    sessionId = data.sessionId;
+                    analysisResult = data.analysis;
+
+                } else {
+                    const description = document.getElementById('textDescription').value.trim();
+                    if (!description) {
+                        throw new Error('Please enter a description');
+                    }
+
+                    const requirements = document.getElementById('requirements').value
+                        .split('\n')
+                        .map(r => r.trim())
+                        .filter(r => r);
+
+                    const response = await fetch('/api/wizard/analyze-text', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description, requirements, tenantId })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Analysis failed');
+                    }
+
+                    const data = await response.json();
+                    sessionId = data.sessionId;
+                    analysisResult = data.analysis;
+                }
+
+                renderCapabilities();
+                goToStep(2);
+
+            } catch (error) {
+                showError('error1', error.message);
+            } finally {
+                document.getElementById('loading1').classList.remove('active');
+                document.getElementById('analyzeBtn').disabled = false;
+            }
+        });
+
+        // Apply button
+        document.getElementById('applyBtn').addEventListener('click', async () => {
+            hideError('error3');
+            document.getElementById('loading3').classList.add('active');
+            document.getElementById('applyBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/wizard/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, tenantId })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Failed to create agents');
+                }
+
+                const data = await response.json();
+                renderSuccess(data);
+                goToStep(4);
+
+            } catch (error) {
+                showError('error3', error.message);
+            } finally {
+                document.getElementById('loading3').classList.remove('active');
+                document.getElementById('applyBtn').disabled = false;
+            }
+        });
+
+        // Render functions
+        function renderCapabilities() {
+            const summary = analysisResult.summary || {};
+            const caps = analysisResult.extractedCapabilities || [];
+
+            document.getElementById('capabilitySummary').innerHTML = `
+                <div class="summary-item">
+                    <div class="summary-value">${caps.length}</div>
+                    <div class="summary-label">Capabilities</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${summary.valueStreams?.length || 0}</div>
+                    <div class="summary-label">Value Streams</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${summary.complexity || 'medium'}</div>
+                    <div class="summary-label">Complexity</div>
+                </div>
+            `;
+
+            document.getElementById('capabilityList').innerHTML = caps.map(cap => `
+                <div class="capability-item">
+                    <div>
+                        <strong>${cap.name}</strong>
+                        ${cap.description ? `<div style="opacity:0.8;font-size:0.9rem">${cap.description}</div>` : ''}
+                    </div>
+                    <span class="capability-tag">Level ${cap.level || 0}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderAgents() {
+            const agents = analysisResult.agents || [];
+            const summary = analysisResult.summary || {};
+
+            document.getElementById('agentSummary').innerHTML = `
+                <div class="summary-item">
+                    <div class="summary-value">${agents.length}</div>
+                    <div class="summary-label">Agents</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${(analysisResult.agentRelationships || []).length}</div>
+                    <div class="summary-label">Interactions</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${(analysisResult.integrations || []).length}</div>
+                    <div class="summary-label">Integrations</div>
+                </div>
+            `;
+
+            document.getElementById('agentList').innerHTML = agents.map(agent => `
+                <div class="agent-item">
+                    <div class="agent-header">
+                        <span class="agent-name">${agent.name}</span>
+                        <span class="agent-pattern pattern-tag pattern-${(agent.pattern || 'specialist').toLowerCase()}">${agent.pattern || 'Specialist'}</span>
+                    </div>
+                    <div class="agent-description">${agent.description || agent.purpose || ''}</div>
+                    <div class="agent-capabilities">
+                        ${(agent.capabilities || []).slice(0, 5).map(c => 
+                            `<span class="capability-tag">${typeof c === 'string' ? c : c.name}</span>`
+                        ).join('')}
+                        ${(agent.capabilities || []).length > 5 ? `<span class="capability-tag">+${agent.capabilities.length - 5} more</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSuccess(data) {
+            document.getElementById('successMessage').textContent = 
+                `Created ${data.created.agents} agents with ${data.created.interactions} interactions and ${data.created.integrations} integrations.`;
+
+            document.getElementById('finalSummary').innerHTML = `
+                <div class="summary-item">
+                    <div class="summary-value">${data.created.agents}</div>
+                    <div class="summary-label">Agents Created</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${data.created.interactions}</div>
+                    <div class="summary-label">Interactions</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${data.created.integrations}</div>
+                    <div class="summary-label">Integrations</div>
+                </div>
+            `;
+        }
+
+        // Navigation
+        function goToStep(step) {
+            currentStep = step;
+            
+            // Update progress bar
+            document.querySelectorAll('.step').forEach(s => {
+                const stepNum = parseInt(s.dataset.step);
+                s.classList.remove('active', 'completed');
+                if (stepNum === step) s.classList.add('active');
+                if (stepNum < step) s.classList.add('completed');
+            });
+
+            // Show/hide sections
+            document.querySelectorAll('.step-content').forEach(s => s.classList.add('hidden'));
+            document.getElementById('step' + step).classList.remove('hidden');
+
+            // Render content for step
+            if (step === 3) renderAgents();
+        }
+
+        // Helpers
+        function showError(id, message) {
+            const el = document.getElementById(id);
+            el.textContent = '❌ ' + message;
+            el.classList.add('active');
+        }
+
+        function hideError(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>
