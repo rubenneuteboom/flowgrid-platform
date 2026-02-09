@@ -74,24 +74,7 @@
         }
         .back-btn:hover { background: #475569; }
         
-        /* State management */
-        .state-controls {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        .state-btn {
-            background: #334155;
-            border: 1px solid #475569;
-            padding: 0.4rem 0.75rem;
-            border-radius: 6px;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 0.75rem;
-            transition: all 0.2s;
-        }
-        .state-btn:hover { background: #475569; color: #e2e8f0; }
-        .state-indicator { font-size: 0.7rem; color: #64748b; margin-left: 0.5rem; }
+        /* State management - removed save/clear buttons */
 
         /* Progress Steps - Compact Horizontal */
         .progress-bar {
@@ -770,7 +753,6 @@
             .step-label { display: none; }
             .step-line { width: 20px; }
             header { flex-direction: column; gap: 0.75rem; text-align: center; }
-            .state-controls { order: -1; }
         }
     </style>
 </head>
@@ -781,11 +763,6 @@
             <div class="header-left">
                 <h1>💬 Welcome to Flowgrid</h1>
                 <span class="header-subtitle">Configure your Agent Network in 6 steps</span>
-            </div>
-            <div class="state-controls">
-                <button class="state-btn" onclick="saveState()">💾 Save</button>
-                <button class="state-btn" onclick="clearState()">🗑️ Clear</button>
-                <span class="state-indicator" id="stateIndicator">Auto-save enabled</span>
             </div>
             <a href="/" class="back-btn">← Dashboard</a>
         </header>
@@ -1343,7 +1320,7 @@
         ];
         
         // ==========================================
-        // STATE PERSISTENCE
+        // STATE PERSISTENCE (Silent auto-save, no UI buttons)
         // ==========================================
         function saveState() {
             const state = {
@@ -1354,7 +1331,7 @@
                 savedAt: new Date().toISOString()
             };
             localStorage.setItem(STATE_KEY, JSON.stringify(state));
-            document.getElementById('stateIndicator').textContent = `Saved ${new Date().toLocaleTimeString()}`;
+            // Silent save - no UI feedback
         }
         
         function loadState() {
@@ -1890,31 +1867,20 @@
             errorsEl.value = '';
             
             try {
-                // Simple AI generation via chat endpoint
-                const response = await fetch('/api/design/chat', {
+                // Call wizard service to generate process flow
+                const response = await fetch('/api/wizard/generate-process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: `Generate a simple process flow for an agent named "${agent.name}" with purpose: ${agent.purpose}. Pattern: ${agent.pattern}. Capabilities: ${(agent.capabilities || []).join(', ')}. 
-                        
-Return in this exact format:
-PROCESS STEPS:
-1. ...
-2. ...
-3. ...
-
-DECISION POINTS:
-- IF ... THEN ...
-- IF ... THEN ...
-
-ERROR HANDLING:
-- ON ... THEN ...
-- ON ... THEN ...`
-                    })
+                    body: JSON.stringify({ agent })
                 });
                 
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API returned ${response.status}: ${errorText}`);
+                }
+                
                 const data = await response.json();
-                const reply = data.reply || '';
+                const reply = `PROCESS STEPS:\n${data.processSteps}\n\nDECISION POINTS:\n${data.decisionPoints}\n\nERROR HANDLING:\n${data.errorHandling}`;
                 
                 // Parse the response
                 const stepsMatch = reply.match(/PROCESS STEPS:([\s\S]*?)(?=DECISION POINTS:|$)/i);
