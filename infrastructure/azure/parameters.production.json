@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "production"
+    },
+    "location": {
+      "value": "westeurope"
+    },
+    "postgresAdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/rg-flowgrid-production/providers/Microsoft.KeyVault/vaults/kv-flowgrid-production"
+        },
+        "secretName": "postgres-admin-password"
+      }
+    },
+    "jwtSecret": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/rg-flowgrid-production/providers/Microsoft.KeyVault/vaults/kv-flowgrid-production"
+        },
+        "secretName": "jwt-secret"
+      }
+    },
+    "anthropicApiKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/rg-flowgrid-production/providers/Microsoft.KeyVault/vaults/kv-flowgrid-production"
+        },
+        "secretName": "anthropic-api-key"
+      }
+    }
+  }
+}

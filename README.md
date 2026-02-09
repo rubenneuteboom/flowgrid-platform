@@ -1,5 +1,8 @@
 # Flowgrid Platform
 
+[![Test & Lint](https://github.com/rubenneuteboom/flowgrid-platform/actions/workflows/test-and-lint.yml/badge.svg)](https://github.com/rubenneuteboom/flowgrid-platform/actions/workflows/test-and-lint.yml)
+[![Deploy to Azure](https://github.com/rubenneuteboom/flowgrid-platform/actions/workflows/deploy-azure-container-apps.yml/badge.svg)](https://github.com/rubenneuteboom/flowgrid-platform/actions/workflows/deploy-azure-container-apps.yml)
+
 A multi-tenant, AI-powered IT Service Management platform for designing, deploying, and managing agent-based automation systems.
 
 ## 🏗️ Architecture
@@ -249,8 +252,50 @@ flowgrid-platform/
 | `ANTHROPIC_API_KEY` | design | Claude API key |
 | `AI_PROVIDER` | design | AI provider (anthropic/openai) |
 
+## 🚀 Deployment
+
+### Option 1: VPS (€10-50/month) - Recommended for Starting
+
+```bash
+# On your VPS (Ubuntu 22.04)
+git clone https://github.com/rubenneuteboom/flowgrid-platform.git
+cd flowgrid-platform/infrastructure
+
+# Configure environment
+cp .env.example .env
+nano .env  # Add your secrets
+
+# Deploy
+docker compose up -d
+```
+
+### Option 2: Azure Container Apps (€200-400/month)
+
+```bash
+# Deploy infrastructure
+az deployment group create \
+  --resource-group rg-flowgrid-staging \
+  --template-file infrastructure/azure/main.bicep \
+  --parameters environment=staging
+
+# CI/CD deploys automatically on push to main
+```
+
+See [docs/DEPLOYMENT-SETUP.md](docs/DEPLOYMENT-SETUP.md) for complete deployment guide.
+
+### CI/CD Workflows
+
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| `test-and-lint.yml` | PR, push to main | TypeScript checks, ESLint, tests |
+| `deploy-azure-container-apps.yml` | Push to main | Deploy to Azure Container Apps |
+| `deploy-vps.yml` | Manual | Deploy to VPS via SSH |
+
 ## 🚧 Roadmap
 
+- [x] CI/CD pipelines with GitHub Actions
+- [x] Azure Container Apps deployment
+- [x] VPS deployment option
 - [ ] WebSocket support for real-time updates
 - [ ] OAuth2/OIDC integration (Azure AD B2C)
 - [ ] Agent orchestration engine

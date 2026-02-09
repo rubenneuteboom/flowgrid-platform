@@ -6,251 +6,53 @@
     <title>Flowgrid Platform</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
         }
         .container {
-            max-width: 1000px;
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 16px;
-            padding: 3rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            color: #f1f5f9;
-        }
-        .subtitle {
-            font-size: 1.2rem;
-            color: #94a3b8;
-            margin-bottom: 2rem;
-        }
-        .status {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background: #10b981;
-            border-radius: 6px;
-            font-weight: bold;
-            margin-bottom: 2rem;
-            color: white;
-        }
-        .services {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .service-card {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: transform 0.2s, border-color 0.2s;
-        }
-        .service-card:hover {
-            transform: translateY(-2px);
-            border-color: #3b82f6;
-        }
-        .service-name {
-            font-size: 1.3rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-            color: #f1f5f9;
-        }
-        .service-desc {
-            color: #94a3b8;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-        }
-        .endpoint {
-            background: #1e293b;
-            border: 1px solid #334155;
-            padding: 0.5rem;
-            border-radius: 6px;
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 0.85rem;
-            word-break: break-all;
-            color: #60a5fa;
-        }
-        .endpoints-section {
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid #334155;
-        }
-        .endpoint-list {
-            display: grid;
-            gap: 1rem;
-        }
-        .endpoint-item {
-            background: #0f172a;
-            border: 1px solid #334155;
-            padding: 1rem;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .method {
-            padding: 0.3rem 0.6rem;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 0.8rem;
-        }
-        .method.get { background: #10b981; }
-        .method.post { background: #3b82f6; }
-        .method.put { background: #f59e0b; }
-        .method.delete { background: #ef4444; }
-        .endpoint-path {
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 0.9rem;
-            color: #e2e8f0;
-        }
-        a {
-            color: #60a5fa;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-            color: #93c5fd;
-        }
-        .footer {
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid #334155;
             text-align: center;
-            color: #64748b;
+            color: white;
+            padding: 2rem;
         }
+        h1 { font-size: 3rem; margin-bottom: 1rem; }
+        p { font-size: 1.2rem; opacity: 0.9; margin-bottom: 2rem; }
+        .status {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .status span { color: #4ade80; }
+        .links { margin-top: 2rem; }
+        .links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            margin: 0 0.5rem;
+            transition: background 0.2s;
+        }
+        .links a:hover { background: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🌐 Flowgrid Platform</h1>
-        <p class="subtitle">Multi-Tenant AI Agent Management Platform</p>
-        <div class="status">✅ All Systems Operational</div>
-
-        <div style="margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
-            <a href="/wizard.html" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; font-size: 1.1rem; font-weight: bold; color: white; text-decoration: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); transition: transform 0.2s, box-shadow 0.2s;">
-                🧙‍♂️ Launch Agent Design Wizard
-            </a>
-            <a href="/design" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 12px; font-size: 1.1rem; font-weight: bold; color: white; text-decoration: none; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: transform 0.2s, box-shadow 0.2s;">
-                🎨 Open Design Module
-            </a>
+        <h1>🚀 Flowgrid Platform</h1>
+        <p>AI-Powered IT Service Management</p>
+        <div class="status">
+            Gateway Status: <span>● Online</span>
         </div>
-        <div style="margin-bottom: 2rem;">
-            <p style="opacity: 0.8; font-size: 0.9rem;">
-                <strong>Wizard:</strong> Create new agents from capability models or descriptions<br>
-                <strong>Design Module:</strong> Manage, visualize, and edit existing agents
-            </p>
-        </div>
-
-        <div class="services">
-            <div class="service-card">
-                <div class="service-name">🤖 Agent Service</div>
-                <div class="service-desc">Agent CRUD operations and lifecycle management</div>
-                <div class="endpoint">http://localhost:3001</div>
-            </div>
-
-            <div class="service-card">
-                <div class="service-name">🔐 Auth Service</div>
-                <div class="service-desc">JWT authentication and user management</div>
-                <div class="endpoint">http://localhost:3002</div>
-            </div>
-
-            <div class="service-card">
-                <div class="service-name">🎨 Design Service</div>
-                <div class="service-desc">AI-powered agent design with Claude</div>
-                <div class="endpoint">http://localhost:3003</div>
-            </div>
-
-            <div class="service-card">
-                <div class="service-name">🔌 Integration Service</div>
-                <div class="service-desc">ServiceNow, Jira, GitHub integrations</div>
-                <div class="endpoint">http://localhost:3004</div>
-            </div>
-
-            <div class="service-card">
-                <div class="service-name">🎨 Design Module</div>
-                <div class="service-desc">Agent management UI with graph visualization</div>
-                <div class="endpoint">http://localhost:3006</div>
-            </div>
-
-            <div class="service-card">
-                <div class="service-name">🗄️ PostgreSQL</div>
-                <div class="service-desc">Multi-tenant database</div>
-                <div class="endpoint">localhost:5432</div>
-            </div>
-
-            <div class="service-card">
-                <div class="service-name">⚡ Redis</div>
-                <div class="service-desc">Caching and session storage</div>
-                <div class="endpoint">localhost:6379</div>
-            </div>
-        </div>
-
-        <div class="endpoints-section">
-            <h2 style="margin-bottom: 1rem;">📡 API Endpoints</h2>
-            <div class="endpoint-list">
-                <div class="endpoint-item">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/health</span>
-                    <span style="opacity: 0.7;">Gateway health check</span>
-                </div>
-
-                <div class="endpoint-item">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/api/agents</span>
-                    <span style="opacity: 0.7;">List all agents</span>
-                </div>
-
-                <div class="endpoint-item">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/agents</span>
-                    <span style="opacity: 0.7;">Create new agent</span>
-                </div>
-
-                <div class="endpoint-item">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/auth/login</span>
-                    <span style="opacity: 0.7;">User login (demo@flowgrid.io / demo123)</span>
-                </div>
-
-                <div class="endpoint-item">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/auth/verify</span>
-                    <span style="opacity: 0.7;">Verify JWT token</span>
-                </div>
-
-                <div class="endpoint-item">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/api/auth/me</span>
-                    <span style="opacity: 0.7;">Get current user profile</span>
-                </div>
-
-                <div class="endpoint-item">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/design/chat</span>
-                    <span style="opacity: 0.7;">Chat with Claude AI</span>
-                </div>
-
-                <div class="endpoint-item">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/api/integrations/catalog</span>
-                    <span style="opacity: 0.7;">List available integrations</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p>Built with ❤️ by CHEF • <a href="https://github.com/rubenneuteboom/flowgrid-platform" target="_blank">View on GitHub</a></p>
+        <div class="links">
+            <a href="/api/auth/health">Auth Service</a>
+            <a href="/api/agents">Agents API</a>
+            <a href="/api/design">Design API</a>
+            <a href="/api/integrations/catalog">Integrations</a>
         </div>
     </div>
 </body>
