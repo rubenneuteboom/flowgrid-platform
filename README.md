@@ -95,9 +95,26 @@ docker run -d --name flowgrid-gateway --rm -p 8080:80 \
 
 ### Auth Service (/api/auth)
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/auth/login` | POST | Login and get JWT token |
+| Endpoint | Method | Description | Auth |
+|----------|--------|-------------|------|
+| `/api/auth/login` | POST | Login with email/password (+MFA) | - |
+| `/api/auth/logout` | POST | Revoke refresh token | ✓ |
+| `/api/auth/refresh` | POST | Exchange refresh token | - |
+| `/api/auth/verify` | POST | Validate JWT token | - |
+| `/api/auth/me` | GET | Get current user | ✓ |
+| `/api/auth/invite/send` | POST | Send invite (admin only) | Admin |
+| `/api/auth/invite/accept` | POST | Accept invite, create account | - |
+| `/api/auth/password/forgot` | POST | Request password reset | - |
+| `/api/auth/password/reset` | POST | Reset password with token | - |
+| `/api/auth/password/change` | POST | Change password | ✓ |
+| `/api/auth/mfa/setup` | POST | Setup MFA (QR code) | ✓ |
+| `/api/auth/mfa/verify` | POST | Verify & enable MFA | ✓ |
+| `/api/auth/mfa/disable` | POST | Disable MFA | ✓ |
+| `/api/auth/oauth/microsoft/url` | POST | Get Microsoft OAuth URL | - |
+| `/api/auth/admin/users` | GET | List users | Admin |
+| `/api/auth/admin/audit` | GET | Auth audit log | Admin |
+
+📚 See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) for complete API documentation.
 | `/api/auth/verify` | POST | Verify JWT token |
 | `/api/auth/me` | GET | Get current user (requires Bearer token) |
 | `/api/auth/tenant` | GET | Get tenant info (requires Bearer token) |

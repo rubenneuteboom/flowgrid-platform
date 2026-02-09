@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup Two-Factor Authentication - Flowgrid</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 500px;
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 { font-size: 28px; margin-bottom: 8px; }
+    .header p { opacity: 0.9; }
+    .content {
+      padding: 30px;
+    }
+    .step {
+      display: none;
+    }
+    .step.active {
+      display: block;
+    }
+    .step-indicator {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+    .step-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #e0e0e0;
+      margin: 0 8px;
+      transition: background 0.3s;
+    }
+    .step-dot.active {
+      background: #667eea;
+    }
+    .step-dot.completed {
+      background: #22c55e;
+    }
+    .qr-section {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .qr-code {
+      display: inline-block;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .qr-code img {
+      width: 200px;
+      height: 200px;
+    }
+    .secret-key {
+      margin-top: 20px;
+      padding: 16px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    .secret-key label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+    .secret-key code {
+      font-family: monospace;
+      font-size: 16px;
+      letter-spacing: 2px;
+      word-break: break-all;
+    }
+    .secret-key button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      border: none;
+      background: #667eea;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .verify-input {
+      letter-spacing: 8px;
+      text-align: center;
+      font-size: 24px;
+      font-family: monospace;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .btn-primary:hover { box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+      margin-top: 12px;
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .error-message {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .info-box {
+      background: #f0f9ff;
+      border: 1px solid #0ea5e9;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .info-box h3 { color: #0369a1; margin-bottom: 8px; }
+    .info-box p { color: #0369a1; font-size: 14px; }
+    .backup-codes {
+      background: #fefce8;
+      border: 2px solid #eab308;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .backup-codes h3 { color: #a16207; margin-bottom: 12px; }
+    .backup-codes-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .backup-code {
+      font-family: monospace;
+      font-size: 14px;
+      background: white;
+      padding: 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .backup-codes .warning {
+      font-size: 13px;
+      color: #a16207;
+      margin-top: 12px;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 10px;
+    }
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #667eea;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .apps-list {
+      text-align: left;
+      margin: 16px 0;
+    }
+    .apps-list li {
+      margin: 8px 0;
+      color: #666;
+    }
+    .skip-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .skip-link a {
+      color: #999;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛡️ Two-Factor Authentication</h1>
+      <p>Add an extra layer of security to your account</p>
+    </div>
+    
+    <div class="content">
+      <div class="step-indicator">
+        <div class="step-dot active" id="dot1"></div>
+        <div class="step-dot" id="dot2"></div>
+        <div class="step-dot" id="dot3"></div>
+      </div>
+
+      <div class="error-message" id="errorMessage"></div>
+
+      <!-- Step 1: Intro & Get QR -->
+      <div class="step active" id="step1">
+        <div class="info-box">
+          <h3>📱 Authenticator App Required</h3>
+          <p>You'll need an authenticator app on your phone. Popular options include:</p>
+          <ul class="apps-list">
+            <li>Google Authenticator</li>
+            <li>Microsoft Authenticator</li>
+            <li>Authy</li>
+            <li>1Password</li>
+          </ul>
+        </div>
+
+        <div class="loading" id="loading1"></div>
+
+        <button type="button" class="btn btn-primary" id="startSetup">Get Started</button>
+        
+        <div class="skip-link" id="skipOption" style="display: none;">
+          <a href="/index.html">Skip for now</a>
+        </div>
+      </div>
+
+      <!-- Step 2: Scan QR Code -->
+      <div class="step" id="step2">
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+          Scan this QR code with your authenticator app:
+        </p>
+
+        <div class="qr-section">
+          <div class="qr-code">
+            <img id="qrCodeImg" src="" alt="QR Code">
+          </div>
+        </div>
+
+        <div class="secret-key">
+          <label>Can't scan? Enter this code manually:</label>
+          <code id="secretKey"></code>
+          <button type="button" id="copySecret">Copy</button>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="continueToVerify" style="margin-top: 20px;">
+          Continue
+        </button>
+      </div>
+
+      <!-- Step 3: Verify Code -->
+      <div class="step" id="step3">
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+          Enter the 6-digit code from your authenticator app:
+        </p>
+
+        <form id="verifyForm">
+          <div class="form-group">
+            <input type="text" id="verifyCode" class="verify-input" 
+                   placeholder="000000" maxlength="6" autocomplete="one-time-code" required>
+          </div>
+
+          <div class="loading" id="loading3"></div>
+
+          <button type="submit" class="btn btn-primary" id="verifyBtn">Verify & Enable</button>
+        </form>
+      </div>
+
+      <!-- Step 4: Success & Backup Codes -->
+      <div class="step" id="step4">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <span style="font-size: 48px;">✅</span>
+          <h2 style="margin-top: 12px; color: #22c55e;">2FA Enabled!</h2>
+        </div>
+
+        <div class="backup-codes">
+          <h3>🔑 Save Your Backup Codes</h3>
+          <p>Use these codes to access your account if you lose your authenticator:</p>
+          <div class="backup-codes-grid" id="backupCodesGrid"></div>
+          <button type="button" class="btn btn-secondary" id="downloadCodes" style="width: auto; margin: 0 auto; display: block;">
+            📥 Download Codes
+          </button>
+          <p class="warning">⚠️ Store these codes securely. They will not be shown again!</p>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="finishSetup">Continue to Flowgrid</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/auth';
+    let currentStep = 1;
+    let mfaSecret = '';
+    let backupCodes = [];
+
+    const params = new URLSearchParams(window.location.search);
+    const isRequired = params.get('required') === 'true';
+
+    if (!isRequired) {
+      document.getElementById('skipOption').style.display = 'block';
+    }
+
+    // Check auth
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      window.location.href = '/login.html';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('errorMessage').style.display = 'none';
+    }
+
+    function goToStep(step) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(`step${step}`).classList.add('active');
+
+      document.querySelectorAll('.step-dot').forEach((dot, i) => {
+        dot.classList.remove('active', 'completed');
+        if (i + 1 < step) dot.classList.add('completed');
+        if (i + 1 === step) dot.classList.add('active');
+      });
+
+      currentStep = step;
+      hideError();
+    }
+
+    // Step 1: Start setup
+    document.getElementById('startSetup').addEventListener('click', async () => {
+      const loading = document.getElementById('loading1');
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_BASE}/mfa/setup`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          mfaSecret = data.secret;
+          document.getElementById('qrCodeImg').src = data.qrCode;
+          document.getElementById('secretKey').textContent = data.secret;
+          goToStep(2);
+        } else {
+          showError(data.message || 'Failed to start MFA setup');
+        }
+      } catch (error) {
+        showError('Network error. Please try again.');
+      }
+
+      loading.style.display = 'none';
+    });
+
+    // Copy secret
+    document.getElementById('copySecret').addEventListener('click', () => {
+      navigator.clipboard.writeText(mfaSecret);
+      document.getElementById('copySecret').textContent = 'Copied!';
+      setTimeout(() => {
+        document.getElementById('copySecret').textContent = 'Copy';
+      }, 2000);
+    });
+
+    // Step 2: Continue to verify
+    document.getElementById('continueToVerify').addEventListener('click', () => {
+      goToStep(3);
+      document.getElementById('verifyCode').focus();
+    });
+
+    // Step 3: Verify code
+    document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const code = document.getElementById('verifyCode').value;
+      const loading = document.getElementById('loading3');
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_BASE}/mfa/verify`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ code }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          backupCodes = data.backupCodes;
+          displayBackupCodes();
+          goToStep(4);
+        } else {
+          showError(data.message || 'Invalid code. Please try again.');
+        }
+      } catch (error) {
+        showError('Network error. Please try again.');
+      }
+
+      loading.style.display = 'none';
+    });
+
+    function displayBackupCodes() {
+      const grid = document.getElementById('backupCodesGrid');
+      grid.innerHTML = backupCodes.map(code => 
+        `<div class="backup-code">${code}</div>`
+      ).join('');
+    }
+
+    // Download backup codes
+    document.getElementById('downloadCodes').addEventListener('click', () => {
+      const content = `Flowgrid Backup Codes
+Generated: ${new Date().toISOString()}
+
+Save these codes in a secure location. Each code can only be used once.
+
+${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}
+
+If you lose access to your authenticator app, use one of these codes to sign in.
+`;
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'flowgrid-backup-codes.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Step 4: Finish
+    document.getElementById('finishSetup').addEventListener('click', () => {
+      window.location.href = '/index.html';
+    });
+  </script>
+</body>
+</html>

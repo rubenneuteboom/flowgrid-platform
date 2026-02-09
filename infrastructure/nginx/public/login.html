@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Flowgrid</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 420px;
+      overflow: hidden;
+    }
+    .login-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .login-header h1 { font-size: 28px; margin-bottom: 8px; }
+    .login-header p { opacity: 0.9; }
+    .login-form {
+      padding: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .btn-primary:hover { box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+      margin-top: 12px;
+    }
+    .btn-microsoft {
+      background: #2f2f2f;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e0e0e0;
+    }
+    .divider span {
+      padding: 0 15px;
+      color: #999;
+      font-size: 14px;
+    }
+    .error-message {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .success-message {
+      background: #d1fae5;
+      border: 1px solid #6ee7b7;
+      color: #059669;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .mfa-section {
+      display: none;
+    }
+    .mfa-input {
+      letter-spacing: 8px;
+      text-align: center;
+      font-size: 24px;
+      font-family: monospace;
+    }
+    .links {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+    .links a {
+      color: #667eea;
+      text-decoration: none;
+    }
+    .links a:hover { text-decoration: underline; }
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 10px;
+    }
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #667eea;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <h1>🚀 Flowgrid</h1>
+      <p>Enterprise AI Agent Platform</p>
+    </div>
+    
+    <div class="login-form">
+      <div class="error-message" id="errorMessage"></div>
+      <div class="success-message" id="successMessage"></div>
+      
+      <!-- Login Form -->
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required placeholder="you@company.com">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required placeholder="••••••••">
+        </div>
+        
+        <!-- MFA Section (shown when required) -->
+        <div class="mfa-section" id="mfaSection">
+          <div class="form-group">
+            <label for="mfaCode">Authentication Code</label>
+            <input type="text" id="mfaCode" name="mfaCode" class="mfa-input" 
+                   placeholder="000000" maxlength="8" autocomplete="one-time-code">
+            <p style="font-size: 12px; color: #666; margin-top: 8px;">
+              Enter the 6-digit code from your authenticator app or a backup code
+            </p>
+          </div>
+        </div>
+        
+        <div class="loading" id="loading"></div>
+        
+        <button type="submit" class="btn btn-primary" id="submitBtn">Sign In</button>
+      </form>
+      
+      <div class="divider"><span>or</span></div>
+      
+      <button type="button" class="btn btn-microsoft" id="microsoftBtn" style="display: none;">
+        <svg width="20" height="20" viewBox="0 0 21 21" fill="none">
+          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        Sign in with Microsoft
+      </button>
+      
+      <div class="links">
+        <a href="/forgot-password.html">Forgot password?</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/auth';
+    let mfaRequired = false;
+
+    const form = document.getElementById('loginForm');
+    const errorDiv = document.getElementById('errorMessage');
+    const successDiv = document.getElementById('successMessage');
+    const mfaSection = document.getElementById('mfaSection');
+    const loading = document.getElementById('loading');
+    const submitBtn = document.getElementById('submitBtn');
+    const microsoftBtn = document.getElementById('microsoftBtn');
+
+    // Check for URL params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error')) {
+      showError(getErrorMessage(params.get('error')));
+    }
+    if (params.get('registered')) {
+      showSuccess('Account created! Please log in.');
+    }
+    if (params.get('reset')) {
+      showSuccess('Password reset successfully. Please log in with your new password.');
+    }
+
+    // Check for OAuth tokens in URL
+    if (params.get('accessToken')) {
+      localStorage.setItem('accessToken', params.get('accessToken'));
+      localStorage.setItem('refreshToken', params.get('refreshToken'));
+      window.location.href = '/index.html';
+    }
+
+    function getErrorMessage(code) {
+      const messages = {
+        'oauth_failed': 'Microsoft sign-in failed. Please try again.',
+        'invalid_callback': 'Invalid authentication response.',
+        'token_exchange_failed': 'Failed to complete sign-in. Please try again.',
+        'no_email': 'Could not retrieve email from Microsoft account.',
+        'account_disabled': 'Your account has been disabled.',
+        'no_account': 'No account found. Please contact your administrator for an invite.',
+        'server_error': 'Server error. Please try again later.',
+      };
+      return messages[code] || 'An error occurred. Please try again.';
+    }
+
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      successDiv.style.display = 'none';
+    }
+
+    function showSuccess(message) {
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      errorDiv.style.display = 'none';
+    }
+
+    function setLoading(isLoading) {
+      loading.style.display = isLoading ? 'block' : 'none';
+      submitBtn.disabled = isLoading;
+      submitBtn.style.opacity = isLoading ? '0.7' : '1';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      setLoading(true);
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const mfaCode = document.getElementById('mfaCode').value;
+
+      try {
+        const response = await fetch(`${API_BASE}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, mfaCode: mfaCode || undefined }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          if (data.mfaRequired) {
+            // Show MFA input
+            mfaRequired = true;
+            mfaSection.style.display = 'block';
+            document.getElementById('mfaCode').focus();
+            submitBtn.textContent = 'Verify & Sign In';
+            setLoading(false);
+          } else {
+            // Success - store tokens and redirect
+            localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('tenant', JSON.stringify(data.tenant));
+            window.location.href = '/index.html';
+          }
+        } else {
+          showError(data.message || 'Login failed');
+          setLoading(false);
+        }
+      } catch (error) {
+        showError('Network error. Please check your connection.');
+        setLoading(false);
+      }
+    });
+
+    // Microsoft OAuth
+    microsoftBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch(`${API_BASE}/oauth/microsoft/url`, { method: 'POST' });
+        const data = await response.json();
+        if (data.authUrl) {
+          localStorage.setItem('oauthState', data.state);
+          window.location.href = data.authUrl;
+        } else {
+          showError('Microsoft sign-in is not configured');
+        }
+      } catch (error) {
+        showError('Failed to initiate Microsoft sign-in');
+      }
+    });
+
+    // Check if Microsoft OAuth is configured
+    fetch(`${API_BASE}/oauth/microsoft/url`, { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.authUrl) {
+          microsoftBtn.style.display = 'flex';
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>
