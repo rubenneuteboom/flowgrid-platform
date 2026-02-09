@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>🧙‍♂️ Agent Design Wizard - Flowgrid Platform</title>
+    <title>💬 Flowgrid Wizard - Agent Design</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -13,23 +13,15 @@
     <!-- vis-network for graph -->
     <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/vis-network.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/dist/vis-network.min.css" rel="stylesheet">
-    <!-- BPMN.js for Process Design (lazy loaded) -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+            background: #0f172a;
             color: #e2e8f0;
             min-height: 100vh;
             overflow-x: hidden;
-        }
-        
-        /* Glass morphism card */
-        .glass {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 16px;
         }
         
         /* Container */
@@ -47,30 +39,40 @@
             align-items: center;
             margin-bottom: 1.5rem;
             padding: 1rem 1.5rem;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+        }
+        .header-left {
+            display: flex;
+            flex-direction: column;
         }
         header h1 {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #c084fc, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #f1f5f9;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
+        .header-subtitle {
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
         .back-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
+            background: #334155;
+            border: 1px solid #475569;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
             color: #e2e8f0;
             cursor: pointer;
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 500;
             transition: all 0.2s;
         }
-        .back-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+        .back-btn:hover { background: #475569; }
         
         /* State management */
         .state-controls {
@@ -79,80 +81,93 @@
             align-items: center;
         }
         .state-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.15);
-            padding: 0.4rem 0.8rem;
+            background: #334155;
+            border: 1px solid #475569;
+            padding: 0.4rem 0.75rem;
             border-radius: 6px;
-            color: #a5b4fc;
+            color: #94a3b8;
             cursor: pointer;
             font-size: 0.75rem;
             transition: all 0.2s;
         }
-        .state-btn:hover { background: rgba(255,255,255,0.2); }
-        .state-indicator { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
+        .state-btn:hover { background: #475569; color: #e2e8f0; }
+        .state-indicator { font-size: 0.7rem; color: #64748b; margin-left: 0.5rem; }
 
-        /* Progress Steps */
+        /* Progress Steps - Compact Horizontal */
         .progress-bar {
             display: flex;
             justify-content: center;
+            align-items: center;
             margin-bottom: 2rem;
             gap: 0;
-            flex-wrap: wrap;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
         }
         .step {
             display: flex;
+            flex-direction: column;
             align-items: center;
             cursor: pointer;
             transition: all 0.2s;
+            padding: 0 0.5rem;
         }
-        .step:hover .step-circle { transform: scale(1.1); }
+        .step:hover .step-circle { transform: scale(1.05); }
         .step-circle {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.15);
+            background: #334155;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.5);
-            transition: all 0.3s;
-            border: 2px solid transparent;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #64748b;
+            transition: all 0.2s;
+            border: 2px solid #334155;
         }
         .step.active .step-circle { 
-            background: linear-gradient(135deg, #8b5cf6, #6366f1); 
+            background: #3b82f6;
+            border-color: #3b82f6;
             color: white;
-            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.5);
         }
         .step.completed .step-circle { 
-            background: linear-gradient(135deg, #10b981, #059669); 
+            background: #1e40af;
+            border-color: #1e40af;
             color: white;
         }
         .step-label {
-            margin-left: 0.5rem;
-            font-size: 0.8rem;
+            margin-top: 0.4rem;
+            font-size: 0.7rem;
             font-weight: 500;
-            color: rgba(255,255,255,0.5);
+            color: #64748b;
+            text-align: center;
         }
-        .step.active .step-label, .step.completed .step-label { color: #e2e8f0; }
+        .step.active .step-label { color: #3b82f6; }
+        .step.completed .step-label { color: #60a5fa; }
         .step-line {
-            width: 50px;
-            height: 3px;
-            background: rgba(255,255,255,0.15);
-            margin: 0 0.5rem;
-            border-radius: 2px;
-            transition: all 0.3s;
+            width: 40px;
+            height: 2px;
+            background: #334155;
+            margin: 0 0.25rem;
+            margin-bottom: 1.25rem;
+            border-radius: 1px;
+            transition: all 0.2s;
         }
-        .step.completed + .step-line, .step.completed ~ .step-line { background: #10b981; }
+        .step.completed + .step-line { background: #1e40af; }
 
         /* Cards */
         .card {
-            padding: 2rem;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
         .card h2 {
-            font-size: 1.4rem;
+            font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
             display: flex;
@@ -161,9 +176,9 @@
             color: #f1f5f9;
         }
         .card p.subtitle { 
-            color: rgba(255,255,255,0.7); 
+            color: #94a3b8; 
             margin-bottom: 1.5rem;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
 
         /* Input Method Tabs */
@@ -171,93 +186,97 @@
             display: flex;
             justify-content: center;
             gap: 0.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
         .input-tab {
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: 600;
-            border: 2px solid rgba(255,255,255,0.15);
+            font-weight: 500;
+            border: 1px solid #334155;
             background: transparent;
-            color: rgba(255,255,255,0.6);
+            color: #94a3b8;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
-        .input-tab:hover { border-color: #8b5cf6; color: #e2e8f0; }
+        .input-tab:hover { border-color: #3b82f6; color: #e2e8f0; }
         .input-tab.active { 
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
-            border-color: transparent;
+            background: #3b82f6;
+            border-color: #3b82f6;
             color: white;
-            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
         }
         .input-content { display: none; }
         .input-content.active { display: block; }
 
         /* Form elements */
-        .input-group { margin-bottom: 1.5rem; }
+        .input-group { margin-bottom: 1.25rem; }
         label {
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
-            color: rgba(255,255,255,0.8);
-            font-size: 0.9rem;
+            color: #94a3b8;
+            font-size: 0.85rem;
         }
         textarea, input[type="text"], input[type="url"], select {
             width: 100%;
-            padding: 1rem;
-            border: 2px solid rgba(255,255,255,0.15);
-            border-radius: 10px;
-            background: rgba(0,0,0,0.25);
+            padding: 0.75rem 1rem;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            background: #0f172a;
             color: #f1f5f9;
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-family: inherit;
             transition: all 0.2s;
         }
         textarea:focus, input:focus, select:focus {
             outline: none;
-            border-color: #8b5cf6;
-            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
-        textarea { min-height: 150px; resize: vertical; }
-        textarea::placeholder, input::placeholder { color: rgba(255,255,255,0.35); }
+        textarea { min-height: 140px; resize: vertical; }
+        textarea::placeholder, input::placeholder { color: #475569; }
+        .helper-text {
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-top: 0.4rem;
+        }
 
         /* Upload zone */
         .upload-zone {
-            border: 3px dashed rgba(255,255,255,0.2);
-            border-radius: 16px;
-            padding: 3rem;
+            border: 2px dashed #334155;
+            border-radius: 12px;
+            padding: 2.5rem;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
-            background: rgba(0,0,0,0.15);
-            margin-bottom: 1.5rem;
+            background: #0f172a;
+            margin-bottom: 1.25rem;
         }
         .upload-zone:hover, .upload-zone.dragover {
-            border-color: #8b5cf6;
-            background: rgba(139, 92, 246, 0.1);
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
         }
         .upload-zone input { display: none; }
-        .upload-icon { font-size: 4rem; margin-bottom: 1rem; }
-        .upload-zone.has-file { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .upload-icon { font-size: 3rem; margin-bottom: 0.75rem; opacity: 0.7; }
+        .upload-zone.has-file { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
         .preview-image {
-            max-width: 300px;
-            max-height: 200px;
+            max-width: 280px;
+            max-height: 180px;
             border-radius: 8px;
-            margin-top: 1rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            margin-top: 0.75rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         /* Buttons */
         .btn {
-            padding: 0.9rem 2rem;
+            padding: 0.7rem 1.5rem;
             border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
@@ -265,40 +284,37 @@
             gap: 0.5rem;
         }
         .btn-primary {
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            background: #3b82f6;
             color: white;
-            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5); }
+        .btn-primary:hover { background: #2563eb; }
         .btn-primary:disabled {
-            background: rgba(255,255,255,0.15);
+            background: #334155;
+            color: #64748b;
             cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
         }
         .btn-success {
-            background: linear-gradient(135deg, #10b981, #059669);
+            background: #10b981;
             color: white;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
         }
-        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5); }
+        .btn-success:hover { background: #059669; }
         .btn-warning {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
+            background: #f59e0b;
             color: white;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
         }
+        .btn-warning:hover { background: #d97706; }
         .btn-secondary {
-            background: rgba(255,255,255,0.1);
+            background: #334155;
             color: #e2e8f0;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid #475569;
         }
-        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
-        .btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.8rem; }
         .btn-group {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             justify-content: space-between;
-            margin-top: 2rem;
+            margin-top: 1.5rem;
             flex-wrap: wrap;
         }
 
@@ -307,35 +323,35 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            padding: 3rem;
+            padding: 2.5rem;
         }
         .loading.active { display: flex; }
-        .loading-icon { font-size: 4rem; margin-bottom: 1rem; animation: pulse 2s infinite; }
+        .loading-icon { font-size: 3rem; margin-bottom: 0.75rem; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .progress-container {
             width: 100%;
-            max-width: 400px;
-            margin: 1rem 0;
+            max-width: 350px;
+            margin: 0.75rem 0;
         }
         .progress-track {
-            height: 8px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px;
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
             overflow: hidden;
         }
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #8b5cf6, #6366f1);
+            background: #3b82f6;
             width: 0%;
             transition: width 0.5s ease-out;
-            border-radius: 4px;
+            border-radius: 3px;
         }
-        .loading-status { color: rgba(255,255,255,0.7); font-size: 0.9rem; margin-top: 0.5rem; }
+        .loading-status { color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem; }
         .spinner {
-            width: 28px;
-            height: 28px;
-            border: 3px solid rgba(255,255,255,0.2);
-            border-top-color: #8b5cf6;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #334155;
+            border-top-color: #3b82f6;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -348,29 +364,31 @@
         /* Stats grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
         }
         .stat-card {
-            background: rgba(0,0,0,0.2);
-            padding: 1.25rem;
-            border-radius: 12px;
+            background: #1e293b;
+            padding: 1rem;
+            border-radius: 8px;
             text-align: center;
-            border-left: 4px solid #8b5cf6;
+            border-left: 4px solid #3b82f6;
         }
         .stat-card.green { border-left-color: #10b981; }
         .stat-card.yellow { border-left-color: #f59e0b; }
         .stat-card.blue { border-left-color: #3b82f6; }
-        .stat-value { font-size: 2rem; font-weight: 700; color: #f1f5f9; }
-        .stat-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); text-transform: uppercase; }
+        .stat-card.purple { border-left-color: #8b5cf6; }
+        .stat-value { font-size: 1.75rem; font-weight: 700; color: #f1f5f9; }
+        .stat-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Capability tree */
         .capability-tree {
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
             padding: 1rem;
-            max-height: 400px;
+            max-height: 380px;
             overflow-y: auto;
             margin-bottom: 1rem;
         }
@@ -378,31 +396,31 @@
             display: flex;
             align-items: flex-start;
             gap: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            margin-bottom: 0.5rem;
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            border-left: 3px solid #8b5cf6;
+            padding: 0.5rem 0.65rem;
+            margin-bottom: 0.4rem;
+            background: #1e293b;
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6;
             transition: all 0.2s;
         }
-        .cap-item:hover { background: rgba(255,255,255,0.1); }
-        .cap-item.level-0 { border-left-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-        .cap-item.level-1 { margin-left: 1.5rem; border-left-color: #8b5cf6; }
-        .cap-item.level-2 { margin-left: 3rem; border-left-color: #a855f7; }
+        .cap-item:hover { background: #334155; }
+        .cap-item.level-0 { border-left-color: #3b82f6; }
+        .cap-item.level-1 { margin-left: 1.25rem; border-left-color: #8b5cf6; }
+        .cap-item.level-2 { margin-left: 2.5rem; border-left-color: #a855f7; }
         .cap-checkbox { 
-            width: 18px; 
-            height: 18px; 
-            accent-color: #8b5cf6; 
+            width: 16px; 
+            height: 16px; 
+            accent-color: #3b82f6; 
             cursor: pointer;
             margin-top: 2px;
         }
-        .cap-icon { font-size: 0.9rem; }
+        .cap-icon { font-size: 0.85rem; }
         .cap-info { flex: 1; }
-        .cap-name { font-weight: 500; color: #f1f5f9; font-size: 0.9rem; }
-        .cap-desc { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 0.2rem; }
+        .cap-name { font-weight: 500; color: #e2e8f0; font-size: 0.85rem; }
+        .cap-desc { font-size: 0.75rem; color: #64748b; margin-top: 0.15rem; }
         .cap-badge {
-            font-size: 0.65rem;
-            padding: 0.15rem 0.5rem;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
             border-radius: 4px;
             text-transform: uppercase;
             font-weight: 600;
@@ -415,7 +433,7 @@
         .selection-controls {
             display: flex;
             gap: 0.5rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
             align-items: center;
         }
         .selection-count { margin-left: auto; font-size: 0.8rem; color: #10b981; }
@@ -423,60 +441,60 @@
         /* Agent cards grid */
         .agents-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1rem;
-            max-height: 500px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 0.75rem;
+            max-height: 480px;
             overflow-y: auto;
             padding-right: 0.5rem;
         }
         .agent-card {
-            background: rgba(0,0,0,0.25);
-            border-radius: 12px;
-            padding: 1.25rem;
-            border: 2px solid transparent;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 1rem;
             cursor: pointer;
             transition: all 0.2s;
         }
         .agent-card:hover { 
-            border-color: #8b5cf6;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            border-color: #3b82f6;
+            background: #1e293b;
         }
         .agent-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
-        .agent-name { font-weight: 600; color: #10b981; font-size: 1rem; }
+        .agent-name { font-weight: 600; color: #10b981; font-size: 0.95rem; }
         .agent-pattern {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.6rem;
-            border-radius: 6px;
+            font-size: 0.65rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
             font-weight: 600;
         }
-        .agent-vs { font-size: 0.75rem; color: #60a5fa; margin-bottom: 0.5rem; }
+        .agent-vs { font-size: 0.7rem; color: #60a5fa; margin-bottom: 0.4rem; }
         .agent-purpose { 
-            font-size: 0.85rem; 
-            color: rgba(255,255,255,0.7); 
+            font-size: 0.8rem; 
+            color: #94a3b8; 
             line-height: 1.4;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.6rem;
         }
         .agent-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.4rem;
+            gap: 0.35rem;
         }
         .agent-tag {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.5rem;
+            font-size: 0.65rem;
+            padding: 0.15rem 0.4rem;
             border-radius: 4px;
-            background: rgba(255,255,255,0.1);
+            background: #334155;
+            color: #94a3b8;
         }
         .agent-edit-hint {
             text-align: right;
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.4);
+            font-size: 0.65rem;
+            color: #475569;
             margin-top: 0.5rem;
         }
 
@@ -503,41 +521,43 @@
         .pattern-legend {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
+            gap: 0.4rem;
             justify-content: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
             padding: 0.75rem;
-            background: rgba(0,0,0,0.2);
+            background: #0f172a;
+            border: 1px solid #334155;
             border-radius: 8px;
         }
         .legend-item {
-            font-size: 0.7rem;
-            padding: 0.25rem 0.6rem;
+            font-size: 0.65rem;
+            padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-weight: 600;
         }
 
         /* Process design cards */
         .process-card {
-            background: rgba(0,0,0,0.25);
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 1rem;
-            border: 1px solid rgba(255,255,255,0.1);
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
         }
         .process-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
-        .process-title { color: #60a5fa; font-weight: 600; font-size: 1rem; }
-        .process-field { margin-bottom: 0.75rem; }
-        .process-field label { font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-bottom: 0.25rem; }
+        .process-title { color: #60a5fa; font-weight: 600; font-size: 0.95rem; }
+        .process-field { margin-bottom: 0.6rem; }
+        .process-field label { font-size: 0.7rem; color: #64748b; margin-bottom: 0.25rem; }
         .process-field textarea {
-            font-size: 0.85rem;
-            min-height: 80px;
-            background: rgba(0,0,0,0.3);
+            font-size: 0.8rem;
+            min-height: 70px;
+            background: #1e293b;
+            border-color: #334155;
         }
 
         /* Interactions tabs */
@@ -550,89 +570,91 @@
             flex: 1;
             padding: 0.5rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
-            font-weight: 600;
-            font-size: 0.85rem;
-            background: rgba(255,255,255,0.1);
-            color: rgba(255,255,255,0.6);
+            font-weight: 500;
+            font-size: 0.8rem;
+            background: #334155;
+            color: #94a3b8;
             transition: all 0.2s;
         }
         .int-tab.active { background: #ec4899; color: white; }
-        .int-tab:hover:not(.active) { background: rgba(255,255,255,0.2); }
+        .int-tab:hover:not(.active) { background: #475569; }
         .int-content { display: none; }
         .int-content.active { display: block; }
 
         /* Relationship items */
         .rel-item {
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
+            background: #1e293b;
+            border-radius: 6px;
+            padding: 0.6rem;
+            margin-bottom: 0.4rem;
             border-left: 3px solid #ec4899;
         }
         .rel-agents {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.3rem;
+            gap: 0.4rem;
+            margin-bottom: 0.25rem;
         }
-        .rel-agent { font-size: 0.85rem; font-weight: 500; }
+        .rel-agent { font-size: 0.8rem; font-weight: 500; }
         .rel-agent.source { color: #10b981; }
         .rel-agent.target { color: #60a5fa; }
-        .rel-arrow { color: rgba(255,255,255,0.4); }
-        .rel-type { font-size: 0.75rem; color: #f59e0b; margin-bottom: 0.2rem; }
-        .rel-desc { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+        .rel-arrow { color: #475569; }
+        .rel-type { font-size: 0.7rem; color: #f59e0b; margin-bottom: 0.15rem; }
+        .rel-desc { font-size: 0.75rem; color: #64748b; }
 
         /* Integration items */
         .int-item {
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
+            background: #1e293b;
+            border-radius: 6px;
+            padding: 0.6rem;
+            margin-bottom: 0.4rem;
             border-left: 3px solid #8b5cf6;
         }
-        .int-name { font-weight: 600; color: #8b5cf6; font-size: 0.9rem; }
-        .int-meta { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
-        .int-agent { font-size: 0.75rem; color: #10b981; }
+        .int-name { font-weight: 600; color: #8b5cf6; font-size: 0.85rem; }
+        .int-meta { font-size: 0.7rem; color: #64748b; }
+        .int-agent { font-size: 0.7rem; color: #10b981; }
 
         /* Message items */
         .msg-item {
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
+            background: #1e293b;
+            border-radius: 6px;
+            padding: 0.6rem;
+            margin-bottom: 0.4rem;
             border-left: 3px solid #f59e0b;
         }
-        .msg-name { font-weight: 600; color: #f59e0b; font-size: 0.9rem; }
-        .msg-desc { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+        .msg-name { font-weight: 600; color: #f59e0b; font-size: 0.85rem; }
+        .msg-desc { font-size: 0.75rem; color: #64748b; }
 
         /* Summary section */
         .summary-agents {
-            max-height: 300px;
+            max-height: 280px;
             overflow-y: auto;
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 1.25rem;
         }
         .summary-agent {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem 0.75rem;
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
+            padding: 0.4rem 0.6rem;
+            background: #1e293b;
+            border-radius: 6px;
+            margin-bottom: 0.4rem;
         }
-        .summary-agent-name { font-weight: 500; color: #f1f5f9; }
-        .summary-agent-caps { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+        .summary-agent-name { font-weight: 500; color: #e2e8f0; font-size: 0.85rem; }
+        .summary-agent-caps { font-size: 0.7rem; color: #64748b; }
 
         /* Graph container */
         .graph-container {
-            height: 300px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 12px;
+            height: 280px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
             margin-bottom: 1rem;
         }
 
@@ -651,90 +673,91 @@
         }
         .modal.active { display: block; }
         .modal-content {
-            max-width: 700px;
+            max-width: 680px;
             margin: 0 auto;
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.15);
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
         }
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #334155;
         }
-        .modal-title { color: #10b981; font-size: 1.1rem; font-weight: 600; }
+        .modal-title { color: #10b981; font-size: 1rem; font-weight: 600; }
         .modal-close {
             background: none;
             border: none;
-            color: rgba(255,255,255,0.6);
-            font-size: 1.5rem;
+            color: #64748b;
+            font-size: 1.25rem;
             cursor: pointer;
             padding: 0.5rem;
             transition: color 0.2s;
         }
         .modal-close:hover { color: #ef4444; }
         .modal-body {
-            padding: 1.5rem;
-            max-height: 70vh;
+            padding: 1.25rem;
+            max-height: 65vh;
             overflow-y: auto;
         }
         .modal-section {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
         .modal-section h4 {
             color: #60a5fa;
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.85rem;
+            margin-bottom: 0.6rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #334155;
         }
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
+            gap: 0.6rem;
         }
-        .form-group { margin-bottom: 0.75rem; }
-        .form-group label { font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-bottom: 0.25rem; }
+        .form-group { margin-bottom: 0.6rem; }
+        .form-group label { font-size: 0.7rem; color: #64748b; margin-bottom: 0.2rem; }
         .form-group input, .form-group select, .form-group textarea {
-            font-size: 0.9rem;
-            padding: 0.6rem;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
         }
         .modal-footer {
             display: flex;
             justify-content: flex-end;
-            gap: 0.75rem;
-            padding: 1rem 1.5rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            gap: 0.6rem;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid #334155;
         }
 
         /* Error display */
         .error-box {
             display: none;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            padding: 1rem;
-            border-radius: 10px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 0.75rem;
+            border-radius: 8px;
             margin-bottom: 1rem;
             color: #fca5a5;
+            font-size: 0.85rem;
         }
         .error-box.active { display: block; }
 
         /* Success card */
         .success-card {
             text-align: center;
-            padding: 3rem;
+            padding: 2.5rem;
         }
-        .success-icon { font-size: 5rem; margin-bottom: 1rem; }
-        .success-title { font-size: 1.5rem; margin-bottom: 0.5rem; color: #10b981; }
-        .success-subtitle { color: rgba(255,255,255,0.7); margin-bottom: 2rem; }
+        .success-icon { font-size: 4rem; margin-bottom: 0.75rem; }
+        .success-title { font-size: 1.35rem; margin-bottom: 0.4rem; color: #10b981; }
+        .success-subtitle { color: #94a3b8; margin-bottom: 1.5rem; font-size: 0.9rem; }
 
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         /* Hidden utility */
         .hidden { display: none !important; }
@@ -745,21 +768,26 @@
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .agents-grid { grid-template-columns: 1fr; }
             .step-label { display: none; }
-            .step-line { width: 30px; }
+            .step-line { width: 20px; }
+            header { flex-direction: column; gap: 0.75rem; text-align: center; }
+            .state-controls { order: -1; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Header -->
-        <header class="glass">
-            <h1>🧙‍♂️ Agent Design Wizard</h1>
+        <header>
+            <div class="header-left">
+                <h1>💬 Welcome to Flowgrid</h1>
+                <span class="header-subtitle">Configure your Agent Network in 6 steps</span>
+            </div>
             <div class="state-controls">
                 <button class="state-btn" onclick="saveState()">💾 Save</button>
                 <button class="state-btn" onclick="clearState()">🗑️ Clear</button>
                 <span class="state-indicator" id="stateIndicator">Auto-save enabled</span>
             </div>
-            <a href="/" class="back-btn">← Back to Dashboard</a>
+            <a href="/" class="back-btn">← Dashboard</a>
         </header>
 
         <!-- Progress Bar - 6 Steps -->
@@ -799,11 +827,11 @@
         <!-- STEP 1: IDENTIFY CAPABILITIES -->
         <!-- ============================================================ -->
         <section id="step1" class="step-content">
-            <div class="card glass">
-                <div style="text-align: center; margin-bottom: 1.5rem;">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎯</div>
+            <div class="card">
+                <div style="text-align: center; margin-bottom: 1.25rem;">
+                    <div style="font-size: 3rem; margin-bottom: 0.75rem; opacity: 0.8;">🎯</div>
                     <h2>Identify Your Capabilities</h2>
-                    <p class="subtitle">Choose how you want to define your capabilities. Describe them in text, upload an XML file, or let AI analyze an image.</p>
+                    <p class="subtitle">Choose how to define your capabilities — describe them, upload XML, or use AI image analysis.</p>
                 </div>
 
                 <!-- Input Method Tabs -->
@@ -824,16 +852,12 @@
                     <div class="input-group">
                         <label for="descriptionInput">📝 Description</label>
                         <textarea id="descriptionInput" placeholder="Example: We are the IT Service Management department of a mid-sized company. We handle about 500 tickets per month, 60% incidents and 40% service requests. We use ServiceNow as our ITSM tool and want to automate: ticket triage, knowledge base searches, and standard approvals..."></textarea>
-                        <p style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 0.5rem;">
-                            The more detail you provide, the better the capability map. Describe processes, tools, volumes, and automatable tasks.
-                        </p>
+                        <p class="helper-text">The more detail you provide, the better the capability map. Describe processes, tools, volumes, and automatable tasks.</p>
                     </div>
                     <div class="input-group">
-                        <label for="websiteUrl">🌐 Corporate Website <span style="color: rgba(255,255,255,0.4); font-size: 0.8rem;">(optional)</span></label>
+                        <label for="websiteUrl">🌐 Corporate Website <span style="color: #64748b; font-weight: 400;">(optional)</span></label>
                         <input type="url" id="websiteUrl" placeholder="https://www.company.com">
-                        <p style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 0.5rem;">
-                            The website will be analyzed for additional context about products, services, and company structure.
-                        </p>
+                        <p class="helper-text">The website will be analyzed for additional context about products, services, and company structure.</p>
                     </div>
                     <button class="btn btn-primary" style="width: 100%;" onclick="analyzeText()">
                         🧠 Generate Capability Map
@@ -846,15 +870,15 @@
                         <input type="file" id="xmlFileInput" accept=".xml">
                         <div class="upload-icon">📄</div>
                         <p><strong>Drop an XML file here</strong></p>
-                        <p style="opacity: 0.7;">or click to browse</p>
-                        <p style="font-size: 0.8rem; opacity: 0.5; margin-top: 1rem;">Supported: Archi export (.xml), Open Group ArchiMate (.xml)</p>
+                        <p style="color: #64748b; font-size: 0.85rem;">or click to browse</p>
+                        <p style="font-size: 0.75rem; color: #475569; margin-top: 0.75rem;">Supported: Archi export (.xml), Open Group ArchiMate (.xml)</p>
                     </div>
                 </div>
 
                 <!-- Image Upload -->
                 <div id="input-image" class="input-content">
-                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.75rem; margin-bottom: 1.5rem; text-align: center;">
-                        <span style="color: rgba(255,255,255,0.6); font-size: 0.8rem;">
+                    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 0.6rem; margin-bottom: 1.25rem; text-align: center;">
+                        <span style="color: #64748b; font-size: 0.75rem;">
                             🔍 GPT-4o Vision → 🧠 Claude Analysis = <span style="color: #10b981;">Hybrid AI</span>
                         </span>
                     </div>
@@ -864,32 +888,30 @@
                         <div id="imageUploadPrompt">
                             <div class="upload-icon">🖼️</div>
                             <p><strong>Drop an image here</strong></p>
-                            <p style="opacity: 0.7;">or click to browse</p>
-                            <p style="font-size: 0.8rem; opacity: 0.5; margin-top: 1rem;">JPG, PNG, GIF, WebP (max 20MB)</p>
+                            <p style="color: #64748b; font-size: 0.85rem;">or click to browse</p>
+                            <p style="font-size: 0.75rem; color: #475569; margin-top: 0.75rem;">JPG, PNG, GIF, WebP (max 20MB)</p>
                         </div>
                         <div id="imagePreviewContainer" style="display: none;">
                             <img id="imagePreview" class="preview-image" alt="Preview">
-                            <p id="imagePreviewName" style="color: rgba(255,255,255,0.7); margin-top: 0.5rem;"></p>
+                            <p id="imagePreviewName" style="color: #94a3b8; margin-top: 0.5rem; font-size: 0.8rem;"></p>
                             <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); clearImagePreview();" style="margin-top: 0.5rem;">✕ Remove</button>
                         </div>
                     </div>
                     
-                    <div id="imageAdvancedOptions" style="display: none; margin-top: 1rem;">
+                    <div id="imageAdvancedOptions" style="display: none; margin-top: 0.75rem;">
                         <button class="btn btn-secondary btn-sm" style="width: 100%;" onclick="toggleAdvancedOptions()" id="advancedToggle">
                             ▶ Advanced Options
                         </button>
-                        <div id="advancedContent" style="display: none; margin-top: 0.75rem;">
+                        <div id="advancedContent" style="display: none; margin-top: 0.6rem;">
                             <div class="input-group">
-                                <label>📝 Custom Instructions <span style="color: rgba(255,255,255,0.4);">(optional)</span></label>
+                                <label>📝 Custom Instructions <span style="color: #64748b; font-weight: 400;">(optional)</span></label>
                                 <textarea id="customPromptInput" rows="3" placeholder="e.g., This is an IT4IT capability model showing 5 value streams. Focus on the R2D and S2P streams..."></textarea>
-                                <p style="color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-top: 0.5rem;">
-                                    💡 Describe what type of model this is, what the colors mean, or which areas to focus on.
-                                </p>
+                                <p class="helper-text">💡 Describe what type of model this is, what the colors mean, or which areas to focus on.</p>
                             </div>
                         </div>
                     </div>
                     
-                    <button id="analyzeImageBtn" class="btn btn-success" style="display: none; width: 100%; margin-top: 1rem;" onclick="analyzeImage()">
+                    <button id="analyzeImageBtn" class="btn btn-success" style="display: none; width: 100%; margin-top: 0.75rem;" onclick="analyzeImage()">
                         🚀 Start AI Analysis
                     </button>
                 </div>
@@ -900,7 +922,7 @@
                 <!-- Loading state -->
                 <div class="loading" id="step1Loading">
                     <div class="loading-icon">🔄</div>
-                    <h3 style="margin-bottom: 0.5rem;">Analyzing your input...</h3>
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Analyzing your input...</h3>
                     <div class="progress-container">
                         <div class="progress-track">
                             <div class="progress-fill" id="step1Progress"></div>
@@ -915,11 +937,11 @@
         <!-- STEP 2: REVIEW CAPABILITIES -->
         <!-- ============================================================ -->
         <section id="step2" class="step-content hidden">
-            <div class="card glass">
+            <div class="card">
                 <!-- Loading state -->
                 <div class="loading" id="step2Loading">
                     <div class="loading-icon">🔄</div>
-                    <h3 style="margin-bottom: 0.5rem;">Extracting Capabilities...</h3>
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Extracting Capabilities...</h3>
                     <div class="progress-container">
                         <div class="progress-track">
                             <div class="progress-fill" id="step2Progress"></div>
@@ -955,11 +977,11 @@
         <!-- STEP 3: AGENT DESIGN & PATTERNS -->
         <!-- ============================================================ -->
         <section id="step3" class="step-content hidden">
-            <div class="card glass">
+            <div class="card">
                 <!-- Loading state -->
                 <div class="loading" id="step3Loading">
                     <div class="loading-icon">🤖</div>
-                    <h3 style="margin-bottom: 0.5rem;">Designing Agents...</h3>
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Designing Agents...</h3>
                     <div class="progress-container">
                         <div class="progress-track">
                             <div class="progress-fill" id="step3Progress"></div>
@@ -1001,11 +1023,11 @@
         <!-- STEP 4: PROCESS DESIGN -->
         <!-- ============================================================ -->
         <section id="step4" class="step-content hidden">
-            <div class="card glass">
+            <div class="card">
                 <!-- Loading state -->
                 <div class="loading" id="step4Loading">
                     <div class="loading-icon">🔄</div>
-                    <h3 style="margin-bottom: 0.5rem;">Generating Process Flows...</h3>
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Generating Process Flows...</h3>
                     <div class="progress-container">
                         <div class="progress-track">
                             <div class="progress-fill" id="step4Progress"></div>
@@ -1019,13 +1041,13 @@
                     <h2>🔄 Process Design</h2>
                     <p class="subtitle">Define process flows, decision points, and error handling for each agent.</p>
 
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem;">
                         <button class="btn btn-warning btn-sm" onclick="generateAllProcesses()">
                             🤖 Generate All with AI
                         </button>
                     </div>
 
-                    <div id="processCards" style="max-height: 500px; overflow-y: auto;">
+                    <div id="processCards" style="max-height: 480px; overflow-y: auto;">
                         <!-- Process cards rendered here -->
                     </div>
 
@@ -1041,11 +1063,11 @@
         <!-- STEP 5: INTERACTIONS -->
         <!-- ============================================================ -->
         <section id="step5" class="step-content hidden">
-            <div class="card glass">
+            <div class="card">
                 <!-- Loading state -->
                 <div class="loading" id="step5Loading">
                     <div class="loading-icon">🔗</div>
-                    <h3 style="margin-bottom: 0.5rem;">Generating Interactions...</h3>
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Generating Interactions...</h3>
                     <div class="progress-container">
                         <div class="progress-track">
                             <div class="progress-fill" id="step5Progress"></div>
@@ -1067,14 +1089,14 @@
                     </div>
 
                     <!-- Content areas -->
-                    <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1rem; max-height: 400px; overflow-y: auto; margin-bottom: 1rem;">
+                    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 0.75rem; max-height: 350px; overflow-y: auto; margin-bottom: 0.75rem;">
                         <div id="intRelationships" class="int-content active"></div>
                         <div id="intIntegrations" class="int-content"></div>
                         <div id="intMessages" class="int-content"></div>
                     </div>
 
                     <!-- Graph visualization -->
-                    <h3 style="font-size: 1rem; color: #f1f5f9; margin-bottom: 0.5rem;">📊 Interaction Graph</h3>
+                    <h3 style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">📊 Interaction Graph</h3>
                     <div class="graph-container" id="interactionGraph"></div>
 
                     <div class="btn-group">
@@ -1092,7 +1114,7 @@
         <!-- STEP 6: IMPORT & SAVE -->
         <!-- ============================================================ -->
         <section id="step6" class="step-content hidden">
-            <div class="card glass">
+            <div class="card">
                 <h2>🚀 Ready to Import</h2>
                 <p class="subtitle">Review the summary and click Import to activate your Agent Network.</p>
 
@@ -1110,14 +1132,14 @@
                         <div class="stat-value" id="summaryInteractions">0</div>
                         <div class="stat-label">Interactions</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card purple">
                         <div class="stat-value" id="summaryIntegrations">0</div>
                         <div class="stat-label">Integrations</div>
                     </div>
                 </div>
 
                 <!-- Agent preview -->
-                <h3 style="font-size: 1rem; color: #94a3b8; margin-bottom: 0.75rem;">Agent Overview</h3>
+                <h3 style="font-size: 0.9rem; color: #64748b; margin-bottom: 0.6rem;">Agent Overview</h3>
                 <div class="summary-agents" id="summaryAgentList">
                     <!-- Agent list rendered here -->
                 </div>
@@ -1133,7 +1155,7 @@
 
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="goToStep(5)">← Back</button>
-                    <button class="btn btn-success" style="font-size: 1.1rem; padding: 1rem 3rem;" onclick="performImport()">
+                    <button class="btn btn-success" style="font-size: 1rem; padding: 0.8rem 2.5rem;" onclick="performImport()">
                         🚀 Import & Start
                     </button>
                 </div>
@@ -1144,7 +1166,7 @@
         <!-- STEP 7: SUCCESS (shown after import) -->
         <!-- ============================================================ -->
         <section id="step7" class="step-content hidden">
-            <div class="card glass success-card">
+            <div class="card success-card">
                 <div class="success-icon">🎉</div>
                 <h2 class="success-title">Agents Created Successfully!</h2>
                 <p class="success-subtitle" id="successMessage">Your agents have been created and are ready to configure.</p>
@@ -1152,8 +1174,8 @@
                 <div class="stats-grid" id="finalSummary"></div>
 
                 <div class="btn-group" style="justify-content: center;">
-                    <a href="/" class="btn btn-secondary">Back to Dashboard</a>
-                    <button class="btn btn-primary" onclick="location.reload()">Create More Agents</button>
+                    <a href="/design" class="btn btn-primary">🎨 Open Design Module →</a>
+                    <button class="btn btn-secondary" onclick="location.reload()">Create More Agents</button>
                 </div>
             </div>
         </section>
@@ -1163,7 +1185,7 @@
     <!-- AGENT EDIT MODAL -->
     <!-- ============================================================ -->
     <div class="modal" id="agentModal">
-        <div class="modal-content glass">
+        <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="modalAgentTitle">🤖 Agent Configuration</h3>
                 <button class="modal-close" onclick="closeAgentModal()">✕</button>
@@ -1609,7 +1631,7 @@
         function renderCapabilityTree(capabilities) {
             const container = document.getElementById('capabilityTree');
             if (!capabilities || capabilities.length === 0) {
-                container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">No capabilities found</p>';
+                container.innerHTML = '<p style="color: #64748b;">No capabilities found</p>';
                 return;
             }
             
@@ -1711,7 +1733,18 @@
             
             analysisResult.filteredAgents = agents;
             renderAgentCards(agents);
-            document.getElementById('agentCount').textContent = agents.length;
+            
+            // Update agent count
+            const countEl = document.getElementById('agentCount');
+            if (countEl) {
+                countEl.textContent = agents.length;
+            }
+            
+            // Also update subtitle text
+            const subtitle = document.querySelector('#step3Results .subtitle');
+            if (subtitle && agents.length > 0) {
+                subtitle.innerHTML = `<span id="agentCount">${agents.length}</span> agents suggested. Select the appropriate <strong>Agentic Pattern</strong> per agent.`;
+            }
         }
         
         function renderAgentCards(agents) {
@@ -1966,7 +1999,7 @@ ERROR HANDLING:
                     <div class="rel-type">📨 ${r.messageType || 'message'}</div>
                     <div class="rel-desc">${escapeHtml(r.description || 'No description')}</div>
                 </div>
-            `).join('') : '<p style="color: rgba(255,255,255,0.5);">No relationships defined</p>';
+            `).join('') : '<p style="color: #64748b;">No relationships defined</p>';
             
             // Integrations
             const intContainer = document.getElementById('intIntegrations');
@@ -1976,7 +2009,7 @@ ERROR HANDLING:
                     <div class="int-meta">${i.type} • ${i.system} • ${i.direction}</div>
                     <div class="int-agent">Agent: ${escapeHtml(getAgentName(i.agentId))}</div>
                 </div>
-            `).join('') : '<p style="color: rgba(255,255,255,0.5);">No integrations defined</p>';
+            `).join('') : '<p style="color: #64748b;">No integrations defined</p>';
             
             // Messages
             const msgContainer = document.getElementById('intMessages');
@@ -1989,7 +2022,7 @@ ERROR HANDLING:
                     <div class="msg-name">📨 ${escapeHtml(m.name)}</div>
                     <div class="msg-desc">${escapeHtml(m.description || '')}</div>
                 </div>
-            `).join('') : '<p style="color: rgba(255,255,255,0.5);">No message types defined</p>';
+            `).join('') : '<p style="color: #64748b;">No message types defined</p>';
             
             document.getElementById('relCount').textContent = relationships.length;
             document.getElementById('intCount').textContent = integrations.length;
@@ -2001,14 +2034,14 @@ ERROR HANDLING:
             const relationships = analysisResult?.agentRelationships || [];
             
             if (agents.length === 0) {
-                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.5);">No agents to visualize</p>';
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #64748b;">No agents to visualize</p>';
                 return;
             }
             
             const nodes = agents.map((a, i) => ({
                 id: a.id,
                 label: a.name,
-                color: { background: '#8b5cf6', border: '#a855f7' },
+                color: { background: '#3b82f6', border: '#60a5fa' },
                 font: { color: '#f1f5f9' }
             }));
             
@@ -2093,7 +2126,7 @@ ERROR HANDLING:
                             <span class="summary-agent-name">🤖 ${escapeHtml(agent.name)}</span>
                             <span class="summary-agent-caps">${(agent.capabilities || []).length} caps</span>
                         </div>
-                        <span class="agent-pattern pattern-${(agent.pattern || 'specialist').toLowerCase().replace(/[^a-z]/g, '-')}" style="font-size: 0.7rem;">${pattern.emoji} ${pattern.name}</span>
+                        <span class="agent-pattern pattern-${(agent.pattern || 'specialist').toLowerCase().replace(/[^a-z]/g, '-')}" style="font-size: 0.65rem;">${pattern.emoji} ${pattern.name}</span>
                     </div>
                 `;
             }).join('');
@@ -2137,7 +2170,7 @@ ERROR HANDLING:
                         <div class="stat-value">${data.created.interactions}</div>
                         <div class="stat-label">Interactions</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card purple">
                         <div class="stat-value">${data.created.integrations}</div>
                         <div class="stat-label">Integrations</div>
                     </div>

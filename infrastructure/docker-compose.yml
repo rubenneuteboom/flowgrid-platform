@@ -187,6 +187,26 @@ services:
     networks:
       - flowgrid-network
 
+  design-module:
+    build:
+      context: ../services/design-module
+      dockerfile: Dockerfile
+    container_name: flowgrid-design-module
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3006
+      AGENT_SERVICE_URL: http://agent-service:3001
+    ports:
+      - "3006:3006"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - flowgrid-network
+
   # =============================================================================
   # API Gateway
   # =============================================================================

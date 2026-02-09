@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>🎨 Agent Design Module - Flowgrid Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/vis-network.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/dist/vis-network.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      background: #0f172a; 
+      color: #e2e8f0; 
+    }
+    
+    /* Header */
+    .header { 
+      background: #1e293b; 
+      padding: 0.75rem 1.5rem; 
+      border-bottom: 1px solid #334155; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+    }
+    .header h1 { 
+      font-size: 1.25rem; 
+      color: #f59e0b; 
+      display: flex; 
+      align-items: center; 
+      gap: 0.5rem;
+    }
+    .header .nav-links {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    .header .nav-link {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .header .nav-link:hover { background: #334155; color: #e2e8f0; }
+    .header .stats { 
+      display: flex; 
+      gap: 1.5rem; 
+      font-size: 0.85rem; 
+      color: #94a3b8; 
+    }
+    .header .stat { text-align: center; }
+    .header .stat-value { 
+      font-size: 1.25rem; 
+      font-weight: bold; 
+      color: #f1f5f9; 
+    }
+    
+    /* Main Layout */
+    .container { 
+      display: flex; 
+      height: calc(100vh - 56px); 
+    }
+    
+    /* Sidebar */
+    .sidebar { 
+      background: #1e293b; 
+      border-right: 1px solid #334155; 
+      overflow-y: auto; 
+      width: 280px; 
+      min-width: 200px; 
+      max-width: 400px; 
+      flex-shrink: 0; 
+      position: relative; 
+    }
+    .sidebar-section { 
+      padding: 1rem; 
+      border-bottom: 1px solid #334155; 
+    }
+    .sidebar-section h3 { 
+      font-size: 0.8rem; 
+      color: #94a3b8; 
+      margin-bottom: 0.5rem; 
+      text-transform: uppercase; 
+      letter-spacing: 0.5px;
+    }
+    
+    /* Search & Filters */
+    input, select { 
+      width: 100%; 
+      padding: 0.5rem; 
+      border: 1px solid #334155; 
+      border-radius: 6px; 
+      background: #0f172a; 
+      color: #e2e8f0; 
+      margin-bottom: 0.5rem; 
+      font-size: 0.85rem;
+    }
+    input:focus, select:focus { 
+      outline: none; 
+      border-color: #60a5fa; 
+    }
+    
+    /* Element List */
+    .element-list { 
+      max-height: 400px; 
+      overflow-y: auto; 
+    }
+    .element-item { 
+      padding: 0.6rem 0.75rem; 
+      cursor: pointer; 
+      border-radius: 6px; 
+      margin-bottom: 2px; 
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      transition: all 0.15s;
+    }
+    .element-item:hover { background: #334155; }
+    .element-item.selected { background: #3b82f6; }
+    .element-name { font-weight: 500; }
+    .element-type { 
+      font-size: 0.7rem; 
+      color: #94a3b8; 
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .element-item.selected .element-type { color: #bfdbfe; }
+    
+    /* Main Content */
+    .main-content { 
+      flex: 1; 
+      min-width: 300px; 
+      position: relative; 
+      padding: 1rem; 
+      overflow-y: auto; 
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Graph Legend */
+    .graph-legend { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 0.5rem; 
+      margin-bottom: 0.75rem; 
+      padding: 0.5rem; 
+      background: #1e293b; 
+      border-radius: 6px; 
+    }
+    .legend-item { 
+      display: flex; 
+      align-items: center; 
+      gap: 0.3rem; 
+      font-size: 0.75rem; 
+      color: #94a3b8; 
+      cursor: pointer; 
+      padding: 0.2rem 0.4rem; 
+      border-radius: 3px; 
+      transition: all 0.2s; 
+    }
+    .legend-item:hover { background: #334155; }
+    .legend-item.disabled { opacity: 0.4; text-decoration: line-through; }
+    .legend-color { 
+      width: 12px; 
+      height: 12px; 
+      border-radius: 3px; 
+    }
+    
+    /* Graph Container */
+    .graph-container { 
+      flex: 1;
+      min-height: 400px; 
+      background: #0f172a; 
+      border-radius: 8px; 
+      border: 1px solid #334155;
+    }
+    
+    /* Detail Panel */
+    .detail-panel { 
+      background: #1e293b; 
+      border-left: 1px solid #334155; 
+      padding: 1rem; 
+      overflow-y: auto; 
+      display: flex; 
+      flex-direction: column; 
+      width: 420px; 
+      min-width: 350px; 
+      max-width: 600px; 
+      flex-shrink: 0; 
+      position: relative; 
+    }
+    .detail-panel h2 { 
+      font-size: 1rem; 
+      color: #60a5fa; 
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .detail-panel .agent-type {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+    }
+    
+    /* Detail Tabs */
+    .detail-tabs { 
+      display: flex; 
+      gap: 0.15rem; 
+      margin-bottom: 1rem; 
+      border-bottom: 1px solid #334155; 
+      padding-bottom: 0.5rem; 
+      flex-wrap: wrap; 
+    }
+    .detail-tab { 
+      padding: 0.4rem 0.6rem; 
+      background: transparent; 
+      border-radius: 4px 4px 0 0; 
+      cursor: pointer; 
+      font-size: 0.75rem; 
+      color: #94a3b8; 
+      border: 1px solid transparent; 
+      white-space: nowrap; 
+      transition: all 0.2s;
+    }
+    .detail-tab:hover { color: #e2e8f0; background: #334155; }
+    .detail-tab.active { 
+      background: #3b82f6; 
+      color: white; 
+      border-color: #3b82f6; 
+    }
+    
+    /* Tab Content */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Form Styles */
+    .form-group { margin-bottom: 0.75rem; }
+    .form-group label { 
+      display: block; 
+      color: #94a3b8; 
+      font-size: 0.75rem; 
+      margin-bottom: 0.25rem; 
+      text-transform: uppercase; 
+      letter-spacing: 0.5px; 
+    }
+    .form-group textarea { 
+      width: 100%; 
+      padding: 0.5rem; 
+      border: 1px solid #334155; 
+      border-radius: 6px; 
+      background: #0f172a; 
+      color: #e2e8f0; 
+      font-size: 0.85rem; 
+      font-family: inherit;
+      min-height: 80px;
+      resize: vertical;
+    }
+    .form-group textarea:focus { outline: none; border-color: #60a5fa; }
+    
+    /* Buttons */
+    .btn { 
+      padding: 0.5rem 1rem; 
+      border: none; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-weight: 500; 
+      font-size: 0.85rem;
+      transition: all 0.2s; 
+    }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    
+    /* Cards */
+    .info-card {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .info-card h4 {
+      color: #60a5fa;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+    .info-card p {
+      color: #cbd5e1;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    
+    /* Relationship List */
+    .relationship-item {
+      background: #0f172a;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .relationship-type {
+      background: #334155;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+    .relationship-target {
+      color: #60a5fa;
+      cursor: pointer;
+    }
+    .relationship-target:hover { text-decoration: underline; }
+    
+    /* Code View */
+    .code-container pre {
+      background: #0f172a;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #e2e8f0;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    /* Integration List */
+    .integration-item {
+      background: #0f172a;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .integration-name {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .integration-badge {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: #334155;
+      color: #94a3b8;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+    }
+    .empty-state .icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    /* Resize Handle */
+    .resize-handle { 
+      width: 4px; 
+      background: transparent; 
+      cursor: col-resize; 
+      position: absolute; 
+      top: 0; 
+      bottom: 0; 
+      z-index: 10; 
+      transition: background 0.2s; 
+    }
+    .resize-handle:hover, .resize-handle.active { background: #3b82f6; }
+    .sidebar .resize-handle { right: 0; }
+    .detail-panel .resize-handle { left: 0; }
+    
+    /* Loading State */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #64748b;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #334155;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>🎨 Agent Design Module</h1>
+    <div class="nav-links">
+      <a href="/" class="nav-link">🏠 Home</a>
+      <a href="/wizard.html" class="nav-link">✨ Wizard</a>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-agents">0</div>
+        <div>Agents</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-relationships">0</div>
+        <div>Relations</div>
+      </div>
+    </div>
+  </header>
+  
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Left Sidebar - Element Browser -->
+    <aside class="sidebar">
+      <div class="resize-handle" id="sidebar-resize"></div>
+      
+      <div class="sidebar-section">
+        <h3>🔍 Search</h3>
+        <input type="text" id="search-input" placeholder="Search agents...">
+        <select id="type-filter">
+          <option value="">All Types</option>
+          <option value="Agent">🤖 Agents</option>
+          <option value="Capability">📦 Capabilities</option>
+          <option value="DataObject">📄 Data Objects</option>
+        </select>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>📋 Elements</h3>
+        <div class="element-list" id="element-list">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <p style="margin-top: 0.5rem;">Loading...</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content - Graph -->
+    <main class="main-content">
+      <!-- Legend -->
+      <div class="graph-legend" id="graph-legend">
+        <div class="legend-item" data-type="Agent" onclick="toggleLegend('Agent')">
+          <div class="legend-color" style="background: #10b981;"></div>
+          <span>Agent</span>
+        </div>
+        <div class="legend-item" data-type="Capability" onclick="toggleLegend('Capability')">
+          <div class="legend-color" style="background: #60a5fa;"></div>
+          <span>Capability</span>
+        </div>
+        <div class="legend-item" data-type="DataObject" onclick="toggleLegend('DataObject')">
+          <div class="legend-color" style="background: #f59e0b;"></div>
+          <span>Data Object</span>
+        </div>
+      </div>
+      
+      <!-- Graph Canvas -->
+      <div class="graph-container" id="graph-container"></div>
+    </main>
+    
+    <!-- Right Panel - Detail View -->
+    <aside class="detail-panel" id="detail-panel">
+      <div class="resize-handle" id="detail-resize"></div>
+      
+      <!-- Empty State -->
+      <div id="detail-empty" class="empty-state">
+        <div class="icon">👈</div>
+        <p>Select an agent to view details</p>
+      </div>
+      
+      <!-- Agent Detail View -->
+      <div id="detail-content" style="display: none;">
+        <h2 id="detail-name">Agent Name</h2>
+        <div class="agent-type" id="detail-type">🤖 Agent • Specialist</div>
+        
+        <!-- Tabs -->
+        <div class="detail-tabs">
+          <button class="detail-tab active" data-tab="overview" onclick="showTab('overview')">📋 Overview</button>
+          <button class="detail-tab" data-tab="objectives" onclick="showTab('objectives')">🎯 Objectives</button>
+          <button class="detail-tab" data-tab="integrations" onclick="showTab('integrations')">🔌 Integrations</button>
+          <button class="detail-tab" data-tab="relations" onclick="showTab('relations')">🔗 Relations</button>
+          <button class="detail-tab" data-tab="code" onclick="showTab('code')">🤖 Code</button>
+        </div>
+        
+        <!-- Tab: Overview -->
+        <div id="tab-overview" class="tab-content active">
+          <div class="form-group">
+            <label>Purpose</label>
+            <textarea id="agent-purpose" placeholder="Describe the agent's purpose..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Value Stream</label>
+            <input type="text" id="agent-valuestream" placeholder="e.g., Request to Deploy">
+          </div>
+          <div class="form-group">
+            <label>Capability Group</label>
+            <input type="text" id="agent-capgroup" placeholder="e.g., Incident Management">
+          </div>
+          <div class="form-group">
+            <label>Pattern</label>
+            <select id="agent-pattern">
+              <option value="routing">🔀 Routing</option>
+              <option value="planning">📋 Planning</option>
+              <option value="tool-use">🔧 Tool Use</option>
+              <option value="orchestration">🎭 Orchestration</option>
+              <option value="human-in-loop">👤 Human-in-Loop</option>
+              <option value="rag">📚 RAG</option>
+              <option value="reflection">🔍 Reflection</option>
+              <option value="guardrails">🛡️ Guardrails</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+            <button class="btn btn-primary" onclick="saveAgent()">💾 Save Changes</button>
+            <button class="btn btn-danger" onclick="deleteAgent()">🗑️ Delete</button>
+          </div>
+        </div>
+        
+        <!-- Tab: Objectives -->
+        <div id="tab-objectives" class="tab-content">
+          <div class="form-group">
+            <label>Objectives (one per line)</label>
+            <textarea id="agent-objectives" rows="6" placeholder="Reduce incident resolution time by 30%&#10;Automate routine ticket triage&#10;Improve SLA compliance to 95%"></textarea>
+          </div>
+          <div class="form-group">
+            <label>KPIs</label>
+            <textarea id="agent-kpis" rows="4" placeholder="Average resolution time&#10;Ticket automation rate&#10;SLA compliance percentage"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveAgent()">💾 Save Objectives</button>
+        </div>
+        
+        <!-- Tab: Integrations -->
+        <div id="tab-integrations" class="tab-content">
+          <div id="integrations-list">
+            <div class="empty-state">
+              <div class="icon">🔌</div>
+              <p>No integrations configured</p>
+            </div>
+          </div>
+          <button class="btn btn-success" style="margin-top: 1rem;" onclick="addIntegration()">➕ Add Integration</button>
+        </div>
+        
+        <!-- Tab: Relations -->
+        <div id="tab-relations" class="tab-content">
+          <h4 style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.75rem;">OUTGOING</h4>
+          <div id="relations-outgoing">
+            <div class="empty-state" style="padding: 1rem;">
+              <p>No outgoing relationships</p>
+            </div>
+          </div>
+          
+          <h4 style="color: #94a3b8; font-size: 0.8rem; margin: 1rem 0 0.75rem;">INCOMING</h4>
+          <div id="relations-incoming">
+            <div class="empty-state" style="padding: 1rem;">
+              <p>No incoming relationships</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tab: Code -->
+        <div id="tab-code" class="tab-content">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h4 style="color: #94a3b8; font-size: 0.8rem;">GENERATED PROMPT</h4>
+            <button class="btn btn-secondary" onclick="copyCode()">📋 Copy</button>
+          </div>
+          <div class="code-container">
+            <pre id="agent-code">// Select an agent to view generated code</pre>
+          </div>
+          <button class="btn btn-success" style="margin-top: 1rem;" onclick="generateCode()">🤖 Regenerate with AI</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+  
+  <script>
+    // ============================================================================
+    // Configuration
+    // ============================================================================
+    
+    // API base URL - uses nginx gateway
+    const API_BASE = '/api/agents';
+    
+    // State
+    let agents = [];
+    let relationships = [];
+    let selectedAgentId = null;
+    let network = null;
+    let hiddenTypes = new Set();
+    
+    // Node colors by type
+    const nodeColors = {
+      'Agent': '#10b981',
+      'Capability': '#60a5fa',
+      'DataObject': '#f59e0b',
+      'Process': '#ec4899',
+      'default': '#94a3b8'
+    };
+    
+    // ============================================================================
+    // Initialization
+    // ============================================================================
+    
+    async function init() {
+      console.log('[design-module] Initializing...');
+      
+      try {
+        await loadAgents();
+        await loadRelationships();
+        initGraph();
+        updateStats();
+        console.log('[design-module] Ready');
+      } catch (error) {
+        console.error('[design-module] Init error:', error);
+        showError('Failed to load data. Make sure agent-service is running.');
+      }
+    }
+    
+    // ============================================================================
+    // Data Loading
+    // ============================================================================
+    
+    async function loadAgents() {
+      try {
+        const response = await fetch(`${API_BASE}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        agents = await response.json();
+        renderElementList();
+      } catch (error) {
+        console.error('[loadAgents] Error:', error);
+        // Use mock data for demo
+        agents = generateMockAgents();
+        renderElementList();
+      }
+    }
+    
+    async function loadRelationships() {
+      try {
+        const response = await fetch(`${API_BASE}/relationships`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        relationships = await response.json();
+      } catch (error) {
+        console.error('[loadRelationships] Error:', error);
+        relationships = generateMockRelationships();
+      }
+    }
+    
+    // Mock data for demo purposes
+    function generateMockAgents() {
+      return [
+        { id: '1', name: 'Incident Manager', type: 'Agent', pattern: 'orchestration', purpose: 'Manages incident lifecycle', valueStream: 'D2C', capabilityGroup: 'Incident Management' },
+        { id: '2', name: 'Change Coordinator', type: 'Agent', pattern: 'planning', purpose: 'Coordinates change requests', valueStream: 'R2D', capabilityGroup: 'Change Management' },
+        { id: '3', name: 'Knowledge Bot', type: 'Agent', pattern: 'rag', purpose: 'Provides knowledge assistance', valueStream: 'D2C', capabilityGroup: 'Knowledge Management' },
+        { id: '4', name: 'Ticket Router', type: 'Agent', pattern: 'routing', purpose: 'Routes tickets to appropriate teams', valueStream: 'D2C', capabilityGroup: 'Service Desk' },
+        { id: '5', name: 'Incident Analysis', type: 'Capability', purpose: 'Analyzes incident patterns' },
+        { id: '6', name: 'Change Impact Assessment', type: 'Capability', purpose: 'Assesses change impact' },
+        { id: '7', name: 'Incident Record', type: 'DataObject', purpose: 'Stores incident data' },
+        { id: '8', name: 'Change Request', type: 'DataObject', purpose: 'Stores change request data' },
+      ];
+    }
+    
+    function generateMockRelationships() {
+      return [
+        { id: 'r1', sourceId: '1', targetId: '5', type: 'uses' },
+        { id: 'r2', sourceId: '1', targetId: '7', type: 'manages' },
+        { id: 'r3', sourceId: '2', targetId: '6', type: 'uses' },
+        { id: 'r4', sourceId: '2', targetId: '8', type: 'manages' },
+        { id: 'r5', sourceId: '4', targetId: '1', type: 'delegates_to' },
+        { id: 'r6', sourceId: '1', targetId: '3', type: 'consults' },
+      ];
+    }
+    
+    // ============================================================================
+    // Element List Rendering
+    // ============================================================================
+    
+    function renderElementList() {
+      const container = document.getElementById('element-list');
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+      const typeFilter = document.getElementById('type-filter').value;
+      
+      const filtered = agents.filter(a => {
+        const matchesSearch = a.name.toLowerCase().includes(searchTerm);
+        const matchesType = !typeFilter || a.type === typeFilter;
+        return matchesSearch && matchesType;
+      });
+      
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🔍</div>
+            <p>No elements found</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = filtered.map(a => `
+        <div class="element-item ${a.id === selectedAgentId ? 'selected' : ''}" 
+             onclick="selectAgent('${a.id}')"
+             data-id="${a.id}">
+          <span class="element-name">${escapeHtml(a.name)}</span>
+          <span class="element-type">
+            <span style="width: 8px; height: 8px; border-radius: 2px; background: ${nodeColors[a.type] || nodeColors.default};"></span>
+            ${a.type || 'Unknown'}
+          </span>
+        </div>
+      `).join('');
+    }
+    
+    // ============================================================================
+    // Graph Visualization
+    // ============================================================================
+    
+    function initGraph() {
+      const container = document.getElementById('graph-container');
+      
+      const nodes = new vis.DataSet(
+        agents
+          .filter(a => !hiddenTypes.has(a.type))
+          .map(a => ({
+            id: a.id,
+            label: a.name,
+            color: {
+              background: nodeColors[a.type] || nodeColors.default,
+              border: '#1e293b',
+              highlight: { background: '#f59e0b', border: '#f59e0b' }
+            },
+            font: { color: '#f1f5f9', size: 12 },
+            shape: a.type === 'Agent' ? 'box' : (a.type === 'DataObject' ? 'ellipse' : 'hexagon'),
+            borderWidth: 2,
+          }))
+      );
+      
+      const edges = new vis.DataSet(
+        relationships
+          .filter(r => {
+            const source = agents.find(a => a.id === r.sourceId);
+            const target = agents.find(a => a.id === r.targetId);
+            return source && target && !hiddenTypes.has(source.type) && !hiddenTypes.has(target.type);
+          })
+          .map(r => ({
+            id: r.id,
+            from: r.sourceId,
+            to: r.targetId,
+            label: r.type,
+            arrows: 'to',
+            color: { color: '#475569', highlight: '#60a5fa' },
+            font: { color: '#64748b', size: 10, align: 'middle' },
+            smooth: { type: 'curvedCW', roundness: 0.2 },
+          }))
+      );
+      
+      const options = {
+        nodes: {
+          shadow: true,
+          margin: 10,
+        },
+        edges: {
+          width: 1.5,
+          shadow: true,
+        },
+        physics: {
+          enabled: true,
+          barnesHut: {
+            gravitationalConstant: -2000,
+            centralGravity: 0.3,
+            springLength: 150,
+            springConstant: 0.04,
+          },
+          stabilization: { iterations: 100 },
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 200,
+        },
+      };
+      
+      network = new vis.Network(container, { nodes, edges }, options);
+      
+      network.on('click', function(params) {
+        if (params.nodes.length > 0) {
+          selectAgent(params.nodes[0]);
+        }
+      });
+      
+      network.on('doubleClick', function(params) {
+        if (params.nodes.length > 0) {
+          network.focus(params.nodes[0], { scale: 1.5, animation: true });
+        }
+      });
+    }
+    
+    function toggleLegend(type) {
+      const item = document.querySelector(`.legend-item[data-type="${type}"]`);
+      if (hiddenTypes.has(type)) {
+        hiddenTypes.delete(type);
+        item.classList.remove('disabled');
+      } else {
+        hiddenTypes.add(type);
+        item.classList.add('disabled');
+      }
+      initGraph();
+    }
+    
+    // ============================================================================
+    // Agent Selection & Detail View
+    // ============================================================================
+    
+    function selectAgent(id) {
+      selectedAgentId = id;
+      const agent = agents.find(a => a.id === id);
+      
+      if (!agent) {
+        document.getElementById('detail-empty').style.display = 'block';
+        document.getElementById('detail-content').style.display = 'none';
+        return;
+      }
+      
+      document.getElementById('detail-empty').style.display = 'none';
+      document.getElementById('detail-content').style.display = 'block';
+      
+      // Update header
+      document.getElementById('detail-name').textContent = agent.name;
+      document.getElementById('detail-type').textContent = `${getTypeIcon(agent.type)} ${agent.type} • ${agent.pattern || 'General'}`;
+      
+      // Update overview tab
+      document.getElementById('agent-purpose').value = agent.purpose || '';
+      document.getElementById('agent-valuestream').value = agent.valueStream || '';
+      document.getElementById('agent-capgroup').value = agent.capabilityGroup || '';
+      document.getElementById('agent-pattern').value = agent.pattern || 'tool-use';
+      
+      // Update objectives tab
+      document.getElementById('agent-objectives').value = (agent.objectives || []).join('\n');
+      document.getElementById('agent-kpis').value = (agent.kpis || []).join('\n');
+      
+      // Update relations tab
+      renderRelationships(id);
+      
+      // Update integrations tab
+      renderIntegrations(agent);
+      
+      // Update code tab
+      generateAgentCode(agent);
+      
+      // Highlight in list
+      renderElementList();
+      
+      // Focus in graph
+      if (network) {
+        network.selectNodes([id]);
+      }
+    }
+    
+    function getTypeIcon(type) {
+      const icons = {
+        'Agent': '🤖',
+        'Capability': '📦',
+        'DataObject': '📄',
+        'Process': '🔄',
+      };
+      return icons[type] || '📋';
+    }
+    
+    function renderRelationships(agentId) {
+      const outgoing = relationships.filter(r => r.sourceId === agentId);
+      const incoming = relationships.filter(r => r.targetId === agentId);
+      
+      const outContainer = document.getElementById('relations-outgoing');
+      const inContainer = document.getElementById('relations-incoming');
+      
+      if (outgoing.length === 0) {
+        outContainer.innerHTML = '<div class="empty-state" style="padding: 1rem;"><p>No outgoing relationships</p></div>';
+      } else {
+        outContainer.innerHTML = outgoing.map(r => {
+          const target = agents.find(a => a.id === r.targetId);
+          return `
+            <div class="relationship-item">
+              <span class="relationship-type">${r.type}</span>
+              <span>→</span>
+              <span class="relationship-target" onclick="selectAgent('${r.targetId}')">${target?.name || 'Unknown'}</span>
+            </div>
+          `;
+        }).join('');
+      }
+      
+      if (incoming.length === 0) {
+        inContainer.innerHTML = '<div class="empty-state" style="padding: 1rem;"><p>No incoming relationships</p></div>';
+      } else {
+        inContainer.innerHTML = incoming.map(r => {
+          const source = agents.find(a => a.id === r.sourceId);
+          return `
+            <div class="relationship-item">
+              <span class="relationship-target" onclick="selectAgent('${r.sourceId}')">${source?.name || 'Unknown'}</span>
+              <span>→</span>
+              <span class="relationship-type">${r.type}</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+    
+    function renderIntegrations(agent) {
+      const container = document.getElementById('integrations-list');
+      const integrations = agent.integrations || [];
+      
+      if (integrations.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🔌</div>
+            <p>No integrations configured</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = integrations.map(int => `
+        <div class="integration-item">
+          <div class="integration-name">
+            <span>${int.icon || '🔌'}</span>
+            <span>${int.name}</span>
+            <span class="integration-badge">${int.type}</span>
+          </div>
+          <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Configure</button>
+        </div>
+      `).join('');
+    }
+    
+    function generateAgentCode(agent) {
+      const code = `# Agent: ${agent.name}
+# Type: ${agent.type}
+# Pattern: ${agent.pattern || 'general'}
+
+## System Prompt
+
+You are ${agent.name}, an AI agent in the Flowgrid platform.
+
+### Purpose
+${agent.purpose || 'No purpose defined'}
+
+### Value Stream
+${agent.valueStream || 'Not specified'}
+
+### Capability Group  
+${agent.capabilityGroup || 'Not specified'}
+
+### Objectives
+${(agent.objectives || ['No objectives defined']).map(o => `- ${o}`).join('\n')}
+
+### Behavior Guidelines
+- Follow the ${agent.pattern || 'general'} pattern
+- Maintain audit trail of all actions
+- Escalate when confidence is low
+- Respect rate limits and quotas
+
+### Integration Points
+${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '- None configured'}
+`;
+      
+      document.getElementById('agent-code').textContent = code;
+    }
+    
+    // ============================================================================
+    // Tab Navigation
+    // ============================================================================
+    
+    function showTab(tabName) {
+      // Update tab buttons
+      document.querySelectorAll('.detail-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+      });
+      
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+    }
+    
+    // ============================================================================
+    // CRUD Operations
+    // ============================================================================
+    
+    async function saveAgent() {
+      if (!selectedAgentId) return;
+      
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
+      
+      // Update from form
+      agent.purpose = document.getElementById('agent-purpose').value;
+      agent.valueStream = document.getElementById('agent-valuestream').value;
+      agent.capabilityGroup = document.getElementById('agent-capgroup').value;
+      agent.pattern = document.getElementById('agent-pattern').value;
+      agent.objectives = document.getElementById('agent-objectives').value.split('\n').filter(o => o.trim());
+      agent.kpis = document.getElementById('agent-kpis').value.split('\n').filter(k => k.trim());
+      
+      try {
+        const response = await fetch(`${API_BASE}/${selectedAgentId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(agent),
+        });
+        
+        if (response.ok) {
+          showNotification('Agent saved successfully', 'success');
+          generateAgentCode(agent);
+        } else {
+          throw new Error('Save failed');
+        }
+      } catch (error) {
+        console.error('[saveAgent] Error:', error);
+        // For demo, just show success
+        showNotification('Agent saved (demo mode)', 'success');
+        generateAgentCode(agent);
+      }
+    }
+    
+    async function deleteAgent() {
+      if (!selectedAgentId) return;
+      
+      if (!confirm('Are you sure you want to delete this agent?')) return;
+      
+      try {
+        await fetch(`${API_BASE}/${selectedAgentId}`, { method: 'DELETE' });
+        agents = agents.filter(a => a.id !== selectedAgentId);
+        relationships = relationships.filter(r => r.sourceId !== selectedAgentId && r.targetId !== selectedAgentId);
+        selectedAgentId = null;
+        renderElementList();
+        initGraph();
+        updateStats();
+        document.getElementById('detail-empty').style.display = 'block';
+        document.getElementById('detail-content').style.display = 'none';
+        showNotification('Agent deleted', 'success');
+      } catch (error) {
+        console.error('[deleteAgent] Error:', error);
+        showNotification('Delete failed (demo mode)', 'error');
+      }
+    }
+    
+    function addIntegration() {
+      showNotification('Integration wizard coming soon!', 'info');
+    }
+    
+    function generateCode() {
+      showNotification('AI code generation coming soon!', 'info');
+    }
+    
+    function copyCode() {
+      const code = document.getElementById('agent-code').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        showNotification('Code copied to clipboard', 'success');
+      });
+    }
+    
+    // ============================================================================
+    // UI Utilities
+    // ============================================================================
+    
+    function updateStats() {
+      document.getElementById('stat-agents').textContent = agents.filter(a => a.type === 'Agent').length;
+      document.getElementById('stat-relationships').textContent = relationships.length;
+    }
+    
+    function showNotification(message, type = 'info') {
+      // Simple notification
+      const colors = {
+        success: '#10b981',
+        error: '#ef4444',
+        info: '#3b82f6',
+      };
+      
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        background: ${colors[type]};
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+    
+    function showError(message) {
+      const container = document.getElementById('element-list');
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">⚠️</div>
+          <p style="color: #ef4444;">${escapeHtml(message)}</p>
+          <button class="btn btn-secondary" style="margin-top: 1rem;" onclick="init()">Retry</button>
+        </div>
+      `;
+    }
+    
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // ============================================================================
+    // Event Listeners
+    // ============================================================================
+    
+    document.getElementById('search-input').addEventListener('input', renderElementList);
+    document.getElementById('type-filter').addEventListener('change', renderElementList);
+    
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', init);
+    
+    // CSS Animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+      @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

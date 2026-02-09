@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Agents - Flowgrid Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .actions {
+            display: flex;
+            gap: 1rem;
+        }
+        .btn {
+            background: #334155;
+            border: 1px solid #475569;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            color: #e2e8f0;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #475569; border-color: #64748b; transform: translateY(-2px); }
+        .btn-primary { background: #3b82f6; border-color: #3b82f6; }
+        .btn-primary:hover { background: #2563eb; border-color: #2563eb; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-left: 4px solid #3b82f6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .stat-label {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        .agent-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s;
+        }
+        .agent-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+        .agent-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .agent-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .type-servicenow { background: #3b82f6; }
+        .type-ai { background: #8b5cf6; }
+        .type-monitor { background: #10b981; }
+        .type-orchestrator { background: #f59e0b; }
+        
+        .agent-desc {
+            opacity: 0.9;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        .agent-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .empty-state {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        .empty-state h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .empty-state p {
+            opacity: 0.8;
+            margin-bottom: 2rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            font-size: 1.2rem;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Agents</h1>
+            <div class="actions">
+                <a href="/" class="btn">← Dashboard</a>
+                <a href="/wizard.html" class="btn btn-primary">+ Create Agents</a>
+            </div>
+        </header>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalAgents">-</div>
+                <div class="stat-label">Total Agents</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalCapabilities">-</div>
+                <div class="stat-label">Capabilities</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalIntegrations">-</div>
+                <div class="stat-label">Integrations</div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading agents...</p>
+        </div>
+
+        <div id="agentsContainer" class="agents-grid" style="display: none;"></div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <h2>No Agents Yet</h2>
+            <p>Start by creating your first agents using the wizard.</p>
+            <a href="/wizard.html" class="btn btn-primary" style="display: inline-block;">🧙‍♂️ Launch Wizard</a>
+        </div>
+    </div>
+
+    <script>
+        async function loadAgents() {
+            try {
+                const response = await fetch('/api/agents');
+                const data = await response.json();
+                
+                const agents = data.data || [];
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                if (agents.length === 0) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    return;
+                }
+                
+                // Update stats
+                document.getElementById('totalAgents').textContent = agents.length;
+                document.getElementById('totalCapabilities').textContent = 
+                    agents.reduce((sum, a) => sum + (a.capabilityCount || 0), 0);
+                document.getElementById('totalIntegrations').textContent = 
+                    agents.reduce((sum, a) => sum + (a.integrationCount || 0), 0);
+                
+                // Render agents
+                const container = document.getElementById('agentsContainer');
+                container.style.display = 'grid';
+                container.innerHTML = agents.map(agent => `
+                    <div class="agent-card">
+                        <div class="agent-header">
+                            <div>
+                                <div class="agent-name">${agent.name}</div>
+                                <span class="agent-type type-${agent.type || 'servicenow'}">${agent.type || 'ServiceNow'}</span>
+                            </div>
+                        </div>
+                        <div class="agent-desc">${agent.description || 'No description'}</div>
+                        <div class="agent-meta">
+                            <div class="meta-item">
+                                <span>🎯</span>
+                                <span>${agent.capabilityCount || 0} capabilities</span>
+                            </div>
+                            <div class="meta-item">
+                                <span>🔌</span>
+                                <span>${agent.integrationCount || 0} integrations</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: #ef4444;">Error loading agents: ${error.message}</p>
+                    <button class="btn" onclick="loadAgents()">Retry</button>
+                `;
+            }
+        }
+        
+        loadAgents();
+    </script>
+</body>
+</html>
