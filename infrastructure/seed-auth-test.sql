@@ -18,7 +18,7 @@ VALUES (
     '22222222-2222-2222-2222-222222222223',
     '11111111-1111-1111-1111-111111111111',
     'user@flowgrid.io',
-    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4kKhGDDXGb4O2O5S', -- user123
+    '$2b$12$5Cth.t2sXb..SebY1MMtLuZJduV6NwpBTrsPP.afJeYWTrzznILia', -- user123
     'Test User',
     'user',
     true,
@@ -32,7 +32,7 @@ VALUES (
     '22222222-2222-2222-2222-222222222224',
     '11111111-1111-1111-1111-111111111111',
     'mfa@flowgrid.io',
-    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4kKhGDDXGb4O2O5S', -- mfa123 (same hash for demo)
+    '$2b$12$/jp9YYRdncuDpE1l6PgxR.12sjMf3LlzKhRFLn/ZpgOpwEGLs2XLG', -- mfa123
     'MFA Test User',
     'user',
     false, -- MFA needs to be set up via API
@@ -41,26 +41,26 @@ VALUES (
     NOW()
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
--- Test User 3: Inactive user (password: inactive123)
+-- Test User 3: Inactive user (password: demo123 - can't login anyway)
 INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, email_verified)
 VALUES (
     '22222222-2222-2222-2222-222222222225',
     '11111111-1111-1111-1111-111111111111',
     'inactive@flowgrid.io',
-    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4kKhGDDXGb4O2O5S',
+    '$2b$12$d0g/46Xtt2FTSW.cgTcq/ur.P9q6qzcfm9l.r21cu3KIP3DoMhtpS', -- demo123
     'Inactive User',
     'user',
     false,
     true
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
--- Test User 4: Locked user (password: locked123)
+-- Test User 4: Locked user (password: demo123 - temporarily locked)
 INSERT INTO users (id, tenant_id, email, password_hash, name, role, failed_login_attempts, locked_until, email_verified)
 VALUES (
     '22222222-2222-2222-2222-222222222226',
     '11111111-1111-1111-1111-111111111111',
     'locked@flowgrid.io',
-    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4kKhGDDXGb4O2O5S',
+    '$2b$12$d0g/46Xtt2FTSW.cgTcq/ur.P9q6qzcfm9l.r21cu3KIP3DoMhtpS', -- demo123
     'Locked User',
     'user',
     5,
@@ -84,7 +84,7 @@ VALUES (
     '22222222-2222-2222-2222-222222222227',
     '11111111-1111-1111-1111-111111111112',
     'admin@testcorp.io',
-    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4kKhGDDXGb4O2O5S', -- admin123
+    '$2b$12$Q7k./JXre75nlt/H2mvN9uCQ1Ru5esQ0duaov4xlEAFhMGppKXlKm', -- admin123
     'TestCorp Admin',
     'admin',
     true,

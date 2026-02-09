@@ -13,13 +13,13 @@ VALUES (
 ) ON CONFLICT (slug) DO NOTHING;
 
 -- Demo User (password: demo123)
--- Password hash is bcrypt of 'demo123' with salt rounds 10
+-- Password hash is bcrypt of 'demo123' with salt rounds 12
 INSERT INTO users (id, tenant_id, email, password_hash, name, role)
 VALUES (
     '22222222-2222-2222-2222-222222222222',
     '11111111-1111-1111-1111-111111111111',
     'demo@flowgrid.io',
-    '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- demo123
+    '$2b$12$d0g/46Xtt2FTSW.cgTcq/ur.P9q6qzcfm9l.r21cu3KIP3DoMhtpS', -- demo123
     'Demo User',
     'admin'
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
