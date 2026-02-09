@@ -14,12 +14,41 @@
     <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/vis-network.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/dist/vis-network.min.css" rel="stylesheet">
     <style>
+        :root {
+            /* Teal/Cyan Network Theme */
+            --bg-primary: #152b2b;
+            --bg-secondary: #1a3636;
+            --bg-card: #1f4040;
+            --bg-card-hover: #254a4a;
+            --bg-input: #122424;
+            
+            --border-default: #2d5555;
+            --border-hover: #3d7070;
+            --border-accent: #5dd5c0;
+            
+            --accent-primary: #5dd5c0;
+            --accent-secondary: #7de4d0;
+            --accent-tertiary: #a0f0e0;
+            --accent-glow: rgba(93, 213, 192, 0.3);
+            --accent-glow-strong: rgba(93, 213, 192, 0.5);
+            
+            --text-primary: #e8f5f3;
+            --text-secondary: #a8c8c4;
+            --text-muted: #7a9a96;
+            
+            --success: #5dd5c0;
+            --warning: #f5a623;
+            --error: #f56565;
+            --info: #60a5fa;
+            --purple: #a78bfa;
+        }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
         }
@@ -39,8 +68,8 @@
             align-items: center;
             margin-bottom: 1.5rem;
             padding: 1rem 1.5rem;
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 12px;
         }
         .header-left {
@@ -50,31 +79,33 @@
         header h1 {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #f1f5f9;
+            color: var(--accent-primary);
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
         .header-subtitle {
-            color: #64748b;
+            color: var(--text-muted);
             font-size: 0.85rem;
             margin-top: 0.25rem;
         }
         .back-btn {
-            background: #334155;
-            border: 1px solid #475569;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-default);
             padding: 0.5rem 1rem;
             border-radius: 6px;
-            color: #e2e8f0;
+            color: var(--text-primary);
             cursor: pointer;
             text-decoration: none;
             font-size: 0.85rem;
             font-weight: 500;
             transition: all 0.2s;
         }
-        .back-btn:hover { background: #475569; }
-        
-        /* State management - removed save/clear buttons */
+        .back-btn:hover { 
+            background: var(--bg-card-hover); 
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
 
         /* Progress Steps - Compact Horizontal */
         .progress-bar {
@@ -83,8 +114,8 @@
             align-items: center;
             margin-bottom: 2rem;
             gap: 0;
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 12px;
             padding: 1rem 1.5rem;
         }
@@ -101,50 +132,51 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background: #334155;
+            background: var(--bg-secondary);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
             font-size: 0.85rem;
-            color: #64748b;
+            color: var(--text-muted);
             transition: all 0.2s;
-            border: 2px solid #334155;
+            border: 2px solid var(--border-default);
         }
         .step.active .step-circle { 
-            background: #3b82f6;
-            border-color: #3b82f6;
-            color: white;
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: var(--bg-primary);
+            box-shadow: 0 0 16px var(--accent-glow);
         }
         .step.completed .step-circle { 
-            background: #1e40af;
-            border-color: #1e40af;
-            color: white;
+            background: var(--bg-card-hover);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
         }
         .step-label {
             margin-top: 0.4rem;
             font-size: 0.7rem;
             font-weight: 500;
-            color: #64748b;
+            color: var(--text-muted);
             text-align: center;
         }
-        .step.active .step-label { color: #3b82f6; }
-        .step.completed .step-label { color: #60a5fa; }
+        .step.active .step-label { color: var(--accent-primary); }
+        .step.completed .step-label { color: var(--accent-secondary); }
         .step-line {
             width: 40px;
             height: 2px;
-            background: #334155;
+            background: var(--border-default);
             margin: 0 0.25rem;
             margin-bottom: 1.25rem;
             border-radius: 1px;
             transition: all 0.2s;
         }
-        .step.completed + .step-line { background: #1e40af; }
+        .step.completed + .step-line { background: var(--accent-primary); }
 
         /* Cards */
         .card {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 12px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
@@ -156,10 +188,10 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            color: #f1f5f9;
+            color: var(--text-primary);
         }
         .card p.subtitle { 
-            color: #94a3b8; 
+            color: var(--text-secondary); 
             margin-bottom: 1.5rem;
             font-size: 0.9rem;
         }
@@ -176,20 +208,23 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: 500;
-            border: 1px solid #334155;
+            border: 1px solid var(--border-default);
             background: transparent;
-            color: #94a3b8;
+            color: var(--text-secondary);
             transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 0.5rem;
             font-size: 0.85rem;
         }
-        .input-tab:hover { border-color: #3b82f6; color: #e2e8f0; }
+        .input-tab:hover { 
+            border-color: var(--accent-primary); 
+            color: var(--text-primary); 
+        }
         .input-tab.active { 
-            background: #3b82f6;
-            border-color: #3b82f6;
-            color: white;
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: var(--bg-primary);
         }
         .input-content { display: none; }
         .input-content.active { display: block; }
@@ -200,51 +235,51 @@
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
-            color: #94a3b8;
+            color: var(--text-secondary);
             font-size: 0.85rem;
         }
         textarea, input[type="text"], input[type="url"], select {
             width: 100%;
             padding: 0.75rem 1rem;
-            border: 1px solid #334155;
+            border: 1px solid var(--border-default);
             border-radius: 8px;
-            background: #0f172a;
-            color: #f1f5f9;
+            background: var(--bg-input);
+            color: var(--text-primary);
             font-size: 0.9rem;
             font-family: inherit;
             transition: all 0.2s;
         }
         textarea:focus, input:focus, select:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px var(--accent-glow);
         }
         textarea { min-height: 140px; resize: vertical; }
-        textarea::placeholder, input::placeholder { color: #475569; }
+        textarea::placeholder, input::placeholder { color: var(--text-muted); }
         .helper-text {
-            color: #64748b;
+            color: var(--text-muted);
             font-size: 0.75rem;
             margin-top: 0.4rem;
         }
 
         /* Upload zone */
         .upload-zone {
-            border: 2px dashed #334155;
+            border: 2px dashed var(--border-default);
             border-radius: 12px;
             padding: 2.5rem;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
-            background: #0f172a;
+            background: var(--bg-input);
             margin-bottom: 1.25rem;
         }
         .upload-zone:hover, .upload-zone.dragover {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.05);
+            border-color: var(--accent-primary);
+            background: rgba(93, 213, 192, 0.05);
         }
         .upload-zone input { display: none; }
         .upload-icon { font-size: 3rem; margin-bottom: 0.75rem; opacity: 0.7; }
-        .upload-zone.has-file { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+        .upload-zone.has-file { border-color: var(--success); background: rgba(93, 213, 192, 0.05); }
         .preview-image {
             max-width: 280px;
             max-height: 180px;
@@ -267,31 +302,40 @@
             gap: 0.5rem;
         }
         .btn-primary {
-            background: #3b82f6;
-            color: white;
+            background: var(--accent-primary);
+            color: var(--bg-primary);
         }
-        .btn-primary:hover { background: #2563eb; }
+        .btn-primary:hover { 
+            background: var(--accent-secondary); 
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
         .btn-primary:disabled {
-            background: #334155;
-            color: #64748b;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
             cursor: not-allowed;
         }
         .btn-success {
-            background: #10b981;
-            color: white;
+            background: var(--success);
+            color: var(--bg-primary);
         }
-        .btn-success:hover { background: #059669; }
+        .btn-success:hover { 
+            background: var(--accent-secondary); 
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
         .btn-warning {
-            background: #f59e0b;
-            color: white;
+            background: var(--warning);
+            color: var(--bg-primary);
         }
-        .btn-warning:hover { background: #d97706; }
+        .btn-warning:hover { background: #e69500; }
         .btn-secondary {
-            background: #334155;
-            color: #e2e8f0;
-            border: 1px solid #475569;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-default);
         }
-        .btn-secondary:hover { background: #475569; }
+        .btn-secondary:hover { 
+            background: var(--bg-card-hover); 
+            border-color: var(--accent-primary);
+        }
         .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.8rem; }
         .btn-group {
             display: flex;
@@ -318,23 +362,23 @@
         }
         .progress-track {
             height: 6px;
-            background: #334155;
+            background: var(--bg-secondary);
             border-radius: 3px;
             overflow: hidden;
         }
         .progress-fill {
             height: 100%;
-            background: #3b82f6;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-tertiary));
             width: 0%;
             transition: width 0.5s ease-out;
             border-radius: 3px;
         }
-        .loading-status { color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem; }
+        .loading-status { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem; }
         .spinner {
             width: 24px;
             height: 24px;
-            border: 3px solid #334155;
-            border-top-color: #3b82f6;
+            border: 3px solid var(--border-default);
+            border-top-color: var(--accent-primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -352,23 +396,27 @@
             margin-bottom: 1.25rem;
         }
         .stat-card {
-            background: #1e293b;
+            background: var(--bg-card);
             padding: 1rem;
             border-radius: 8px;
             text-align: center;
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid var(--accent-primary);
         }
-        .stat-card.green { border-left-color: #10b981; }
-        .stat-card.yellow { border-left-color: #f59e0b; }
-        .stat-card.blue { border-left-color: #3b82f6; }
-        .stat-card.purple { border-left-color: #8b5cf6; }
-        .stat-value { font-size: 1.75rem; font-weight: 700; color: #f1f5f9; }
-        .stat-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card.green { border-left-color: var(--success); }
+        .stat-card.yellow { border-left-color: var(--warning); }
+        .stat-card.blue { border-left-color: var(--info); }
+        .stat-card.purple { border-left-color: var(--purple); }
+        .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--accent-primary); }
+        .stat-card.green .stat-value { color: var(--success); }
+        .stat-card.yellow .stat-value { color: var(--warning); }
+        .stat-card.blue .stat-value { color: var(--info); }
+        .stat-card.purple .stat-value { color: var(--purple); }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Capability tree */
         .capability-tree {
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: var(--bg-input);
+            border: 1px solid var(--border-default);
             border-radius: 8px;
             padding: 1rem;
             max-height: 380px;
@@ -381,26 +429,26 @@
             gap: 0.5rem;
             padding: 0.5rem 0.65rem;
             margin-bottom: 0.4rem;
-            background: #1e293b;
+            background: var(--bg-card);
             border-radius: 6px;
-            border-left: 3px solid #3b82f6;
+            border-left: 3px solid var(--accent-primary);
             transition: all 0.2s;
         }
-        .cap-item:hover { background: #334155; }
-        .cap-item.level-0 { border-left-color: #3b82f6; }
-        .cap-item.level-1 { margin-left: 1.25rem; border-left-color: #8b5cf6; }
-        .cap-item.level-2 { margin-left: 2.5rem; border-left-color: #a855f7; }
+        .cap-item:hover { background: var(--bg-card-hover); }
+        .cap-item.level-0 { border-left-color: var(--accent-primary); }
+        .cap-item.level-1 { margin-left: 1.25rem; border-left-color: var(--purple); }
+        .cap-item.level-2 { margin-left: 2.5rem; border-left-color: #c084fc; }
         .cap-checkbox { 
             width: 16px; 
             height: 16px; 
-            accent-color: #3b82f6; 
+            accent-color: var(--accent-primary); 
             cursor: pointer;
             margin-top: 2px;
         }
         .cap-icon { font-size: 0.85rem; }
         .cap-info { flex: 1; }
-        .cap-name { font-weight: 500; color: #e2e8f0; font-size: 0.85rem; }
-        .cap-desc { font-size: 0.75rem; color: #64748b; margin-top: 0.15rem; }
+        .cap-name { font-weight: 500; color: var(--text-primary); font-size: 0.85rem; cursor: pointer; }
+        .cap-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
         .cap-badge {
             font-size: 0.6rem;
             padding: 0.15rem 0.4rem;
@@ -408,9 +456,9 @@
             text-transform: uppercase;
             font-weight: 600;
         }
-        .cap-badge.high { background: #10b981; color: white; }
-        .cap-badge.medium { background: #f59e0b; color: white; }
-        .cap-badge.low { background: #64748b; color: white; }
+        .cap-badge.high { background: var(--success); color: var(--bg-primary); }
+        .cap-badge.medium { background: var(--warning); color: var(--bg-primary); }
+        .cap-badge.low { background: var(--text-muted); color: var(--bg-primary); }
         
         /* Selection controls */
         .selection-controls {
@@ -419,7 +467,7 @@
             margin-bottom: 0.75rem;
             align-items: center;
         }
-        .selection-count { margin-left: auto; font-size: 0.8rem; color: #10b981; }
+        .selection-count { margin-left: auto; font-size: 0.8rem; color: var(--success); }
 
         /* Agent cards grid */
         .agents-grid {
@@ -431,16 +479,18 @@
             padding-right: 0.5rem;
         }
         .agent-card {
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: var(--bg-input);
+            border: 1px solid var(--border-default);
+            border-left: 4px solid var(--accent-primary);
             border-radius: 10px;
             padding: 1rem;
             cursor: pointer;
             transition: all 0.2s;
         }
         .agent-card:hover { 
-            border-color: #3b82f6;
-            background: #1e293b;
+            border-color: var(--accent-primary);
+            background: var(--bg-card);
+            box-shadow: 0 0 20px var(--accent-glow);
         }
         .agent-header {
             display: flex;
@@ -448,17 +498,17 @@
             align-items: flex-start;
             margin-bottom: 0.5rem;
         }
-        .agent-name { font-weight: 600; color: #10b981; font-size: 0.95rem; }
+        .agent-name { font-weight: 600; color: var(--accent-primary); font-size: 0.95rem; }
         .agent-pattern {
             font-size: 0.65rem;
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-weight: 600;
         }
-        .agent-vs { font-size: 0.7rem; color: #60a5fa; margin-bottom: 0.4rem; }
+        .agent-vs { font-size: 0.7rem; color: var(--info); margin-bottom: 0.4rem; }
         .agent-purpose { 
             font-size: 0.8rem; 
-            color: #94a3b8; 
+            color: var(--text-secondary); 
             line-height: 1.4;
             margin-bottom: 0.6rem;
         }
@@ -471,13 +521,13 @@
             font-size: 0.65rem;
             padding: 0.15rem 0.4rem;
             border-radius: 4px;
-            background: #334155;
-            color: #94a3b8;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
         }
         .agent-edit-hint {
             text-align: right;
             font-size: 0.65rem;
-            color: #475569;
+            color: var(--text-muted);
             margin-top: 0.5rem;
         }
 
@@ -490,10 +540,10 @@
         .pattern-rag { background: #0891b2; color: white; }
         .pattern-reflection { background: #be185d; color: white; }
         .pattern-guardrails { background: #4b5563; color: white; }
-        .pattern-specialist { background: #10b981; color: white; }
+        .pattern-specialist { background: var(--accent-primary); color: var(--bg-primary); }
         .pattern-orchestrator { background: #dc2626; color: white; }
         .pattern-coordinator { background: #f59e0b; color: white; }
-        .pattern-gateway { background: #3b82f6; color: white; }
+        .pattern-gateway { background: var(--info); color: white; }
         .pattern-monitor { background: #6366f1; color: white; }
         .pattern-executor { background: #ef4444; color: white; }
         .pattern-analyzer { background: #14b8a6; color: white; }
@@ -508,8 +558,8 @@
             justify-content: center;
             margin-bottom: 1.25rem;
             padding: 0.75rem;
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: var(--bg-input);
+            border: 1px solid var(--border-default);
             border-radius: 8px;
         }
         .legend-item {
@@ -521,8 +571,8 @@
 
         /* Process design cards */
         .process-card {
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: var(--bg-input);
+            border: 1px solid var(--border-default);
             border-radius: 10px;
             padding: 1rem;
             margin-bottom: 0.75rem;
@@ -533,14 +583,14 @@
             align-items: center;
             margin-bottom: 0.75rem;
         }
-        .process-title { color: #60a5fa; font-weight: 600; font-size: 0.95rem; }
+        .process-title { color: var(--accent-primary); font-weight: 600; font-size: 0.95rem; }
         .process-field { margin-bottom: 0.6rem; }
-        .process-field label { font-size: 0.7rem; color: #64748b; margin-bottom: 0.25rem; }
+        .process-field label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.25rem; }
         .process-field textarea {
             font-size: 0.8rem;
             min-height: 70px;
-            background: #1e293b;
-            border-color: #334155;
+            background: var(--bg-card);
+            border-color: var(--border-default);
         }
 
         /* Interactions tabs */
@@ -557,22 +607,22 @@
             cursor: pointer;
             font-weight: 500;
             font-size: 0.8rem;
-            background: #334155;
-            color: #94a3b8;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
             transition: all 0.2s;
         }
-        .int-tab.active { background: #ec4899; color: white; }
-        .int-tab:hover:not(.active) { background: #475569; }
+        .int-tab.active { background: var(--accent-primary); color: var(--bg-primary); }
+        .int-tab:hover:not(.active) { background: var(--bg-card-hover); }
         .int-content { display: none; }
         .int-content.active { display: block; }
 
         /* Relationship items */
         .rel-item {
-            background: #1e293b;
+            background: var(--bg-card);
             border-radius: 6px;
             padding: 0.6rem;
             margin-bottom: 0.4rem;
-            border-left: 3px solid #ec4899;
+            border-left: 3px solid var(--accent-primary);
         }
         .rel-agents {
             display: flex;
@@ -581,41 +631,41 @@
             margin-bottom: 0.25rem;
         }
         .rel-agent { font-size: 0.8rem; font-weight: 500; }
-        .rel-agent.source { color: #10b981; }
-        .rel-agent.target { color: #60a5fa; }
-        .rel-arrow { color: #475569; }
-        .rel-type { font-size: 0.7rem; color: #f59e0b; margin-bottom: 0.15rem; }
-        .rel-desc { font-size: 0.75rem; color: #64748b; }
+        .rel-agent.source { color: var(--success); }
+        .rel-agent.target { color: var(--info); }
+        .rel-arrow { color: var(--text-muted); }
+        .rel-type { font-size: 0.7rem; color: var(--warning); margin-bottom: 0.15rem; }
+        .rel-desc { font-size: 0.75rem; color: var(--text-muted); }
 
         /* Integration items */
         .int-item {
-            background: #1e293b;
+            background: var(--bg-card);
             border-radius: 6px;
             padding: 0.6rem;
             margin-bottom: 0.4rem;
-            border-left: 3px solid #8b5cf6;
+            border-left: 3px solid var(--purple);
         }
-        .int-name { font-weight: 600; color: #8b5cf6; font-size: 0.85rem; }
-        .int-meta { font-size: 0.7rem; color: #64748b; }
-        .int-agent { font-size: 0.7rem; color: #10b981; }
+        .int-name { font-weight: 600; color: var(--purple); font-size: 0.85rem; }
+        .int-meta { font-size: 0.7rem; color: var(--text-muted); }
+        .int-agent { font-size: 0.7rem; color: var(--success); }
 
         /* Message items */
         .msg-item {
-            background: #1e293b;
+            background: var(--bg-card);
             border-radius: 6px;
             padding: 0.6rem;
             margin-bottom: 0.4rem;
-            border-left: 3px solid #f59e0b;
+            border-left: 3px solid var(--warning);
         }
-        .msg-name { font-weight: 600; color: #f59e0b; font-size: 0.85rem; }
-        .msg-desc { font-size: 0.75rem; color: #64748b; }
+        .msg-name { font-weight: 600; color: var(--warning); font-size: 0.85rem; }
+        .msg-desc { font-size: 0.75rem; color: var(--text-muted); }
 
         /* Summary section */
         .summary-agents {
             max-height: 280px;
             overflow-y: auto;
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: var(--bg-input);
+            border: 1px solid var(--border-default);
             border-radius: 8px;
             padding: 0.75rem;
             margin-bottom: 1.25rem;
@@ -625,18 +675,18 @@
             justify-content: space-between;
             align-items: center;
             padding: 0.4rem 0.6rem;
-            background: #1e293b;
+            background: var(--bg-card);
             border-radius: 6px;
             margin-bottom: 0.4rem;
         }
-        .summary-agent-name { font-weight: 500; color: #e2e8f0; font-size: 0.85rem; }
-        .summary-agent-caps { font-size: 0.7rem; color: #64748b; }
+        .summary-agent-name { font-weight: 500; color: var(--text-primary); font-size: 0.85rem; }
+        .summary-agent-caps { font-size: 0.7rem; color: var(--text-muted); }
 
         /* Graph container */
         .graph-container {
             height: 280px;
-            background: #0f172a;
-            border: 1px solid #334155;
+            background: var(--bg-input);
+            border: 1px solid var(--border-default);
             border-radius: 8px;
             margin-bottom: 1rem;
         }
@@ -658,8 +708,8 @@
         .modal-content {
             max-width: 680px;
             margin: 0 auto;
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
             border-radius: 12px;
         }
         .modal-header {
@@ -667,19 +717,19 @@
             justify-content: space-between;
             align-items: center;
             padding: 1rem 1.25rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--border-default);
         }
-        .modal-title { color: #10b981; font-size: 1rem; font-weight: 600; }
+        .modal-title { color: var(--accent-primary); font-size: 1rem; font-weight: 600; }
         .modal-close {
             background: none;
             border: none;
-            color: #64748b;
+            color: var(--text-muted);
             font-size: 1.25rem;
             cursor: pointer;
             padding: 0.5rem;
             transition: color 0.2s;
         }
-        .modal-close:hover { color: #ef4444; }
+        .modal-close:hover { color: var(--error); }
         .modal-body {
             padding: 1.25rem;
             max-height: 65vh;
@@ -689,11 +739,11 @@
             margin-bottom: 1.25rem;
         }
         .modal-section h4 {
-            color: #60a5fa;
+            color: var(--accent-secondary);
             font-size: 0.85rem;
             margin-bottom: 0.6rem;
             padding-bottom: 0.4rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--border-default);
         }
         .form-row {
             display: grid;
@@ -701,7 +751,7 @@
             gap: 0.6rem;
         }
         .form-group { margin-bottom: 0.6rem; }
-        .form-group label { font-size: 0.7rem; color: #64748b; margin-bottom: 0.2rem; }
+        .form-group label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.2rem; }
         .form-group input, .form-group select, .form-group textarea {
             font-size: 0.85rem;
             padding: 0.5rem 0.75rem;
@@ -711,14 +761,14 @@
             justify-content: flex-end;
             gap: 0.6rem;
             padding: 1rem 1.25rem;
-            border-top: 1px solid #334155;
+            border-top: 1px solid var(--border-default);
         }
 
         /* Error display */
         .error-box {
             display: none;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(245, 101, 101, 0.1);
+            border: 1px solid rgba(245, 101, 101, 0.3);
             padding: 0.75rem;
             border-radius: 8px;
             margin-bottom: 1rem;
@@ -733,14 +783,14 @@
             padding: 2.5rem;
         }
         .success-icon { font-size: 4rem; margin-bottom: 0.75rem; }
-        .success-title { font-size: 1.35rem; margin-bottom: 0.4rem; color: #10b981; }
-        .success-subtitle { color: #94a3b8; margin-bottom: 1.5rem; font-size: 0.9rem; }
+        .success-title { font-size: 1.35rem; margin-bottom: 0.4rem; color: var(--accent-primary); }
+        .success-subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
 
         /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #1e293b; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--accent-primary); border-radius: 3px; opacity: 0.5; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-secondary); }
 
         /* Hidden utility */
         .hidden { display: none !important; }
@@ -832,7 +882,7 @@
                         <p class="helper-text">The more detail you provide, the better the capability map. Describe processes, tools, volumes, and automatable tasks.</p>
                     </div>
                     <div class="input-group">
-                        <label for="websiteUrl">🌐 Corporate Website <span style="color: #64748b; font-weight: 400;">(optional)</span></label>
+                        <label for="websiteUrl">🌐 Corporate Website <span style="color: var(--text-muted); font-weight: 400;">(optional)</span></label>
                         <input type="url" id="websiteUrl" placeholder="https://www.company.com">
                         <p class="helper-text">The website will be analyzed for additional context about products, services, and company structure.</p>
                     </div>
@@ -847,16 +897,16 @@
                         <input type="file" id="xmlFileInput" accept=".xml">
                         <div class="upload-icon">📄</div>
                         <p><strong>Drop an XML file here</strong></p>
-                        <p style="color: #64748b; font-size: 0.85rem;">or click to browse</p>
-                        <p style="font-size: 0.75rem; color: #475569; margin-top: 0.75rem;">Supported: Archi export (.xml), Open Group ArchiMate (.xml)</p>
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">or click to browse</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem;">Supported: Archi export (.xml), Open Group ArchiMate (.xml)</p>
                     </div>
                 </div>
 
                 <!-- Image Upload -->
                 <div id="input-image" class="input-content">
-                    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 0.6rem; margin-bottom: 1.25rem; text-align: center;">
-                        <span style="color: #64748b; font-size: 0.75rem;">
-                            🔍 GPT-4o Vision → 🧠 Claude Analysis = <span style="color: #10b981;">Hybrid AI</span>
+                    <div style="background: var(--bg-input); border: 1px solid var(--border-default); border-radius: 6px; padding: 0.6rem; margin-bottom: 1.25rem; text-align: center;">
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">
+                            🔍 GPT-4o Vision → 🧠 Claude Analysis = <span style="color: var(--accent-primary);">Hybrid AI</span>
                         </span>
                     </div>
                     
@@ -865,12 +915,12 @@
                         <div id="imageUploadPrompt">
                             <div class="upload-icon">🖼️</div>
                             <p><strong>Drop an image here</strong></p>
-                            <p style="color: #64748b; font-size: 0.85rem;">or click to browse</p>
-                            <p style="font-size: 0.75rem; color: #475569; margin-top: 0.75rem;">JPG, PNG, GIF, WebP (max 20MB)</p>
+                            <p style="color: var(--text-muted); font-size: 0.85rem;">or click to browse</p>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem;">JPG, PNG, GIF, WebP (max 20MB)</p>
                         </div>
                         <div id="imagePreviewContainer" style="display: none;">
                             <img id="imagePreview" class="preview-image" alt="Preview">
-                            <p id="imagePreviewName" style="color: #94a3b8; margin-top: 0.5rem; font-size: 0.8rem;"></p>
+                            <p id="imagePreviewName" style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 0.8rem;"></p>
                             <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); clearImagePreview();" style="margin-top: 0.5rem;">✕ Remove</button>
                         </div>
                     </div>
@@ -881,7 +931,7 @@
                         </button>
                         <div id="advancedContent" style="display: none; margin-top: 0.6rem;">
                             <div class="input-group">
-                                <label>📝 Custom Instructions <span style="color: #64748b; font-weight: 400;">(optional)</span></label>
+                                <label>📝 Custom Instructions <span style="color: var(--text-muted); font-weight: 400;">(optional)</span></label>
                                 <textarea id="customPromptInput" rows="3" placeholder="e.g., This is an IT4IT capability model showing 5 value streams. Focus on the R2D and S2P streams..."></textarea>
                                 <p class="helper-text">💡 Describe what type of model this is, what the colors mean, or which areas to focus on.</p>
                             </div>
@@ -1066,14 +1116,14 @@
                     </div>
 
                     <!-- Content areas -->
-                    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 0.75rem; max-height: 350px; overflow-y: auto; margin-bottom: 0.75rem;">
+                    <div style="background: var(--bg-input); border: 1px solid var(--border-default); border-radius: 8px; padding: 0.75rem; max-height: 350px; overflow-y: auto; margin-bottom: 0.75rem;">
                         <div id="intRelationships" class="int-content active"></div>
                         <div id="intIntegrations" class="int-content"></div>
                         <div id="intMessages" class="int-content"></div>
                     </div>
 
                     <!-- Graph visualization -->
-                    <h3 style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">📊 Interaction Graph</h3>
+                    <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">📊 Interaction Graph</h3>
                     <div class="graph-container" id="interactionGraph"></div>
 
                     <div class="btn-group">
@@ -1116,7 +1166,7 @@
                 </div>
 
                 <!-- Agent preview -->
-                <h3 style="font-size: 0.9rem; color: #64748b; margin-bottom: 0.6rem;">Agent Overview</h3>
+                <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.6rem;">Agent Overview</h3>
                 <div class="summary-agents" id="summaryAgentList">
                     <!-- Agent list rendered here -->
                 </div>
@@ -1320,7 +1370,7 @@
         ];
         
         // ==========================================
-        // STATE PERSISTENCE (Silent auto-save, no UI buttons)
+        // STATE PERSISTENCE
         // ==========================================
         function saveState() {
             const state = {
@@ -1331,7 +1381,6 @@
                 savedAt: new Date().toISOString()
             };
             localStorage.setItem(STATE_KEY, JSON.stringify(state));
-            // Silent save - no UI feedback
         }
         
         function loadState() {
@@ -1339,7 +1388,6 @@
                 const saved = localStorage.getItem(STATE_KEY);
                 if (saved) {
                     const state = JSON.parse(saved);
-                    // Check if not too old (24h)
                     const savedAt = new Date(state.savedAt);
                     if ((Date.now() - savedAt.getTime()) < 24 * 60 * 60 * 1000) {
                         return state;
@@ -1383,7 +1431,6 @@
         // NAVIGATION
         // ==========================================
         function navigateToStep(step) {
-            // Allow navigation only to completed steps or next step
             if (step <= currentStep || (analysisResult && step <= 6)) {
                 goToStep(step);
             }
@@ -1392,7 +1439,6 @@
         function goToStep(step) {
             currentStep = step;
             
-            // Update progress bar
             document.querySelectorAll('.step').forEach(s => {
                 const stepNum = parseInt(s.dataset.step);
                 const circle = s.querySelector('.step-circle');
@@ -1409,12 +1455,10 @@
                 }
             });
             
-            // Show/hide sections
             document.querySelectorAll('.step-content').forEach(s => s.classList.add('hidden'));
             const stepEl = document.getElementById(`step${step}`);
             if (stepEl) stepEl.classList.remove('hidden');
             
-            // Render content for specific steps
             if (step === 2 && analysisResult) {
                 showStep2Results();
             } else if (step === 3 && analysisResult) {
@@ -1443,7 +1487,6 @@
             document.getElementById(`input-${method}`).classList.add('active');
         }
         
-        // Text Analysis
         async function analyzeText() {
             const description = document.getElementById('descriptionInput').value.trim();
             if (description.length < 20) {
@@ -1487,7 +1530,6 @@
             }
         }
         
-        // Image handling
         function clearImagePreview() {
             selectedImageFile = null;
             document.getElementById('imagePreviewContainer').style.display = 'none';
@@ -1573,14 +1615,12 @@
             }
         }
         
-        // XML handling
         async function processXmlUpload(file) {
             hideError('step1Error');
             showLoading('step1', true);
             updateProgress('step1', 30, 'Parsing XML file...');
             
             try {
-                // For now, show a message that XML processing needs server-side implementation
                 await delay(1000);
                 throw new Error('XML upload requires ArchiMate parser on server. Use Text or Image input instead.');
                 
@@ -1608,11 +1648,10 @@
         function renderCapabilityTree(capabilities) {
             const container = document.getElementById('capabilityTree');
             if (!capabilities || capabilities.length === 0) {
-                container.innerHTML = '<p style="color: #64748b;">No capabilities found</p>';
+                container.innerHTML = '<p style="color: var(--text-muted);">No capabilities found</p>';
                 return;
             }
             
-            // Group by parent for hierarchy
             const roots = capabilities.filter(c => !c.parentName);
             const byParent = {};
             capabilities.forEach(c => {
@@ -1622,7 +1661,6 @@
                 }
             });
             
-            // If no hierarchy, render flat
             if (roots.length === 0) {
                 container.innerHTML = capabilities.map(cap => renderCapItem(cap, 0)).join('');
             } else {
@@ -1676,7 +1714,7 @@
         function updateSelectedCount() {
             const el = document.getElementById('selectedCount');
             el.textContent = `${selectedCapabilities.size} selected`;
-            el.style.color = selectedCapabilities.size > 0 ? '#10b981' : '#ef4444';
+            el.style.color = selectedCapabilities.size > 0 ? 'var(--success)' : 'var(--error)';
         }
         
         // ==========================================
@@ -1694,7 +1732,6 @@
             document.getElementById('step3Loading').classList.remove('active');
             document.getElementById('step3Results').classList.add('active');
             
-            // Filter agents to only those with selected capabilities
             const selected = Array.from(selectedCapabilities);
             let agents = analysisResult?.agents || [];
             
@@ -1711,13 +1748,11 @@
             analysisResult.filteredAgents = agents;
             renderAgentCards(agents);
             
-            // Update agent count
             const countEl = document.getElementById('agentCount');
             if (countEl) {
                 countEl.textContent = agents.length;
             }
             
-            // Also update subtitle text
             const subtitle = document.querySelector('#step3Results .subtitle');
             if (subtitle && agents.length > 0) {
                 subtitle.innerHTML = `<span id="agentCount">${agents.length}</span> agents suggested. Select the appropriate <strong>Agentic Pattern</strong> per agent.`;
@@ -1749,10 +1784,9 @@
         
         function getPatternInfo(pattern) {
             const p = agenticPatterns.find(ap => ap.id === pattern || ap.name === pattern);
-            return p || { emoji: '🤖', name: pattern || 'Specialist', color: '#10b981' };
+            return p || { emoji: '🤖', name: pattern || 'Specialist', color: '#5dd5c0' };
         }
         
-        // Agent Modal
         function openAgentModal(agentId) {
             const agents = analysisResult?.filteredAgents || analysisResult?.agents || [];
             const agent = agents.find(a => a.id === agentId);
@@ -1804,7 +1838,6 @@
             agent.outputs = document.getElementById('modalAgentOutputs').value.split(',').map(s => s.trim()).filter(s => s);
             agent.escalationPath = document.getElementById('modalAgentEscalation').value;
             
-            // Also update in main agents array
             const mainAgents = analysisResult?.agents || [];
             const mainAgent = mainAgents.find(a => a.id === agentId);
             if (mainAgent) Object.assign(mainAgent, agent);
@@ -1867,7 +1900,6 @@
             errorsEl.value = '';
             
             try {
-                // Call wizard service to generate process flow
                 const response = await fetch('/api/wizard/generate-process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1882,7 +1914,6 @@
                 const data = await response.json();
                 const reply = `PROCESS STEPS:\n${data.processSteps}\n\nDECISION POINTS:\n${data.decisionPoints}\n\nERROR HANDLING:\n${data.errorHandling}`;
                 
-                // Parse the response
                 const stepsMatch = reply.match(/PROCESS STEPS:([\s\S]*?)(?=DECISION POINTS:|$)/i);
                 const decisionsMatch = reply.match(/DECISION POINTS:([\s\S]*?)(?=ERROR HANDLING:|$)/i);
                 const errorsMatch = reply.match(/ERROR HANDLING:([\s\S]*?)$/i);
@@ -1891,7 +1922,6 @@
                 decisionsEl.value = decisionsMatch ? decisionsMatch[1].trim() : '';
                 errorsEl.value = errorsMatch ? errorsMatch[1].trim() : '';
                 
-                // Save to agent
                 agent.processSteps = stepsEl.value;
                 agent.decisionPoints = decisionsEl.value;
                 agent.errorHandling = errorsEl.value;
@@ -1953,7 +1983,6 @@
                 return agent ? agent.name : id;
             };
             
-            // Relationships
             const relContainer = document.getElementById('intRelationships');
             relContainer.innerHTML = relationships.length ? relationships.map(r => `
                 <div class="rel-item">
@@ -1965,9 +1994,8 @@
                     <div class="rel-type">📨 ${r.messageType || 'message'}</div>
                     <div class="rel-desc">${escapeHtml(r.description || 'No description')}</div>
                 </div>
-            `).join('') : '<p style="color: #64748b;">No relationships defined</p>';
+            `).join('') : '<p style="color: var(--text-muted);">No relationships defined</p>';
             
-            // Integrations
             const intContainer = document.getElementById('intIntegrations');
             intContainer.innerHTML = integrations.length ? integrations.map(i => `
                 <div class="int-item">
@@ -1975,9 +2003,8 @@
                     <div class="int-meta">${i.type} • ${i.system} • ${i.direction}</div>
                     <div class="int-agent">Agent: ${escapeHtml(getAgentName(i.agentId))}</div>
                 </div>
-            `).join('') : '<p style="color: #64748b;">No integrations defined</p>';
+            `).join('') : '<p style="color: var(--text-muted);">No integrations defined</p>';
             
-            // Messages
             const msgContainer = document.getElementById('intMessages');
             const messageTypes = analysisResult?.messageTypes || [];
             const relMsgTypes = [...new Set(relationships.map(r => r.messageType).filter(Boolean))];
@@ -1988,7 +2015,7 @@
                     <div class="msg-name">📨 ${escapeHtml(m.name)}</div>
                     <div class="msg-desc">${escapeHtml(m.description || '')}</div>
                 </div>
-            `).join('') : '<p style="color: #64748b;">No message types defined</p>';
+            `).join('') : '<p style="color: var(--text-muted);">No message types defined</p>';
             
             document.getElementById('relCount').textContent = relationships.length;
             document.getElementById('intCount').textContent = integrations.length;
@@ -2000,23 +2027,23 @@
             const relationships = analysisResult?.agentRelationships || [];
             
             if (agents.length === 0) {
-                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #64748b;">No agents to visualize</p>';
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-muted);">No agents to visualize</p>';
                 return;
             }
             
             const nodes = agents.map((a, i) => ({
                 id: a.id,
                 label: a.name,
-                color: { background: '#3b82f6', border: '#60a5fa' },
-                font: { color: '#f1f5f9' }
+                color: { background: '#1f4040', border: '#5dd5c0' },
+                font: { color: '#e8f5f3' }
             }));
             
             const edges = relationships.map(r => ({
                 from: r.sourceAgentId || r.from,
                 to: r.targetAgentId || r.to,
                 label: r.messageType || '',
-                color: { color: '#ec4899' },
-                font: { color: '#f1f5f9', size: 10 },
+                color: { color: '#5dd5c0' },
+                font: { color: '#e8f5f3', size: 10 },
                 arrows: 'to'
             }));
             
@@ -2033,7 +2060,6 @@
         }
         
         async function regenerateInteractions() {
-            // Use AI to suggest new interactions
             try {
                 const agents = analysisResult?.filteredAgents || analysisResult?.agents || [];
                 
@@ -2046,7 +2072,6 @@
                 const data = await response.json();
                 
                 if (data.suggestions && data.suggestions.length > 0) {
-                    // Convert suggestions to relationships
                     const newRelationships = data.suggestions.map(s => {
                         const sourceAgent = agents.find(a => a.name === s.sourceAgent);
                         const targetAgent = agents.find(a => a.name === s.targetAgent);
@@ -2123,7 +2148,6 @@
                 
                 document.getElementById('step6Loading').classList.remove('active');
                 
-                // Show success
                 document.getElementById('successMessage').textContent = 
                     `Created ${data.created.agents} agents with ${data.created.interactions} interactions and ${data.created.integrations} integrations.`;
                 
@@ -2144,7 +2168,6 @@
                 
                 clearState();
                 
-                // Show step 7 (success)
                 document.querySelectorAll('.step-content').forEach(s => s.classList.add('hidden'));
                 document.getElementById('step7').classList.remove('hidden');
                 
@@ -2203,12 +2226,10 @@
         // EVENT LISTENERS
         // ==========================================
         
-        // Image file input
         document.getElementById('imageFileInput').addEventListener('change', (e) => {
             if (e.target.files[0]) showImagePreview(e.target.files[0]);
         });
         
-        // Image drop zone
         const imageDropZone = document.getElementById('imageDropZone');
         imageDropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -2225,12 +2246,10 @@
             }
         });
         
-        // XML file input
         document.getElementById('xmlFileInput').addEventListener('change', (e) => {
             if (e.target.files[0]) processXmlUpload(e.target.files[0]);
         });
         
-        // XML drop zone
         const xmlDropZone = document.getElementById('xmlDropZone');
         xmlDropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -2247,12 +2266,10 @@
             }
         });
         
-        // Close modal on escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeAgentModal();
         });
         
-        // Close modal on backdrop click
         document.getElementById('agentModal').addEventListener('click', (e) => {
             if (e.target.id === 'agentModal') closeAgentModal();
         });
