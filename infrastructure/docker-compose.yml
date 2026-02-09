@@ -158,6 +158,35 @@ services:
     networks:
       - flowgrid-network
 
+  wizard-service:
+    build:
+      context: ../services/wizard-service
+      dockerfile: Dockerfile
+    container_name: flowgrid-wizard-service
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3005
+      DATABASE_URL: postgres://flowgrid:${DB_PASSWORD:-flowgrid_dev_password}@postgres:5432/flowgrid
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - flowgrid-network
+
   # =============================================================================
   # API Gateway
   # =============================================================================
