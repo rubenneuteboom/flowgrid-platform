@@ -5,26 +5,19 @@
 
 FROM nginx:1.25-alpine
 
-# Install curl for health checks and gettext for envsubst
-RUN apk add --no-cache curl gettext
+# Install curl for health checks
+RUN apk add --no-cache curl
 
-# Copy configuration templates
+# Copy configuration
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY conf.d/default.conf /etc/nginx/templates/default.conf.template
-COPY conf.d/routes.conf /etc/nginx/templates/routes.conf.template
+COPY conf.d/azure.conf /etc/nginx/conf.d/default.conf
+COPY conf.d/routes.conf /etc/nginx/conf.d/routes.conf
 
 # Create public directory
 RUN mkdir -p /usr/share/nginx/html
 
-# Copy public files if they exist
+# Copy public files
 COPY public/ /usr/share/nginx/html/
-
-# Create startup script that processes env vars
-RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
-    echo 'envsubst "\$AGENT_SERVICE_HOST \$AGENT_SERVICE_PORT \$AUTH_SERVICE_HOST \$AUTH_SERVICE_PORT \$DESIGN_SERVICE_HOST \$DESIGN_SERVICE_PORT \$INTEGRATION_SERVICE_HOST \$INTEGRATION_SERVICE_PORT \$WIZARD_SERVICE_HOST \$WIZARD_SERVICE_PORT \$DESIGN_MODULE_HOST \$DESIGN_MODULE_PORT" < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
-    echo 'cp /etc/nginx/templates/routes.conf.template /etc/nginx/conf.d/routes.conf' >> /docker-entrypoint.sh && \
-    echo 'exec nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
-    chmod +x /docker-entrypoint.sh
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
@@ -33,5 +26,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # Expose port
 EXPOSE 80
 
-# Use startup script
-CMD ["/docker-entrypoint.sh"]
+# Run nginx
+CMD ["nginx", "-g", "daemon off;"]

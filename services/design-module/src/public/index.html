@@ -16,6 +16,57 @@
   <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17/dist/assets/bpmn-js.css">
   <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17/dist/assets/bpmn-font/css/bpmn-embedded.css">
   <style>
+    /* BPMN Custom Color Scheme - Light Blue */
+    .bjs-container .djs-visual > * {
+      stroke: #60a5fa !important;
+    }
+    .bjs-container .djs-visual text {
+      fill: #60a5fa !important;
+    }
+    .bjs-container .djs-visual path,
+    .bjs-container .djs-visual rect,
+    .bjs-container .djs-visual circle,
+    .bjs-container .djs-visual polygon {
+      stroke: #60a5fa !important;
+      fill: transparent !important;
+    }
+    .bjs-container .djs-visual .djs-hit {
+      stroke: transparent !important;
+      fill: transparent !important;
+    }
+    .bjs-container .djs-connection .djs-visual path {
+      stroke: #60a5fa !important;
+      marker-end: url(#sequenceflow-end-white-hsl-225-10-15);
+    }
+    /* Markers/arrows */
+    .bjs-container marker path {
+      fill: #60a5fa !important;
+      stroke: #60a5fa !important;
+    }
+    /* Selection and hover */
+    .bjs-container .djs-outline {
+      stroke: #f59e0b !important;
+    }
+    /* Palette icons */
+    .bjs-container .djs-palette .entry:hover {
+      color: #60a5fa;
+    }
+    /* Canvas background */
+    .bjs-container {
+      background: #1e293b !important;
+    }
+    .bjs-container .djs-palette {
+      background: #0f172a !important;
+      border-color: #334155 !important;
+    }
+    .bjs-container .djs-palette .entry {
+      color: #94a3b8 !important;
+    }
+    .bjs-container .djs-palette .entry:hover {
+      color: #60a5fa !important;
+    }
+  </style>
+  <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body { 
@@ -1587,10 +1638,34 @@
     function selectAgent(id) {
       selectedAgentId = id;
       const agent = agents.find(a => a.id === id);
+      const detailPanel = document.getElementById('detail-panel');
       
       if (!agent) {
         document.getElementById('detail-empty').style.display = 'block';
         document.getElementById('detail-content').style.display = 'none';
+        return;
+      }
+      
+      // Only show right panel for Agent elements
+      const isAgent = agent.elementType === 'Agent' || !agent.elementType;
+      if (detailPanel) {
+        detailPanel.style.display = isAgent ? 'flex' : 'none';
+      }
+      
+      // Update workspace panels regardless of element type
+      updateWorkspacePanels(agent);
+      renderRelationships(id);
+      
+      // Highlight in list
+      renderElementList();
+      
+      // Focus in graph
+      if (network) {
+        network.selectNodes([id]);
+      }
+      
+      // If not an Agent, don't populate the right panel
+      if (!isAgent) {
         return;
       }
       
@@ -1606,18 +1681,10 @@
       const valuestreamEl = document.getElementById('agent-valuestream');
       if (valuestreamEl) valuestreamEl.value = agent.valueStream || '';
       
-      // Show/hide Process Info section
+      // Hide Process Info section (only for Process elements, which don't show here anymore)
       const processSection = document.getElementById('process-info-section');
       if (processSection) {
-        if (agent.elementType === 'Process') {
-          processSection.style.display = 'block';
-          const config = agent.config || {};
-          document.getElementById('agent-process-steps').value = config.processSteps || 'No process steps defined';
-          document.getElementById('agent-decision-points').value = config.decisionPoints || 'No decision points defined';
-          document.getElementById('agent-error-handling').value = config.errorHandling || 'No error handling defined';
-        } else {
-          processSection.style.display = 'none';
-        }
+        processSection.style.display = 'none';
       }
       
       // Update Design tab
@@ -1627,7 +1694,6 @@
       document.getElementById('agent-kpis').value = (agent.kpis || []).join('\n');
       
       // Update Configure tab
-      renderRelationships(id);
       renderInteractions(id);
       renderIntegrations(agent);
 
@@ -1639,17 +1705,6 @@
 
       // Update Code tab
       generateAgentCode(agent);
-
-      // Update workspace panels
-      updateWorkspacePanels(agent);
-
-      // Highlight in list
-      renderElementList();
-
-      // Focus in graph
-      if (network) {
-        network.selectNodes([id]);
-      }
     }
     
     function getTypeIcon(type) {
