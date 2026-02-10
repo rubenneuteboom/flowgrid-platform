@@ -882,20 +882,45 @@
 
       <!-- BPMN Tab -->
       <section class="workspace-panel" id="workspace-bpmn">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <div>
-            <h3 style="color: #f59e0b; margin-bottom: 0.25rem;">📊 BPMN Process View</h3>
-            <p style="color: #64748b; font-size: 0.85rem;">Auto-generated BPMN diagram from your agent network</p>
+        <div style="display: grid; grid-template-columns: 280px 1fr; gap: 1rem; height: calc(100vh - 200px);">
+          <!-- Process List -->
+          <div style="background: #1e293b; border-radius: 8px; padding: 1rem; overflow-y: auto;">
+            <h4 style="color: #f59e0b; margin-bottom: 0.75rem;">🔄 Processes</h4>
+            <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">Select a process to view/edit its BPMN diagram.</p>
+            <div id="bpmn-process-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <!-- Populated by JS -->
+            </div>
           </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-primary" onclick="generateBPMN()" style="font-size: 0.85rem;">🔄 Regenerate</button>
-            <button class="btn btn-success" onclick="exportBPMN()" style="font-size: 0.85rem;">📥 Export</button>
+          
+          <!-- BPMN Canvas Area -->
+          <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div>
+                <h3 style="color: #f59e0b; margin-bottom: 0.25rem;" id="bpmn-process-title">📊 Select a Process</h3>
+                <p style="color: #64748b; font-size: 0.85rem;" id="bpmn-process-desc">Choose a process from the list to view its workflow</p>
+              </div>
+              <div style="display: flex; gap: 0.5rem;" id="bpmn-actions" style="display: none;">
+                <button class="btn btn-primary" onclick="regenerateProcessBPMN()" style="font-size: 0.85rem;">🔄 Regenerate</button>
+                <button class="btn btn-success" onclick="exportProcessBPMN()" style="font-size: 0.85rem;">📥 Export</button>
+              </div>
+            </div>
+            
+            <!-- Empty state -->
+            <div id="bpmn-empty-state" style="flex: 1; display: flex; align-items: center; justify-content: center; background: #1e293b; border: 1px dashed #334155; border-radius: 8px;">
+              <div style="text-align: center; color: #64748b;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+                <p>Select a process from the list to view its BPMN diagram</p>
+              </div>
+            </div>
+            
+            <!-- BPMN Canvas -->
+            <div id="bpmn-canvas-main" style="flex: 1; display: none; background: #1e293b; border: 1px solid #334155; border-radius: 8px;"></div>
+            
+            <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+              <small style="color: #64748b;">Powered by <a href="https://bpmn.io" target="_blank" style="color: #60a5fa;">bpmn.io</a></small>
+              <small style="color: #64748b;" id="bpmn-stats"></small>
+            </div>
           </div>
-        </div>
-        <div id="bpmn-canvas-main" style="width: 100%; height: calc(100vh - 280px); min-height: 400px; background: #1e293b; border: 1px solid #334155; border-radius: 8px;"></div>
-        <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-          <small style="color: #64748b;">Powered by <a href="https://bpmn.io" target="_blank" style="color: #60a5fa;">bpmn.io</a></small>
-          <small style="color: #64748b;" id="bpmn-stats"></small>
         </div>
       </section>
     </main>
@@ -2278,86 +2303,12 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
     document.head.appendChild(style);
 
     // ============================================================================
-    // BPMN Integration
+    // BPMN Integration (Per-Process)
     // ============================================================================
     
-    let bpmnViewer = null;
+    let bpmnModeler = null;
     let currentBpmnXml = null;
-
-    function convertAgentsToBPMN() {
-      const visibleAgents = agents.filter(a => !hiddenTypes.has(a.elementType || a.type));
-      const visibleRels = relationships.filter(r => {
-        const source = agents.find(a => a.id === r.sourceId);
-        const target = agents.find(a => a.id === r.targetId);
-        return source && target && !hiddenTypes.has(source.elementType) && !hiddenTypes.has(target.elementType);
-      });
-
-      // Create element IDs mapping
-      const idMap = new Map();
-      visibleAgents.forEach((a, i) => idMap.set(a.id, `Task_${i + 1}`));
-
-      // Build BPMN tasks
-      const tasks = visibleAgents.map((a, i) => {
-        const taskType = a.autonomyLevel === 'human-in-loop' ? 'bpmn:userTask' : 'bpmn:serviceTask';
-        return `    <${taskType} id="Task_${i + 1}" name="${escapeXml(a.name)}" />`;
-      }).join('\n');
-
-      // Build sequence flows
-      const flows = visibleRels.map((r, i) => {
-        const sourceId = idMap.get(r.sourceId);
-        const targetId = idMap.get(r.targetId);
-        if (sourceId && targetId) {
-          return `    <bpmn:sequenceFlow id="Flow_${i + 1}" sourceRef="${sourceId}" targetRef="${targetId}" />`;
-        }
-        return '';
-      }).filter(f => f).join('\n');
-
-      // Find root agents (no incoming relationships)
-      const hasIncoming = new Set(visibleRels.map(r => r.targetId));
-      const rootAgents = visibleAgents.filter(a => !hasIncoming.has(a.id));
-      const startFlows = rootAgents.map((a, i) => {
-        const taskId = idMap.get(a.id);
-        return `    <bpmn:sequenceFlow id="StartFlow_${i + 1}" sourceRef="StartEvent_1" targetRef="${taskId}" />`;
-      }).join('\n');
-
-      // Find leaf agents (no outgoing relationships)
-      const hasOutgoing = new Set(visibleRels.map(r => r.sourceId));
-      const leafAgents = visibleAgents.filter(a => !hasOutgoing.has(a.id));
-      const endFlows = leafAgents.map((a, i) => {
-        const taskId = idMap.get(a.id);
-        return `    <bpmn:sequenceFlow id="EndFlow_${i + 1}" sourceRef="${taskId}" targetRef="EndEvent_1" />`;
-      }).join('\n');
-
-      return `<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
-                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-                  id="Definitions_FlowGrid" 
-                  targetNamespace="http://flowgrid.io/bpmn">
-  <bpmn:process id="FlowGrid_Process" name="FlowGrid Agent Network" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_1" name="Start" />
-    <bpmn:endEvent id="EndEvent_1" name="End" />
-${tasks}
-${startFlows}
-${flows}
-${endFlows}
-  </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="FlowGrid_Process">
-      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="152" y="102" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="752" y="102" width="36" height="36" />
-      </bpmndi:BPMNShape>
-${visibleAgents.map((a, i) => `      <bpmndi:BPMNShape id="Task_${i + 1}_di" bpmnElement="Task_${i + 1}">
-        <dc:Bounds x="${250 + (i % 4) * 150}" y="${80 + Math.floor(i / 4) * 100}" width="100" height="80" />
-      </bpmndi:BPMNShape>`).join('\n')}
-    </bpmndi:BPMNPlane>
-  </bpmndi:BPMNDiagram>
-</bpmn:definitions>`;
-    }
+    let selectedProcessId = null;
 
     function escapeXml(str) {
       return String(str || '')
@@ -2368,56 +2319,195 @@ ${visibleAgents.map((a, i) => `      <bpmndi:BPMNShape id="Task_${i + 1}_di" bpm
         .replace(/'/g, '&apos;');
     }
 
-    async function generateBPMN() {
-      // Try main canvas first, then fallback to detail panel canvas
-      let container = document.getElementById('bpmn-canvas-main');
-      if (!container) container = document.getElementById('bpmn-canvas');
+    // Populate the process list in BPMN tab
+    function renderBpmnProcessList() {
+      const listEl = document.getElementById('bpmn-process-list');
+      if (!listEl) return;
+      
+      const processes = agents.filter(a => a.elementType === 'Process');
+      
+      if (processes.length === 0) {
+        listEl.innerHTML = '<p style="color: #64748b; font-size: 0.85rem;">No processes found. Import processes via the Wizard.</p>';
+        return;
+      }
+      
+      listEl.innerHTML = processes.map(p => `
+        <div class="bpmn-process-item" 
+             data-id="${p.id}" 
+             onclick="selectBpmnProcess('${p.id}')"
+             style="padding: 0.75rem; background: ${selectedProcessId === p.id ? '#334155' : '#0f172a'}; border-radius: 6px; cursor: pointer; border-left: 3px solid ${selectedProcessId === p.id ? '#f59e0b' : 'transparent'};"
+             onmouseover="if(selectedProcessId !== '${p.id}') this.style.background='#1e293b'"
+             onmouseout="if(selectedProcessId !== '${p.id}') this.style.background='#0f172a'">
+          <div style="color: #e2e8f0; font-weight: 500; margin-bottom: 0.25rem;">${escapeHtml(p.name)}</div>
+          <div style="color: #64748b; font-size: 0.75rem;">${p.config?.processSteps ? '✅ Has flow' : '⚠️ No flow defined'}</div>
+        </div>
+      `).join('');
+    }
+
+    // Select a process to show in BPMN canvas
+    async function selectBpmnProcess(processId) {
+      selectedProcessId = processId;
+      const process = agents.find(a => a.id === processId);
+      
+      if (!process) return;
+      
+      // Update UI
+      renderBpmnProcessList();
+      document.getElementById('bpmn-empty-state').style.display = 'none';
+      document.getElementById('bpmn-canvas-main').style.display = 'block';
+      document.getElementById('bpmn-actions').style.display = 'flex';
+      document.getElementById('bpmn-process-title').textContent = `📊 ${process.name}`;
+      document.getElementById('bpmn-process-desc').textContent = process.description || 'Process workflow diagram';
+      
+      // Generate and display BPMN
+      await generateProcessBPMN(process);
+    }
+
+    // Convert a single process to BPMN based on its processSteps/decisionPoints
+    function convertProcessToBPMN(process) {
+      const config = process.config || {};
+      const processSteps = config.processSteps || '';
+      const decisionPoints = config.decisionPoints || '';
+      
+      // Parse steps (split by newlines or numbered items)
+      const stepLines = processSteps.split(/\n|(?=\d+\.)/).filter(s => s.trim());
+      const steps = stepLines.map((s, i) => ({
+        id: `Task_${i + 1}`,
+        name: s.replace(/^\d+\.\s*/, '').trim().substring(0, 50)
+      })).filter(s => s.name);
+      
+      // Parse decision points
+      const decisionLines = decisionPoints.split(/\n|(?=\d+\.)/).filter(s => s.trim());
+      const decisions = decisionLines.map((d, i) => ({
+        id: `Gateway_${i + 1}`,
+        name: d.replace(/^\d+\.\s*/, '').trim().substring(0, 30)
+      })).filter(d => d.name);
+      
+      // If no steps defined, create a simple placeholder
+      if (steps.length === 0) {
+        steps.push({ id: 'Task_1', name: process.name });
+      }
+
+      // Build BPMN tasks
+      const tasks = steps.map(s => 
+        `    <bpmn:serviceTask id="${s.id}" name="${escapeXml(s.name)}" />`
+      ).join('\n');
+      
+      // Build gateways for decisions
+      const gateways = decisions.map(d =>
+        `    <bpmn:exclusiveGateway id="${d.id}" name="${escapeXml(d.name)}" />`
+      ).join('\n');
+
+      // Build sequential flows between steps
+      const flows = [];
+      flows.push(`    <bpmn:sequenceFlow id="Flow_start" sourceRef="StartEvent_1" targetRef="${steps[0]?.id || 'EndEvent_1'}" />`);
+      
+      for (let i = 0; i < steps.length - 1; i++) {
+        flows.push(`    <bpmn:sequenceFlow id="Flow_${i + 1}" sourceRef="${steps[i].id}" targetRef="${steps[i + 1].id}" />`);
+      }
+      
+      if (steps.length > 0) {
+        flows.push(`    <bpmn:sequenceFlow id="Flow_end" sourceRef="${steps[steps.length - 1].id}" targetRef="EndEvent_1" />`);
+      }
+
+      // Build shapes for visual layout
+      const stepShapes = steps.map((s, i) => `      <bpmndi:BPMNShape id="${s.id}_di" bpmnElement="${s.id}">
+        <dc:Bounds x="${250 + i * 160}" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>`).join('\n');
+      
+      const gatewayShapes = decisions.map((d, i) => `      <bpmndi:BPMNShape id="${d.id}_di" bpmnElement="${d.id}">
+        <dc:Bounds x="${250 + i * 160}" y="200" width="50" height="50" />
+      </bpmndi:BPMNShape>`).join('\n');
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_${process.id}" 
+                  targetNamespace="http://flowgrid.io/bpmn">
+  <bpmn:process id="Process_${process.id.substring(0, 8)}" name="${escapeXml(process.name)}" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start" />
+    <bpmn:endEvent id="EndEvent_1" name="End" />
+${tasks}
+${gateways}
+${flows.join('\n')}
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_${process.id.substring(0, 8)}">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="${300 + steps.length * 160}" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+${stepShapes}
+${gatewayShapes}
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+    }
+
+    async function generateProcessBPMN(process) {
+      const container = document.getElementById('bpmn-canvas-main');
       if (!container) return;
 
       try {
-        currentBpmnXml = convertAgentsToBPMN();
+        currentBpmnXml = convertProcessToBPMN(process);
         
-        if (!bpmnViewer) {
-          bpmnViewer = new BpmnJS({ container });
+        if (!bpmnModeler) {
+          bpmnModeler = new BpmnJS({ container });
         }
 
-        await bpmnViewer.importXML(currentBpmnXml);
-        bpmnViewer.get('canvas').zoom('fit-viewport');
+        await bpmnModeler.importXML(currentBpmnXml);
+        bpmnModeler.get('canvas').zoom('fit-viewport');
         
         // Update stats
         const statsEl = document.getElementById('bpmn-stats');
         const taskCount = (currentBpmnXml.match(/<bpmn:(service|user)Task/g) || []).length;
-        const flowCount = (currentBpmnXml.match(/<bpmn:sequenceFlow/g) || []).length;
-        if (statsEl) statsEl.textContent = `${taskCount} tasks • ${flowCount} flows`;
+        const gatewayCount = (currentBpmnXml.match(/<bpmn:exclusiveGateway/g) || []).length;
+        if (statsEl) statsEl.textContent = `${taskCount} tasks • ${gatewayCount} gateways`;
         
-        showNotification('BPMN diagram generated', 'success');
       } catch (err) {
         console.error('BPMN render error:', err);
         container.innerHTML = `<div style="padding: 2rem; color: #ef4444;">Error rendering BPMN: ${err.message}</div>`;
       }
     }
 
-    function exportBPMN() {
-      if (!currentBpmnXml) {
-        currentBpmnXml = convertAgentsToBPMN();
+    async function regenerateProcessBPMN() {
+      if (!selectedProcessId) return;
+      const process = agents.find(a => a.id === selectedProcessId);
+      if (process) {
+        await generateProcessBPMN(process);
+        showNotification('BPMN regenerated', 'success');
       }
+    }
+
+    function exportProcessBPMN() {
+      if (!currentBpmnXml || !selectedProcessId) {
+        showNotification('Select a process first', 'warning');
+        return;
+      }
+      
+      const process = agents.find(a => a.id === selectedProcessId);
+      const filename = (process?.name || 'process').toLowerCase().replace(/\s+/g, '-') + '.bpmn';
       
       const blob = new Blob([currentBpmnXml], { type: 'application/xml' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'flowgrid-agents.bpmn';
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      showNotification('BPMN exported', 'success');
+      showNotification(`Exported ${filename}`, 'success');
     }
 
-    // Auto-generate BPMN when workspace tab is shown
+    // Render process list when BPMN tab is shown
     const originalShowWorkspaceTab = window.showWorkspaceTab;
     window.showWorkspaceTab = function(tabName) {
       if (originalShowWorkspaceTab) originalShowWorkspaceTab(tabName);
-      if (tabName === 'bpmn' && agents.length > 0) {
-        setTimeout(generateBPMN, 100);
+      if (tabName === 'bpmn') {
+        renderBpmnProcessList();
       }
     };
   </script>

@@ -390,7 +390,14 @@ jobs:
               --cpu 0.25 --memory 0.5Gi \
               --registry-server ${{ env.ACR_NAME }}.azurecr.io \
               --registry-username "$ACR_USERNAME" \
-              --registry-password "$ACR_PASSWORD"
+              --registry-password "$ACR_PASSWORD" \
+              --env-vars \
+                AGENT_SERVICE_PORT=80 \
+                AUTH_SERVICE_PORT=80 \
+                DESIGN_SERVICE_PORT=80 \
+                INTEGRATION_SERVICE_PORT=80 \
+                WIZARD_SERVICE_PORT=80 \
+                DESIGN_MODULE_PORT=80
           else
             echo "Updating gateway container app"
             # Get ACR credentials for update
@@ -407,7 +414,14 @@ jobs:
             az containerapp update \
               --name gateway \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --image ${{ env.ACR_NAME }}.azurecr.io/gateway:${{ needs.setup.outputs.image_tag }}
+              --image ${{ env.ACR_NAME }}.azurecr.io/gateway:${{ needs.setup.outputs.image_tag }} \
+              --set-env-vars \
+                AGENT_SERVICE_PORT=80 \
+                AUTH_SERVICE_PORT=80 \
+                DESIGN_SERVICE_PORT=80 \
+                INTEGRATION_SERVICE_PORT=80 \
+                WIZARD_SERVICE_PORT=80 \
+                DESIGN_MODULE_PORT=80
           fi
 
   # ===========================================================================
