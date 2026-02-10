@@ -285,12 +285,6 @@ Return valid JSON:
       "outputs": [<outputs>]
     }
   ],
-
-ELEMENT TYPE GUIDELINES:
-- "Agent": Autonomous actors that perform tasks, make decisions, or process information (e.g., Coordinator, Analyzer, Monitor, Gateway)
-- "Capability": Specific abilities or functions that can be performed (e.g., "Data Validation", "Report Generation")  
-- "DataObject": Data entities, records, or information objects (e.g., "Build Package", "Customer Record", "Configuration")
-- "Process": Business processes, workflows, or procedures (e.g., "Release Management", "Approval Workflow")
   "agentRelationships": [
     {"sourceAgentId": "agent-1", "targetAgentId": "agent-2", "messageType": "<type>", "description": "<wat>"}
   ],
@@ -298,6 +292,17 @@ ELEMENT TYPE GUIDELINES:
     {"agentId": "agent-1", "name": "<naam>", "system": "<systeem>", "type": "API|Webhook", "direction": "inbound|outbound"}
   ]
 }
+
+CRITICAL - ALL ELEMENTS GO IN THE "agents" ARRAY:
+Every element you identify must be added to the "agents" array with the correct elementType:
+- "Agent": Autonomous actors (Orchestrator, Coordinator, Analyzer, Monitor, Gateway, Router, Specialist)
+- "Capability": Reusable functions/services (Data Validation, Report Generation, API Integration, Search Engine)  
+- "DataObject": Data stores/repositories (Customer Database, Brand Profile, Configuration Store, Knowledge Base)
+- "Process": Workflows/procedures (Approval Process, Release Pipeline, Onboarding Flow)
+
+For EACH capability in "extractedCapabilities", also add it to "agents" with elementType:"Capability".
+For EACH data entity mentioned, add it to "agents" with elementType:"DataObject".
+The "agents" array should have 15-25 items total across all element types.
 
 Return ONLY valid JSON.`;
 
@@ -318,7 +323,12 @@ Return ONLY valid JSON.`;
     analysis = jsonMatch[0];
   }
 
-  return JSON.parse(analysis) as AnalysisResult;
+  const result = JSON.parse(analysis) as AnalysisResult;
+  
+  // Debug: log elementTypes from AI response
+  console.log('[AI Debug] Agents with elementTypes:', JSON.stringify(result.agents?.map(a => ({ name: a.name, elementType: a.elementType }))));
+  
+  return result;
 }
 
 // ============================================================================

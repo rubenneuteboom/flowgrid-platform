@@ -238,6 +238,10 @@ jobs:
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --query name -o tsv 2>/dev/null || echo "")
           
+          # Get ACR credentials
+          ACR_USERNAME=$(az acr credential show -n ${{ env.ACR_NAME }} --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show -n ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
+          
           if [ -z "$EXISTS" ]; then
             echo "Creating new container app: ${{ matrix.service.name }}"
             az containerapp create \
@@ -251,7 +255,8 @@ jobs:
               --max-replicas ${{ matrix.service.maxReplicas }} \
               --cpu 0.5 --memory 1Gi \
               --registry-server ${{ env.ACR_NAME }}.azurecr.io \
-              --registry-identity system \
+              --registry-username "$ACR_USERNAME" \
+              --registry-password "$ACR_PASSWORD" \
               --env-vars \
                 NODE_ENV=production \
                 PORT=${{ matrix.service.port }}
@@ -357,6 +362,10 @@ jobs:
             --query name -o tsv 2>/dev/null || echo "")
           
           if [ -z "$EXISTS" ]; then
+            # Get ACR credentials
+            ACR_USERNAME=$(az acr credential show -n ${{ env.ACR_NAME }} --query username -o tsv)
+            ACR_PASSWORD=$(az acr credential show -n ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
+            
             echo "Creating gateway container app"
             az containerapp create \
               --name gateway \
@@ -369,7 +378,8 @@ jobs:
               --max-replicas 5 \
               --cpu 0.25 --memory 0.5Gi \
               --registry-server ${{ env.ACR_NAME }}.azurecr.io \
-              --registry-identity system
+              --registry-username "$ACR_USERNAME" \
+              --registry-password "$ACR_PASSWORD"
           else
             echo "Updating gateway container app"
             az containerapp update \

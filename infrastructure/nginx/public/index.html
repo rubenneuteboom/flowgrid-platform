@@ -247,7 +247,9 @@
         }
 
         const payload = await response.json();
+        console.log('[shell] API response payload:', payload);
         const total = payload?.meta?.total;
+        console.log('[shell] meta.total =', total, 'data.length =', payload?.data?.length);
         return Number.isFinite(total) ? total > 0 : Array.isArray(payload?.data) && payload.data.length > 0;
       }
 
@@ -277,16 +279,24 @@
       };
 
       async function bootstrap() {
+        console.log('[shell] bootstrap starting');
         window.FlowgridAuthUI.initPage({ requireAuth: true });
 
         try {
+          console.log('[shell] checking if tenant populated...');
           const populated = await isTenantPopulated();
-          if (populated === null) return; // redirected to login
+          console.log('[shell] populated =', populated);
+          if (populated === null) {
+            console.log('[shell] redirected to login');
+            return;
+          }
 
           if (!populated) {
+            console.log('[shell] NOT populated, redirecting to wizard');
             window.location.replace('/wizard.html?onboarding=true');
             return;
           }
+          console.log('[shell] tenant IS populated, showing shell');
 
           bootEl.style.display = 'none';
           shellEl.style.display = 'flex';

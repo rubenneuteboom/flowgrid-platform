@@ -11,6 +11,10 @@
   <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/vis-network.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/dist/vis-network.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/bpmn-js@17/dist/bpmn-modeler.development.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17/dist/assets/diagram-js.css">
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17/dist/assets/bpmn-js.css">
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17/dist/assets/bpmn-font/css/bpmn-embedded.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -766,6 +770,7 @@
         <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🪄 Integrations</button>
         <button class="detail-tab workspace-tab" data-tab="interactions" onclick="showWorkspaceTab('interactions')">🔄 Interactions</button>
         <button class="detail-tab workspace-tab" data-tab="agents" onclick="showWorkspaceTab('agents')">Agents</button>
+        <button class="detail-tab workspace-tab" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">📊 BPMN</button>
       </div>
 
       <!-- Overview Tab - Legacy Style with Donut Chart -->
@@ -826,11 +831,27 @@
 
       <!-- Relationships Tab -->
       <section class="workspace-panel" id="workspace-relationships">
-        <div id="workspace-relations" class="info-card" style="padding: 1.5rem;">
-          <h4 style="color: #60a5fa; margin-bottom: 0.5rem;">Relationships</h4>
+        <div style="padding: 1rem;">
+          <h3 style="color: #60a5fa; margin-bottom: 0.5rem;">Relationships</h3>
           <p style="color: #94a3b8; margin-bottom: 1.5rem;">Explore relationships and connections for the selected element.</p>
-          <div id="relationships-content">
-            <p style="color: #64748b;">Select an element to inspect relationships.</p>
+          
+          <div id="relationships-empty" style="color: #64748b; padding: 2rem; text-align: center;">
+            Select an element to inspect relationships.
+          </div>
+          
+          <div id="relationships-content" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+              <!-- Outgoing Column -->
+              <div>
+                <h4 style="color: #f59e0b; margin-bottom: 1rem;" id="outgoing-header">Outgoing → (0)</h4>
+                <div id="outgoing-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+              </div>
+              <!-- Incoming Column -->
+              <div>
+                <h4 style="color: #60a5fa; margin-bottom: 1rem;" id="incoming-header">← Incoming (0)</h4>
+                <div id="incoming-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -856,6 +877,25 @@
         <div class="info-card">
           <h4>Agents</h4>
           <p id="workspace-agents-list">Loading agent roster…</p>
+        </div>
+      </section>
+
+      <!-- BPMN Tab -->
+      <section class="workspace-panel" id="workspace-bpmn">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h3 style="color: #f59e0b; margin-bottom: 0.25rem;">📊 BPMN Process View</h3>
+            <p style="color: #64748b; font-size: 0.85rem;">Auto-generated BPMN diagram from your agent network</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-primary" onclick="generateBPMN()" style="font-size: 0.85rem;">🔄 Regenerate</button>
+            <button class="btn btn-success" onclick="exportBPMN()" style="font-size: 0.85rem;">📥 Export</button>
+          </div>
+        </div>
+        <div id="bpmn-canvas-main" style="width: 100%; height: calc(100vh - 280px); min-height: 400px; background: #1e293b; border: 1px solid #334155; border-radius: 8px;"></div>
+        <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+          <small style="color: #64748b;">Powered by <a href="https://bpmn.io" target="_blank" style="color: #60a5fa;">bpmn.io</a></small>
+          <small style="color: #64748b;" id="bpmn-stats"></small>
         </div>
       </section>
     </main>
@@ -914,6 +954,23 @@
             <textarea id="agent-success-criteria" placeholder="How do we measure if this agent is successful?" rows="2"></textarea>
           </div>
           <button class="btn btn-success" style="width: 100%; margin-top: 0.5rem;" onclick="saveAgent()">💾 Save Description</button>
+          
+          <!-- Process Info Section (shown for Process elements) -->
+          <div id="process-info-section" style="display: none; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
+            <h3 style="color: #ec4899; font-size: 1rem; margin-bottom: 1rem;">🔄 Process Flow Details</h3>
+            <div class="form-group">
+              <label>Process Steps</label>
+              <textarea id="agent-process-steps" placeholder="The steps in this process..." rows="4" readonly style="background: #0f172a;"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Decision Points</label>
+              <textarea id="agent-decision-points" placeholder="Key decision points in the process..." rows="3" readonly style="background: #0f172a;"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Error Handling</label>
+              <textarea id="agent-error-handling" placeholder="How errors are handled..." rows="3" readonly style="background: #0f172a;"></textarea>
+            </div>
+          </div>
           </div>
         </div>
 
@@ -997,6 +1054,7 @@
             <button class="btn btn-danger" onclick="deleteAgent()">🗑️ Delete</button>
           </div>
         </div>
+
       </div>
     </aside>
   </div>
@@ -1367,20 +1425,24 @@
       }
 
       const nodes = new vis.DataSet(
-        visibleAgents.map(a => ({
-          id: a.id,
-          label: a.name,
-          color: {
-            background: '#475569',
-            border: '#334155',
-            highlight: { background: '#3b82f6', border: '#60a5fa' },
-            hover: { background: '#64748b', border: '#475569' }
-          },
-          font: { color: '#e2e8f0', size: 11, face: 'Inter, sans-serif' },
-          shape: 'hexagon',
-          size: 25,
-          borderWidth: 1,
-        }))
+        visibleAgents.map(a => {
+          const bgColor = nodeColors[a.elementType] || nodeColors[a.type] || nodeColors.default;
+          return {
+            id: a.id,
+            label: a.name,
+            color: {
+              background: bgColor,
+              border: bgColor,
+              highlight: { background: bgColor, border: '#ffffff' },
+              hover: { background: bgColor, border: '#ffffff' }
+            },
+            font: { color: '#ffffff', size: 11, face: 'Inter, sans-serif' },
+            shape: 'box',
+            borderWidth: 2,
+            borderWidthSelected: 3,
+            margin: 8,
+          };
+        })
       );
       
       const edges = new vis.DataSet(
@@ -1391,16 +1453,17 @@
             return source && target && !hiddenTypes.has(source.type) && !hiddenTypes.has(target.type);
           })
           .map(r => {
+            const edgeColor = relationColors[r.type] || relationColors.default;
             return {
               id: r.id,
               from: r.sourceId,
               to: r.targetId,
               label: r.type,
-              arrows: { to: { enabled: true, scaleFactor: 0.5, type: 'arrow' } },
-              color: { color: '#64748b', highlight: '#94a3b8', hover: '#94a3b8' },
-              font: { color: '#94a3b8', size: 9, align: 'horizontal', strokeWidth: 0 },
-              smooth: { type: 'curvedCW', roundness: 0.15 },
-              width: 1.5,
+              arrows: { to: { enabled: true, scaleFactor: 0.6, type: 'arrow' } },
+              color: { color: edgeColor, highlight: edgeColor, hover: edgeColor },
+              font: { color: '#94a3b8', size: 9, align: 'middle', strokeWidth: 0 },
+              smooth: { type: 'curvedCW', roundness: 0.2 },
+              width: 2,
             };
           })
       );
@@ -1514,8 +1577,23 @@
       document.getElementById('detail-type').textContent = `${getTypeIcon(agent.type)} ${agent.type} • ${agent.pattern || 'General'}`;
       
       // Update Description tab
-      document.getElementById('agent-purpose').value = agent.purpose || '';
-      document.getElementById('agent-valuestream').value = agent.valueStream || '';
+      document.getElementById('agent-purpose').value = agent.purpose || agent.description || '';
+      const valuestreamEl = document.getElementById('agent-valuestream');
+      if (valuestreamEl) valuestreamEl.value = agent.valueStream || '';
+      
+      // Show/hide Process Info section
+      const processSection = document.getElementById('process-info-section');
+      if (processSection) {
+        if (agent.elementType === 'Process') {
+          processSection.style.display = 'block';
+          const config = agent.config || {};
+          document.getElementById('agent-process-steps').value = config.processSteps || 'No process steps defined';
+          document.getElementById('agent-decision-points').value = config.decisionPoints || 'No decision points defined';
+          document.getElementById('agent-error-handling').value = config.errorHandling || 'No error handling defined';
+        } else {
+          processSection.style.display = 'none';
+        }
+      }
       
       // Update Design tab
       document.getElementById('agent-pattern').value = agent.pattern || 'tool-use';
@@ -1609,24 +1687,38 @@
     }
     
     function renderWorkspaceRelationships(agentId) {
-      const container = document.getElementById('relationships-content');
-      if (!container) return;
+      const emptyEl = document.getElementById('relationships-empty');
+      const contentEl = document.getElementById('relationships-content');
+      const outgoingHeader = document.getElementById('outgoing-header');
+      const incomingHeader = document.getElementById('incoming-header');
+      const outgoingList = document.getElementById('outgoing-list');
+      const incomingList = document.getElementById('incoming-list');
+      
+      if (!contentEl) return;
       
       const agent = agents.find(a => a.id === agentId);
       if (!agent) {
-        container.innerHTML = '<p style="color: #64748b;">Select an element to inspect relationships.</p>';
+        if (emptyEl) emptyEl.style.display = 'block';
+        contentEl.style.display = 'none';
         return;
       }
       
+      if (emptyEl) emptyEl.style.display = 'none';
+      contentEl.style.display = 'block';
+      
       const outgoing = relationships.filter(r => r.sourceId === agentId);
       const incoming = relationships.filter(r => r.targetId === agentId);
+      
+      // Update headers
+      if (outgoingHeader) outgoingHeader.textContent = `Outgoing → (${outgoing.length})`;
+      if (incomingHeader) incomingHeader.textContent = `← Incoming (${incoming.length})`;
       
       const relationTypeColors = {
         'Realization': '#f97316',
         'Flow': '#3b82f6',
         'Association': '#eab308',
         'Composition': '#ec4899',
-        'Access': '#f97316',
+        'Access': '#ef4444',
         'Serving': '#14b8a6',
         'default': '#64748b'
       };
@@ -1639,33 +1731,29 @@
         const elementType = otherAgent?.elementType || otherAgent?.type || 'Unknown';
         
         return `
-          <div style="background: #1e293b; border-left: 3px solid ${typeColor}; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 0.5rem;">
-            <div style="color: ${typeColor}; font-size: 0.75rem; font-weight: 500; margin-bottom: 0.25rem;">${escapeHtml(r.type || 'Association')}</div>
+          <div style="background: #1e293b; border-left: 3px solid ${typeColor}; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer;" 
+               onclick="selectAgent('${otherAgent?.id}')" 
+               onmouseover="this.style.background='#334155'" 
+               onmouseout="this.style.background='#1e293b'">
+            <div style="color: ${typeColor}; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">${escapeHtml(r.type || 'Association')}</div>
             <div style="color: #e2e8f0; font-size: 0.9rem;">${escapeHtml(otherAgent?.name || 'Unknown')} <span style="color: #64748b;">(${elementType})</span></div>
           </div>
         `;
       }
       
-      container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-          <div>
-            <h5 style="color: #f97316; font-size: 0.9rem; margin-bottom: 1rem;">Outgoing → (${outgoing.length})</h5>
-            <div id="outgoing-relations">
-              ${outgoing.length === 0 
-                ? '<p style="color: #64748b; font-size: 0.85rem;">No outgoing relationships</p>'
-                : outgoing.map(r => renderRelationCard(r, true)).join('')}
-            </div>
-          </div>
-          <div>
-            <h5 style="color: #3b82f6; font-size: 0.9rem; margin-bottom: 1rem;">← Incoming (${incoming.length})</h5>
-            <div id="incoming-relations">
-              ${incoming.length === 0 
-                ? '<p style="color: #64748b; font-size: 0.85rem;">No incoming relationships</p>'
-                : incoming.map(r => renderRelationCard(r, false)).join('')}
-            </div>
-          </div>
-        </div>
-      `;
+      // Render outgoing
+      if (outgoingList) {
+        outgoingList.innerHTML = outgoing.length === 0 
+          ? '<p style="color: #64748b; font-size: 0.85rem; padding: 1rem;">No outgoing relationships</p>'
+          : outgoing.map(r => renderRelationCard(r, true)).join('');
+      }
+      
+      // Render incoming
+      if (incomingList) {
+        incomingList.innerHTML = incoming.length === 0 
+          ? '<p style="color: #64748b; font-size: 0.85rem; padding: 1rem;">No incoming relationships</p>'
+          : incoming.map(r => renderRelationCard(r, false)).join('');
+      }
     }
     
     function renderInteractions(agentId) {
@@ -2188,6 +2276,150 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
     `;
     document.head.appendChild(style);
+
+    // ============================================================================
+    // BPMN Integration
+    // ============================================================================
+    
+    let bpmnViewer = null;
+    let currentBpmnXml = null;
+
+    function convertAgentsToBPMN() {
+      const visibleAgents = agents.filter(a => !hiddenTypes.has(a.elementType || a.type));
+      const visibleRels = relationships.filter(r => {
+        const source = agents.find(a => a.id === r.sourceId);
+        const target = agents.find(a => a.id === r.targetId);
+        return source && target && !hiddenTypes.has(source.elementType) && !hiddenTypes.has(target.elementType);
+      });
+
+      // Create element IDs mapping
+      const idMap = new Map();
+      visibleAgents.forEach((a, i) => idMap.set(a.id, `Task_${i + 1}`));
+
+      // Build BPMN tasks
+      const tasks = visibleAgents.map((a, i) => {
+        const taskType = a.autonomyLevel === 'human-in-loop' ? 'bpmn:userTask' : 'bpmn:serviceTask';
+        return `    <${taskType} id="Task_${i + 1}" name="${escapeXml(a.name)}" />`;
+      }).join('\n');
+
+      // Build sequence flows
+      const flows = visibleRels.map((r, i) => {
+        const sourceId = idMap.get(r.sourceId);
+        const targetId = idMap.get(r.targetId);
+        if (sourceId && targetId) {
+          return `    <bpmn:sequenceFlow id="Flow_${i + 1}" sourceRef="${sourceId}" targetRef="${targetId}" />`;
+        }
+        return '';
+      }).filter(f => f).join('\n');
+
+      // Find root agents (no incoming relationships)
+      const hasIncoming = new Set(visibleRels.map(r => r.targetId));
+      const rootAgents = visibleAgents.filter(a => !hasIncoming.has(a.id));
+      const startFlows = rootAgents.map((a, i) => {
+        const taskId = idMap.get(a.id);
+        return `    <bpmn:sequenceFlow id="StartFlow_${i + 1}" sourceRef="StartEvent_1" targetRef="${taskId}" />`;
+      }).join('\n');
+
+      // Find leaf agents (no outgoing relationships)
+      const hasOutgoing = new Set(visibleRels.map(r => r.sourceId));
+      const leafAgents = visibleAgents.filter(a => !hasOutgoing.has(a.id));
+      const endFlows = leafAgents.map((a, i) => {
+        const taskId = idMap.get(a.id);
+        return `    <bpmn:sequenceFlow id="EndFlow_${i + 1}" sourceRef="${taskId}" targetRef="EndEvent_1" />`;
+      }).join('\n');
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_FlowGrid" 
+                  targetNamespace="http://flowgrid.io/bpmn">
+  <bpmn:process id="FlowGrid_Process" name="FlowGrid Agent Network" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start" />
+    <bpmn:endEvent id="EndEvent_1" name="End" />
+${tasks}
+${startFlows}
+${flows}
+${endFlows}
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="FlowGrid_Process">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="752" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+${visibleAgents.map((a, i) => `      <bpmndi:BPMNShape id="Task_${i + 1}_di" bpmnElement="Task_${i + 1}">
+        <dc:Bounds x="${250 + (i % 4) * 150}" y="${80 + Math.floor(i / 4) * 100}" width="100" height="80" />
+      </bpmndi:BPMNShape>`).join('\n')}
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+    }
+
+    function escapeXml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    async function generateBPMN() {
+      // Try main canvas first, then fallback to detail panel canvas
+      let container = document.getElementById('bpmn-canvas-main');
+      if (!container) container = document.getElementById('bpmn-canvas');
+      if (!container) return;
+
+      try {
+        currentBpmnXml = convertAgentsToBPMN();
+        
+        if (!bpmnViewer) {
+          bpmnViewer = new BpmnJS({ container });
+        }
+
+        await bpmnViewer.importXML(currentBpmnXml);
+        bpmnViewer.get('canvas').zoom('fit-viewport');
+        
+        // Update stats
+        const statsEl = document.getElementById('bpmn-stats');
+        const taskCount = (currentBpmnXml.match(/<bpmn:(service|user)Task/g) || []).length;
+        const flowCount = (currentBpmnXml.match(/<bpmn:sequenceFlow/g) || []).length;
+        if (statsEl) statsEl.textContent = `${taskCount} tasks • ${flowCount} flows`;
+        
+        showNotification('BPMN diagram generated', 'success');
+      } catch (err) {
+        console.error('BPMN render error:', err);
+        container.innerHTML = `<div style="padding: 2rem; color: #ef4444;">Error rendering BPMN: ${err.message}</div>`;
+      }
+    }
+
+    function exportBPMN() {
+      if (!currentBpmnXml) {
+        currentBpmnXml = convertAgentsToBPMN();
+      }
+      
+      const blob = new Blob([currentBpmnXml], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'flowgrid-agents.bpmn';
+      a.click();
+      URL.revokeObjectURL(url);
+      showNotification('BPMN exported', 'success');
+    }
+
+    // Auto-generate BPMN when workspace tab is shown
+    const originalShowWorkspaceTab = window.showWorkspaceTab;
+    window.showWorkspaceTab = function(tabName) {
+      if (originalShowWorkspaceTab) originalShowWorkspaceTab(tabName);
+      if (tabName === 'bpmn' && agents.length > 0) {
+        setTimeout(generateBPMN, 100);
+      }
+    };
   </script>
 </body>
 </html>

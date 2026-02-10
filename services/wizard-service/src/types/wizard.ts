@@ -14,7 +14,7 @@ export interface WizardSession {
   id: string;
   tenantId: string;
   sessionName: string;
-  sourceType: 'image' | 'text' | 'template';
+  sourceType: 'image' | 'text' | 'template' | 'xml';
   sourceData: Record<string, unknown>;
   analysisResult: AnalysisResult | null;
   customPrompt?: string;
@@ -27,7 +27,7 @@ export interface WizardSession {
 export interface CreateSessionRequest {
   tenantId: string;
   sessionName?: string;
-  sourceType: 'image' | 'text' | 'template';
+  sourceType: 'image' | 'text' | 'template' | 'xml';
 }
 
 // ============================================================================

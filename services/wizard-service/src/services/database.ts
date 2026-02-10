@@ -15,6 +15,7 @@ import {
   ProposedIntegration,
   AgenticPattern,
 } from '../types/wizard';
+import { generateProcessFlow } from './ai';
 
 // ============================================================================
 // Database Pool (Singleton)
@@ -47,7 +48,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
 export async function createWizardSession(
   tenantId: string,
   sessionName: string,
-  sourceType: 'image' | 'text' | 'template',
+  sourceType: 'image' | 'text' | 'template' | 'xml',
   sourceData: Record<string, unknown>,
   analysisResult: AnalysisResult,
   customPrompt?: string
@@ -194,6 +195,23 @@ export async function applyWizardSession(
     const newAgentId = uuidv4();
     agentIdMap[agent.id] = newAgentId;
 
+    // Generate process flow for Process elements
+    let processSteps = agent.processSteps;
+    let decisionPoints = agent.decisionPoints;
+    let errorHandling = agent.errorHandling;
+    
+    if (agent.elementType === 'Process' && !processSteps) {
+      try {
+        console.log(`[database] Generating process flow for: ${agent.name}`);
+        const processFlow = await generateProcessFlow(agent);
+        processSteps = processFlow.processSteps;
+        decisionPoints = processFlow.decisionPoints;
+        errorHandling = processFlow.errorHandling;
+      } catch (err) {
+        console.warn(`[database] Failed to generate process flow for ${agent.name}:`, err);
+      }
+    }
+
     await pool.query(
       `INSERT INTO agents (id, tenant_id, name, type, description, config, status, element_type)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -213,9 +231,9 @@ export async function applyWizardSession(
           valueStream: agent.valueStream,
           layer: agent.layer,
           objectives: agent.objectives,
-          processSteps: agent.processSteps,
-          decisionPoints: agent.decisionPoints,
-          errorHandling: agent.errorHandling,
+          processSteps,
+          decisionPoints,
+          errorHandling,
         }),
         'draft',
         agent.elementType || 'Agent'

@@ -135,9 +135,19 @@ app.get('/api/agents', async (req: Request, res: Response) => {
       paramIndex++;
     }
 
-    // Get total count
-    const countQuery = query.replace(/SELECT a\.\*.*FROM/, 'SELECT COUNT(*) FROM');
-    const countResult = await pool.query(countQuery, params);
+    // Get total count (build separately to avoid regex issues with multiline)
+    let countQuery = `SELECT COUNT(*) FROM agents a WHERE 1=1`;
+    if (tenantId) countQuery += ` AND a.tenant_id = $1`;
+    const countParams = tenantId ? [tenantId] : [];
+    if (type) {
+      countQuery += ` AND a.type = $${countParams.length + 1}`;
+      countParams.push(type);
+    }
+    if (status) {
+      countQuery += ` AND a.status = $${countParams.length + 1}`;
+      countParams.push(status);
+    }
+    const countResult = await pool.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0]?.count || '0');
 
     // Add pagination
