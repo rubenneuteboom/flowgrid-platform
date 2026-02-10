@@ -262,6 +262,17 @@ jobs:
                 PORT=${{ matrix.service.port }}
           else
             echo "Updating existing container app: ${{ matrix.service.name }}"
+            # Get ACR credentials for update
+            ACR_USERNAME=$(az acr credential show -n ${{ env.ACR_NAME }} --query username -o tsv)
+            ACR_PASSWORD=$(az acr credential show -n ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
+            
+            az containerapp registry set \
+              --name ${{ matrix.service.name }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --server ${{ env.ACR_NAME }}.azurecr.io \
+              --username "$ACR_USERNAME" \
+              --password "$ACR_PASSWORD"
+            
             az containerapp update \
               --name ${{ matrix.service.name }} \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
@@ -382,6 +393,17 @@ jobs:
               --registry-password "$ACR_PASSWORD"
           else
             echo "Updating gateway container app"
+            # Get ACR credentials for update
+            ACR_USERNAME=$(az acr credential show -n ${{ env.ACR_NAME }} --query username -o tsv)
+            ACR_PASSWORD=$(az acr credential show -n ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
+            
+            az containerapp registry set \
+              --name gateway \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --server ${{ env.ACR_NAME }}.azurecr.io \
+              --username "$ACR_USERNAME" \
+              --password "$ACR_PASSWORD"
+            
             az containerapp update \
               --name gateway \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
