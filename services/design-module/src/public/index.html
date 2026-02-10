@@ -56,14 +56,18 @@
       background: #1e293b !important;
     }
     .bjs-container .djs-palette {
-      background: #0f172a !important;
-      border-color: #334155 !important;
+      background: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
     }
     .bjs-container .djs-palette .entry {
-      color: #94a3b8 !important;
+      color: #000000 !important;
     }
     .bjs-container .djs-palette .entry:hover {
       color: #60a5fa !important;
+    }
+    .bjs-container .djs-palette .entry img,
+    .bjs-container .djs-palette .entry svg {
+      filter: invert(0) !important;
     }
   </style>
   <style>
@@ -754,10 +758,20 @@
         <input type="text" id="search-input" placeholder="Search elements...">
         <select id="type-filter">
           <option value="">All Types</option>
-          <option value="Agent">🤖 Agents</option>
-          <option value="Capability">📦 Capabilities</option>
-          <option value="DataObject">📄 Data Objects</option>
-          <option value="Process">🔄 Process</option>
+          <optgroup label="ArchiMate">
+            <option value="ApplicationFunction">⚙️ ApplicationFunction</option>
+            <option value="ApplicationService">🔌 ApplicationService</option>
+            <option value="BusinessService">💼 BusinessService</option>
+            <option value="DataObject">📄 DataObject</option>
+            <option value="Grouping">📁 Grouping</option>
+            <option value="Requirement">📋 Requirement</option>
+            <option value="Resource">🔧 Resource</option>
+          </optgroup>
+          <optgroup label="FlowGrid">
+            <option value="Agent">🤖 Agent</option>
+            <option value="Capability">📦 Capability</option>
+            <option value="Process">🔄 Process</option>
+          </optgroup>
         </select>
       </div>
       <div class="sidebar-section elements-section">
@@ -848,23 +862,13 @@
       <!-- Graph Tab -->
       <section class="workspace-panel" id="workspace-graph">
         <div class="graph-legend-container" id="graph-legend">
-          <div class="legend-row">
-            <span class="legend-label">Elements:</span>
-            <div class="legend-item" data-type="ApplicationFunction" onclick="toggleLegend('ApplicationFunction')"><div class="legend-color" style="background: #a855f7;"></div><span>ApplicationFunction</span></div>
-            <div class="legend-item" data-type="Grouping" onclick="toggleLegend('Grouping')"><div class="legend-color" style="background: #06b6d4;"></div><span>Grouping</span></div>
-            <div class="legend-item" data-type="Resource" onclick="toggleLegend('Resource')"><div class="legend-color" style="background: #10b981;"></div><span>Resource</span></div>
-            <div class="legend-item" data-type="ApplicationService" onclick="toggleLegend('ApplicationService')"><div class="legend-color" style="background: #f59e0b;"></div><span>ApplicationService</span></div>
-            <div class="legend-item" data-type="Requirement" onclick="toggleLegend('Requirement')"><div class="legend-color" style="background: #3b82f6;"></div><span>Requirement</span></div>
-            <div class="legend-item" data-type="DataObject" onclick="toggleLegend('DataObject')"><div class="legend-color" style="background: #ec4899;"></div><span>DataObject</span></div>
+          <div class="legend-row" id="elements-legend-row">
+            <span class="legend-label">ELEMENTS:</span>
+            <!-- Populated dynamically -->
           </div>
-          <div class="legend-row">
-            <span class="legend-label">Relations:</span>
-            <div class="legend-item relation-legend" data-relation="Realization"><div class="legend-line" style="background: #a855f7;"></div><span>Realization</span></div>
-            <div class="legend-item relation-legend" data-relation="Flow"><div class="legend-line" style="background: #3b82f6;"></div><span>Flow</span></div>
-            <div class="legend-item relation-legend" data-relation="Association"><div class="legend-line" style="background: #64748b;"></div><span>Association</span></div>
-            <div class="legend-item relation-legend" data-relation="Composition"><div class="legend-line" style="background: #ec4899;"></div><span>Composition</span></div>
-            <div class="legend-item relation-legend" data-relation="Access"><div class="legend-line" style="background: #ef4444;"></div><span>Access</span></div>
-            <div class="legend-item relation-legend" data-relation="Serving"><div class="legend-line" style="background: #14b8a6;"></div><span>Serving</span></div>
+          <div class="legend-row" id="relations-legend-row">
+            <span class="legend-label">RELATIONS:</span>
+            <!-- Populated dynamically -->
           </div>
           <div class="legend-stats">Click to toggle • <span id="graph-node-count">0</span> nodes, <span id="graph-edge-count">0</span> edges</div>
         </div>
@@ -979,12 +983,7 @@
     <!-- Right Sidebar - Detail Panel with Legacy Tabs -->
     <aside class="detail-panel" id="detail-panel">
       <div class="resize-handle" id="detail-resize"></div>
-      <div id="detail-empty">
-        <div class="empty-state">
-          <div class="icon">👈</div>
-          <p>Select a Functional Component to edit its description</p>
-        </div>
-      </div>
+      <div id="detail-empty" style="display: none;"></div>
       <div id="detail-content" style="display: none;">
         <h2 id="detail-name">Agent Name</h2>
         <div class="agent-type" id="detail-type">🤖 Agent • Specialist</div>
@@ -1157,6 +1156,7 @@
     let network = null;
     let distributionChart = null;
     let hiddenTypes = new Set();
+    let hiddenRelations = new Set();
     let graphState = 'loading';
     
     function normalizeNodeType(value) {
@@ -1277,6 +1277,7 @@
       try {
         await loadAgents();
         await loadRelationships();
+        renderGraphLegend();
         initGraph();
         updateStats();
         updateDistributionChart();
@@ -1490,7 +1491,7 @@
     function initGraph() {
       const container = document.getElementById('graph-container');
 
-      const visibleAgents = agents.filter(a => !hiddenTypes.has(a.type));
+      const visibleAgents = agents.filter(a => !hiddenTypes.has(a.elementType || a.type));
       if (visibleAgents.length === 0) {
         if (network) {
           network.destroy();
@@ -1502,7 +1503,8 @@
 
       const nodes = new vis.DataSet(
         visibleAgents.map(a => {
-          const bgColor = nodeColors[a.elementType] || nodeColors[a.type] || nodeColors.default;
+          const elemType = a.elementType || a.type || 'default';
+          const bgColor = nodeColors[elemType] || nodeColors.default;
           return {
             id: a.id,
             label: a.name,
@@ -1517,6 +1519,7 @@
             borderWidth: 2,
             borderWidthSelected: 3,
             margin: 8,
+            title: elemType, // tooltip shows element type
           };
         })
       );
@@ -1524,9 +1527,10 @@
       const edges = new vis.DataSet(
         relationships
           .filter(r => {
+            if (hiddenRelations.has(r.type)) return false;
             const source = agents.find(a => a.id === r.sourceId);
             const target = agents.find(a => a.id === r.targetId);
-            return source && target && !hiddenTypes.has(source.type) && !hiddenTypes.has(target.type);
+            return source && target && !hiddenTypes.has(source.elementType || source.type) && !hiddenTypes.has(target.elementType || target.type);
           })
           .map(r => {
             const edgeColor = relationColors[r.type] || relationColors.default;
@@ -1601,7 +1605,7 @@
       const visibleRelationships = relationships.filter(r => {
         const source = agents.find(a => a.id === r.sourceId);
         const target = agents.find(a => a.id === r.targetId);
-        return source && target && !hiddenTypes.has(source.type) && !hiddenTypes.has(target.type);
+        return source && target && !hiddenTypes.has(source.elementType || source.type) && !hiddenTypes.has(target.elementType || target.type);
       });
 
       const types = [...new Set(visibleRelationships.map(r => r.type).filter(Boolean))].sort();
@@ -1623,12 +1627,52 @@
       const item = document.querySelector(`.legend-item[data-type="${type}"]`);
       if (hiddenTypes.has(type)) {
         hiddenTypes.delete(type);
-        item.classList.remove('disabled');
+        if (item) item.classList.remove('disabled');
       } else {
         hiddenTypes.add(type);
-        item.classList.add('disabled');
+        if (item) item.classList.add('disabled');
       }
       initGraph();
+    }
+
+    function toggleRelationLegend(relType) {
+      const item = document.querySelector(`.legend-item[data-relation="${relType}"]`);
+      if (hiddenRelations.has(relType)) {
+        hiddenRelations.delete(relType);
+        if (item) item.classList.remove('disabled');
+      } else {
+        hiddenRelations.add(relType);
+        if (item) item.classList.add('disabled');
+      }
+      initGraph();
+    }
+
+    function renderGraphLegend() {
+      // Get unique element types from data
+      const elementTypes = [...new Set(agents.map(a => a.elementType || a.type).filter(Boolean))].sort();
+      const relationTypes = [...new Set(relationships.map(r => r.type).filter(Boolean))].sort();
+
+      // Render element legend
+      const elemRow = document.getElementById('elements-legend-row');
+      if (elemRow) {
+        elemRow.innerHTML = '<span class="legend-label">ELEMENTS:</span>' + 
+          elementTypes.map(type => {
+            const color = nodeColors[type] || nodeColors.default;
+            const disabled = hiddenTypes.has(type) ? 'disabled' : '';
+            return `<div class="legend-item ${disabled}" data-type="${type}" onclick="toggleLegend('${type}')"><div class="legend-color" style="background: ${color};"></div><span>${type}</span></div>`;
+          }).join('');
+      }
+
+      // Render relation legend
+      const relRow = document.getElementById('relations-legend-row');
+      if (relRow) {
+        relRow.innerHTML = '<span class="legend-label">RELATIONS:</span>' + 
+          relationTypes.map(type => {
+            const color = relationColors[type] || relationColors.default;
+            const disabled = hiddenRelations.has(type) ? 'disabled' : '';
+            return `<div class="legend-item ${disabled}" data-relation="${type}" onclick="toggleRelationLegend('${type}')"><div class="legend-line" style="background: ${color};"></div><span>${type}</span></div>`;
+          }).join('');
+      }
     }
     
     // ============================================================================
