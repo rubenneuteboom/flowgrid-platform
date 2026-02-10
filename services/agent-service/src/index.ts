@@ -138,7 +138,7 @@ app.get('/api/agents', async (req: Request, res: Response) => {
     // Get total count
     const countQuery = query.replace(/SELECT a\.\*.*FROM/, 'SELECT COUNT(*) FROM');
     const countResult = await pool.query(countQuery, params);
-    const total = parseInt(countResult.rows[0].count);
+    const total = parseInt(countResult.rows[0]?.count || '0');
 
     // Add pagination
     query += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
@@ -152,6 +152,7 @@ app.get('/api/agents', async (req: Request, res: Response) => {
         tenantId: row.tenant_id,
         name: row.name,
         type: row.type,
+        elementType: row.element_type || 'Agent',
         description: row.description,
         config: row.config,
         status: row.status,
@@ -693,7 +694,7 @@ app.get('/api/agent-network-graph', async (req: Request, res: Response) => {
     }
 
     const [agentResult, interactionResult] = await Promise.all([
-      pool.query('SELECT id, name, type, description FROM agents WHERE tenant_id = $1 ORDER BY name', [tenantId]),
+      pool.query('SELECT id, name, type, element_type, description FROM agents WHERE tenant_id = $1 ORDER BY name', [tenantId]),
       pool.query(
         `SELECT i.id, i.source_agent_id, i.target_agent_id, i.message_type
          FROM agent_interactions i
@@ -709,6 +710,7 @@ app.get('/api/agent-network-graph', async (req: Request, res: Response) => {
       id: row.id,
       label: row.name,
       type: row.type || 'Agent',
+      elementType: row.element_type || 'Agent',
       description: row.description || '',
     }));
 

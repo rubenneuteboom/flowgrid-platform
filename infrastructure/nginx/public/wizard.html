@@ -910,7 +910,7 @@
                 <h1>💬 Welcome to Flowgrid</h1>
                 <span class="header-subtitle">Configure your Agent Network in 6 steps</span>
             </div>
-            <a href="/" class="back-btn">← Dashboard</a>
+            <a href="/" target="_top" class="back-btn">← Dashboard</a>
         </header>
 
         <!-- Progress Bar - 6 Steps -->
@@ -957,7 +957,7 @@
                     <p class="subtitle">Choose how to define your capabilities — describe them, upload XML, or use AI image analysis.</p>
                     <div id="existingDataCta" class="existing-data-cta">
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.6rem;">✅ Existing organization data detected.</p>
-                        <a href="/design" class="btn btn-primary" style="display: inline-flex; text-decoration: none;">➡️ Go to Design Module</a>
+                        <a href="/design" target="_top" class="btn btn-primary" style="display: inline-flex; text-decoration: none;">➡️ Go to Design Module</a>
                     </div>
                 </div>
 
@@ -1303,7 +1303,7 @@
                 <div class="stats-grid" id="finalSummary"></div>
 
                 <div class="btn-group" style="justify-content: center;">
-                    <a href="/design" class="btn btn-primary">🎨 Open Design Module →</a>
+                    <a href="/design" target="_top" class="btn btn-primary">🎨 Open Design Module →</a>
                     <button class="btn btn-secondary" onclick="location.reload()">Create More Agents</button>
                 </div>
             </div>
@@ -2596,11 +2596,15 @@
                     </div>
                 `;
                 
-                // Primary success path: open Design module immediately.
-                // NOTE: Keep wizard state until navigation succeeds. Clearing it too early
-                // can force users back to step 1 if /design is temporarily unavailable.
-                const redirectUrl = data.redirectUrl || '/design';
+                // Primary success path: open Design module
+                const redirectUrl = data.redirectUrl || '/design/';
                 try {
+                    // If running inside the shell iframe, use parent's loadModuleByUrl
+                    if (window.parent !== window && window.parent.loadModuleByUrl) {
+                        window.parent.loadModuleByUrl(redirectUrl, 'Design Module');
+                        return;
+                    }
+                    // Otherwise navigate the full page
                     window.location.href = redirectUrl;
                     return;
                 } catch (navError) {
@@ -2736,7 +2740,7 @@
         // INITIALIZATION
         // ==========================================
         document.addEventListener('DOMContentLoaded', async () => {
-            window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
+            window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: true });
             await checkExistingOrgData();
 
             // Remove prior-session restore behavior completely.

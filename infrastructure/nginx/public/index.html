@@ -264,6 +264,18 @@
         activateNav(button);
       }
 
+      // Expose function for iframe to call (e.g., after wizard completion)
+      window.loadModuleByUrl = function(url, title) {
+        const matchingButton = navLinks.find(btn => btn.dataset.url === url);
+        if (matchingButton) {
+          loadModule(matchingButton);
+        } else {
+          frameEl.src = url;
+          titleEl.textContent = title || 'Flowgrid';
+          navLinks.forEach(btn => btn.classList.remove('active'));
+        }
+      };
+
       async function bootstrap() {
         window.FlowgridAuthUI.initPage({ requireAuth: true });
 

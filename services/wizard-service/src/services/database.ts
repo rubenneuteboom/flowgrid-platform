@@ -195,8 +195,8 @@ export async function applyWizardSession(
     agentIdMap[agent.id] = newAgentId;
 
     await pool.query(
-      `INSERT INTO agents (id, tenant_id, name, type, description, config, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO agents (id, tenant_id, name, type, description, config, status, element_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         newAgentId,
         tenantId,
@@ -217,7 +217,8 @@ export async function applyWizardSession(
           decisionPoints: agent.decisionPoints,
           errorHandling: agent.errorHandling,
         }),
-        'draft'
+        'draft',
+        agent.elementType || 'Agent'
       ]
     );
 

@@ -88,9 +88,12 @@ export type AutonomyLevel = 'autonomous' | 'supervised' | 'human-in-loop';
 export type RiskAppetite = 'low' | 'medium' | 'high';
 export type AgentLayer = 'value-stream' | 'functional-component' | 'capability';
 
+export type ElementType = 'Agent' | 'Capability' | 'DataObject' | 'Process';
+
 export interface ProposedAgent {
   id: string;
   name: string;
+  elementType?: ElementType;
   layer?: AgentLayer;
   valueStream?: string;
   purpose: string;

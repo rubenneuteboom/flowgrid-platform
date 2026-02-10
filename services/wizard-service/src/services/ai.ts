@@ -272,7 +272,8 @@ Return valid JSON:
   "agents": [
     {
       "id": "agent-1",
-      "name": "<Agent Naam>",
+      "name": "<Element Naam>",
+      "elementType": "Agent|Capability|DataObject|Process",
       "purpose": "<doel>",
       "description": "<uitgebreide beschrijving>",
       "capabilities": [<capability namen>],
@@ -284,6 +285,12 @@ Return valid JSON:
       "outputs": [<outputs>]
     }
   ],
+
+ELEMENT TYPE GUIDELINES:
+- "Agent": Autonomous actors that perform tasks, make decisions, or process information (e.g., Coordinator, Analyzer, Monitor, Gateway)
+- "Capability": Specific abilities or functions that can be performed (e.g., "Data Validation", "Report Generation")  
+- "DataObject": Data entities, records, or information objects (e.g., "Build Package", "Customer Record", "Configuration")
+- "Process": Business processes, workflows, or procedures (e.g., "Release Management", "Approval Workflow")
   "agentRelationships": [
     {"sourceAgentId": "agent-1", "targetAgentId": "agent-2", "messageType": "<type>", "description": "<wat>"}
   ],

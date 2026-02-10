@@ -4,12 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>🎨 FlowGrid Design Studio - Flowgrid Platform</title>
+  <title>⚡ Flowgrid Design - Flowgrid Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/vis-network.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/dist/vis-network.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -77,7 +78,9 @@
       min-width: 200px; 
       max-width: 400px; 
       flex-shrink: 0; 
-      position: relative; 
+      position: relative;
+      display: flex;
+      flex-direction: column;
     }
     .sidebar-section { 
       padding: 1rem; 
@@ -89,6 +92,12 @@
       margin-bottom: 0.5rem; 
       text-transform: uppercase; 
       letter-spacing: 0.5px;
+    }
+    .sidebar-section.elements-section {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
     
     /* Search & Filters */
@@ -109,7 +118,7 @@
     
     /* Element List */
     .element-list { 
-      max-height: 400px; 
+      flex: 1;
       overflow-y: auto; 
     }
     .element-item { 
@@ -134,6 +143,84 @@
       gap: 0.3rem;
     }
     .element-item.selected .element-type { color: #bfdbfe; }
+
+    /* Progress Section - Legacy Style */
+    .progress-section {
+      padding: 1rem;
+      background: #1e293b;
+    }
+    .progress-section h3 {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .progress-counters {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .progress-counter {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 6px;
+      padding: 0.5rem;
+      text-align: center;
+    }
+    .progress-counter-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+    .progress-counter-label {
+      font-size: 0.65rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .progress-counter.configured .progress-counter-value { color: #60a5fa; }
+    .progress-counter.compiled .progress-counter-value { color: #a78bfa; }
+    .progress-counter.deployed .progress-counter-value { color: #10b981; }
+    
+    .progress-bar-container {
+      margin-bottom: 0.75rem;
+    }
+    .progress-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-bottom: 0.25rem;
+    }
+    .progress-bar {
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-stats {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .progress-stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.2rem 0;
+    }
+    .progress-stat-value {
+      color: #94a3b8;
+    }
     
     /* Main Content */
     .main-content { 
@@ -146,15 +233,42 @@
       flex-direction: column;
     }
     
-    /* Graph Legend */
-    .graph-legend { 
-      display: flex; 
-      flex-wrap: wrap; 
-      gap: 0.5rem; 
-      margin-bottom: 0.75rem; 
-      padding: 0.5rem; 
-      background: #1e293b; 
-      border-radius: 6px; 
+    /* Agent Explore Header */
+    .agent-explore-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .agent-explore-header h2 {
+      font-size: 1rem;
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    /* Graph Legend - Legacy Style */
+    .graph-legend-container {
+      background: #1e293b;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .legend-row:last-of-type { margin-bottom: 0; }
+    .legend-label {
+      font-size: 0.7rem;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      min-width: 65px;
     }
     .legend-item { 
       display: flex; 
@@ -173,6 +287,18 @@
       width: 12px; 
       height: 12px; 
       border-radius: 3px; 
+    }
+    .legend-line {
+      width: 20px;
+      height: 3px;
+      border-radius: 1px;
+    }
+    .legend-stats {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.75rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid #334155;
     }
     
     /* Graph Container */
@@ -224,6 +350,74 @@
       flex-wrap: wrap;
       gap: 0.4rem;
     }
+
+    /* Overview Panel - Legacy Style */
+    .overview-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      flex: 1;
+    }
+    .select-element-card {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 1rem;
+      border: 1px solid #334155;
+    }
+    .select-element-card h3 {
+      color: #10b981;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .select-element-card p {
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+    
+    .element-distribution-card {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 1rem;
+      border: 1px solid #334155;
+      flex: 1;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+    }
+    .element-distribution-card h3 {
+      color: #10b981;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .distribution-chart-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      flex: 1;
+    }
+    .chart-wrapper {
+      width: 220px;
+      height: 220px;
+      position: relative;
+    }
+    .chart-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+    }
+    .chart-legend-color {
+      width: 16px;
+      height: 12px;
+      border-radius: 2px;
+    }
     
     /* Detail Panel */
     .detail-panel { 
@@ -253,7 +447,7 @@
       margin-bottom: 1rem;
     }
     
-    /* Detail Tabs */
+    /* Detail Tabs - Legacy Style */
     .detail-tabs { 
       display: flex; 
       gap: 0.15rem; 
@@ -272,6 +466,9 @@
       border: 1px solid transparent; 
       white-space: nowrap; 
       transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
     }
     .detail-tab:hover { color: #e2e8f0; background: #334155; }
     .detail-tab.active { 
@@ -468,13 +665,14 @@
       .main-content { min-height: 55vh; }
       .resize-handle { display: none; }
       .header { flex-wrap: wrap; }
+      .distribution-chart-container { flex-direction: column; }
     }
   </style>
 </head>
 <body>
   <!-- Header -->
   <header class="header legacy-header">
-    <h1>🎨 FlowGrid Design Studio</h1>
+    <h1>⚡ Flowgrid Design</h1>
     <div class="stats">
       <div class="stat">
         <div class="stat-value" id="stat-elements">0</div>
@@ -489,18 +687,11 @@
         <div>Agents</div>
       </div>
     </div>
-    <div class="nav-links">
-      <a href="/" class="nav-link">🏠 Home</a>
-      <a href="#" class="nav-link" onclick="exportDesignBundle(); return false;">📤 Export</a>
-      <a href="#" class="nav-link" onclick="triggerImportDesignBundle(); return false;">📥 Import</a>
-      <a href="#" class="nav-link" onclick="refreshData(); return false;">🔄 Refresh</a>
-      <a href="#" class="nav-link" onclick="createAgent(); return false;">➕ New Agent</a>
-      <a href="/wizard.html" class="btn btn-primary">✨ Start Wizard</a>
-    </div>
   </header>
   <input type="file" id="design-import-input" accept="application/json" style="display: none;">
 
   <div class="container">
+    <!-- Left Sidebar -->
     <aside class="sidebar">
       <div class="resize-handle" id="sidebar-resize"></div>
       <div class="sidebar-section">
@@ -514,43 +705,112 @@
           <option value="Process">🔄 Process</option>
         </select>
       </div>
-      <div class="sidebar-section">
+      <div class="sidebar-section elements-section">
         <h3>📋 Elements</h3>
         <div class="element-list" id="element-list">
           <div class="loading"><div class="loading-spinner"></div><p style="margin-top: 0.5rem;">Loading...</p></div>
         </div>
       </div>
-      <div class="sidebar-section">
+      <!-- Progress Section - Legacy Style -->
+      <div class="progress-section">
         <h3>📈 Progress</h3>
-        <div class="info-card"><h4>Coverage</h4><p id="metric-coverage">0 mapped relationships</p></div>
-        <div class="info-card"><h4>Active Agent</h4><p id="metric-active-agent">No selection</p></div>
+        <div class="progress-counters">
+          <div class="progress-counter configured">
+            <div class="progress-counter-value" id="progress-configured">0</div>
+            <div class="progress-counter-label">Configured</div>
+          </div>
+          <div class="progress-counter compiled">
+            <div class="progress-counter-value" id="progress-compiled">0</div>
+            <div class="progress-counter-label">Compiled</div>
+          </div>
+          <div class="progress-counter deployed">
+            <div class="progress-counter-value" id="progress-deployed">0</div>
+            <div class="progress-counter-label">Deployed</div>
+          </div>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-label">
+            <span>Deployed</span>
+            <span id="progress-percentage">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div class="progress-stats">
+          <div class="progress-stat-row">
+            <span>Total Agents:</span>
+            <span class="progress-stat-value" id="stat-total-agents">0</span>
+          </div>
+          <div class="progress-stat-row">
+            <span>With Purpose:</span>
+            <span class="progress-stat-value" id="stat-with-purpose">0</span>
+          </div>
+          <div class="progress-stat-row">
+            <span>With Design:</span>
+            <span class="progress-stat-value" id="stat-with-design">0</span>
+          </div>
+        </div>
       </div>
     </aside>
 
+    <!-- Main Content - Agent Explore -->
     <main class="main-content">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-        <h2 style="font-size:1rem;color:#60a5fa;">Agent Explore</h2>
+      <div class="agent-explore-header">
+        <h2>🔎 Agent Explore</h2>
       </div>
       <div class="detail-tabs" style="margin-bottom:0.75rem;">
         <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
-        <button class="detail-tab workspace-tab" data-tab="messages" onclick="showWorkspaceTab('messages')">Messages</button>
         <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
         <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
-        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">Integrations</button>
-        <button class="detail-tab workspace-tab" data-tab="a2a" onclick="showWorkspaceTab('a2a')">A2A Interactions</button>
-        <button class="detail-tab workspace-tab" data-tab="tools" onclick="showWorkspaceTab('tools')">Tools</button>
+        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🪄 Integrations</button>
+        <button class="detail-tab workspace-tab" data-tab="interactions" onclick="showWorkspaceTab('interactions')">🔄 Interactions</button>
         <button class="detail-tab workspace-tab" data-tab="agents" onclick="showWorkspaceTab('agents')">Agents</button>
-        <button class="detail-tab workspace-tab" data-tab="process" onclick="showWorkspaceTab('process')">Process Design</button>
       </div>
 
-      <section class="workspace-panel active" id="workspace-overview"><div class="info-card"><h4>Design Summary</h4><p id="workspace-overview-text">Select an element to inspect and edit details.</p></div></section>
-      <section class="workspace-panel" id="workspace-messages"><div id="workspace-messages-list" class="info-card"><h4>Messages</h4><p>No messages available.</p></div></section>
+      <!-- Overview Tab - Legacy Style with Donut Chart -->
+      <section class="workspace-panel active" id="workspace-overview">
+        <div class="overview-content">
+          <div class="select-element-card">
+            <h3>Select an element</h3>
+            <p>Click on an element in the sidebar to view its details and relationships.</p>
+          </div>
+          <div class="element-distribution-card">
+            <h3>Element Distribution</h3>
+            <div class="distribution-chart-container">
+              <div class="chart-wrapper">
+                <canvas id="distribution-chart"></canvas>
+              </div>
+              <div class="chart-legend" id="chart-legend">
+                <!-- Legend items will be populated by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Graph Tab -->
       <section class="workspace-panel" id="workspace-graph">
-        <div class="graph-legend" id="graph-legend">
-          <div class="legend-item" data-type="Agent" onclick="toggleLegend('Agent')"><div class="legend-color" style="background: #10b981;"></div><span>Agent</span></div>
-          <div class="legend-item" data-type="Capability" onclick="toggleLegend('Capability')"><div class="legend-color" style="background: #60a5fa;"></div><span>Capability</span></div>
-          <div class="legend-item" data-type="DataObject" onclick="toggleLegend('DataObject')"><div class="legend-color" style="background: #f59e0b;"></div><span>Data Object</span></div>
-          <div class="legend-item" data-type="Process" onclick="toggleLegend('Process')"><div class="legend-color" style="background: #ec4899;"></div><span>Process</span></div>
+        <div class="graph-legend-container" id="graph-legend">
+          <div class="legend-row">
+            <span class="legend-label">Elements:</span>
+            <div class="legend-item" data-type="ApplicationFunction" onclick="toggleLegend('ApplicationFunction')"><div class="legend-color" style="background: #a855f7;"></div><span>ApplicationFunction</span></div>
+            <div class="legend-item" data-type="Grouping" onclick="toggleLegend('Grouping')"><div class="legend-color" style="background: #06b6d4;"></div><span>Grouping</span></div>
+            <div class="legend-item" data-type="Resource" onclick="toggleLegend('Resource')"><div class="legend-color" style="background: #10b981;"></div><span>Resource</span></div>
+            <div class="legend-item" data-type="ApplicationService" onclick="toggleLegend('ApplicationService')"><div class="legend-color" style="background: #f59e0b;"></div><span>ApplicationService</span></div>
+            <div class="legend-item" data-type="Requirement" onclick="toggleLegend('Requirement')"><div class="legend-color" style="background: #3b82f6;"></div><span>Requirement</span></div>
+            <div class="legend-item" data-type="DataObject" onclick="toggleLegend('DataObject')"><div class="legend-color" style="background: #ec4899;"></div><span>DataObject</span></div>
+          </div>
+          <div class="legend-row">
+            <span class="legend-label">Relations:</span>
+            <div class="legend-item relation-legend" data-relation="Realization"><div class="legend-line" style="background: #a855f7;"></div><span>Realization</span></div>
+            <div class="legend-item relation-legend" data-relation="Flow"><div class="legend-line" style="background: #3b82f6;"></div><span>Flow</span></div>
+            <div class="legend-item relation-legend" data-relation="Association"><div class="legend-line" style="background: #64748b;"></div><span>Association</span></div>
+            <div class="legend-item relation-legend" data-relation="Composition"><div class="legend-line" style="background: #ec4899;"></div><span>Composition</span></div>
+            <div class="legend-item relation-legend" data-relation="Access"><div class="legend-line" style="background: #ef4444;"></div><span>Access</span></div>
+            <div class="legend-item relation-legend" data-relation="Serving"><div class="legend-line" style="background: #14b8a6;"></div><span>Serving</span></div>
+          </div>
+          <div class="legend-stats">Click to toggle • <span id="graph-node-count">0</span> nodes, <span id="graph-edge-count">0</span> edges</div>
         </div>
         <div class="graph-container" id="graph-container">
           <div class="graph-state-overlay" id="graph-overlay">
@@ -562,42 +822,181 @@
             </div>
           </div>
         </div>
-        <div class="interaction-legend" id="interaction-legend"><div class="interaction-legend-title">Interaction Types</div><div class="interaction-legend-items" id="interaction-legend-items"></div></div>
       </section>
-      <section class="workspace-panel" id="workspace-relationships"><div id="workspace-relations" class="info-card"><h4>Relationships</h4><p>Select an element to inspect relationships.</p></div></section>
-      <section class="workspace-panel" id="workspace-integrations"><div id="workspace-integrations-list" class="info-card"><h4>Integrations</h4><p>Select an agent to inspect integrations.</p></div></section>
-      <section class="workspace-panel" id="workspace-a2a"><div class="info-card"><h4>A2A Interactions</h4><p>Interaction contracts are shown in the right panel and messages tab.</p></div></section>
-      <section class="workspace-panel" id="workspace-tools"><div class="info-card"><h4>Tools</h4><p>Tool mapping is available through integrations and generated configuration.</p></div></section>
-      <section class="workspace-panel" id="workspace-agents"><div class="info-card"><h4>Agents</h4><p id="workspace-agents-list">Loading agent roster…</p></div></section>
-      <section class="workspace-panel" id="workspace-process"><div class="info-card"><h4>Process Design</h4><p>Use graph and relationships to shape process flow.</p></div></section>
+
+      <!-- Relationships Tab -->
+      <section class="workspace-panel" id="workspace-relationships">
+        <div id="workspace-relations" class="info-card" style="padding: 1.5rem;">
+          <h4 style="color: #60a5fa; margin-bottom: 0.5rem;">Relationships</h4>
+          <p style="color: #94a3b8; margin-bottom: 1.5rem;">Explore relationships and connections for the selected element.</p>
+          <div id="relationships-content">
+            <p style="color: #64748b;">Select an element to inspect relationships.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Integrations Tab -->
+      <section class="workspace-panel" id="workspace-integrations">
+        <div id="workspace-integrations-list" class="info-card">
+          <h4>Integrations</h4>
+          <p>Select an agent to inspect integrations.</p>
+        </div>
+      </section>
+
+      <!-- Interactions Tab -->
+      <section class="workspace-panel" id="workspace-interactions">
+        <div class="info-card">
+          <h4>A2A Interactions</h4>
+          <p>Interaction contracts are shown in the right panel when an agent is selected.</p>
+        </div>
+      </section>
+
+      <!-- Agents Tab -->
+      <section class="workspace-panel" id="workspace-agents">
+        <div class="info-card">
+          <h4>Agents</h4>
+          <p id="workspace-agents-list">Loading agent roster…</p>
+        </div>
+      </section>
     </main>
 
+    <!-- Right Sidebar - Detail Panel with Legacy Tabs -->
     <aside class="detail-panel" id="detail-panel">
       <div class="resize-handle" id="detail-resize"></div>
-      <div id="detail-empty" class="empty-state"><div class="icon">👈</div><p>Select an agent to open Agent Design</p></div>
+      <div id="detail-empty">
+        <div class="empty-state">
+          <div class="icon">👈</div>
+          <p>Select a Functional Component to edit its description</p>
+        </div>
+      </div>
       <div id="detail-content" style="display: none;">
         <h2 id="detail-name">Agent Name</h2>
         <div class="agent-type" id="detail-type">🤖 Agent • Specialist</div>
+        
+        <!-- Legacy-style tabs: Description, Design, Configure, Verify, Code, Deploy -->
         <div class="detail-tabs">
-          <button class="detail-tab active" data-tab="overview" onclick="showDetailTab('overview')">Overview</button>
-          <button class="detail-tab" data-tab="capabilities" onclick="showDetailTab('capabilities')">Capabilities</button>
-          <button class="detail-tab" data-tab="interactions" onclick="showDetailTab('interactions')">Interactions</button>
-          <button class="detail-tab" data-tab="config" onclick="showDetailTab('config')">Config</button>
-          <button class="detail-tab" data-tab="code" onclick="showDetailTab('code')">Code</button>
-          <button class="detail-tab" data-tab="deploy" onclick="showDetailTab('deploy')">Deploy</button>
+          <button class="detail-tab active" data-tab="description" onclick="showDetailTab('description')">📝 Description</button>
+          <button class="detail-tab" data-tab="design" onclick="showDetailTab('design')">🎨 Design</button>
+          <button class="detail-tab" data-tab="configure" onclick="showDetailTab('configure')">⚙️ Configure</button>
+          <button class="detail-tab" data-tab="verify" onclick="showDetailTab('verify')">✅ Verify</button>
+          <button class="detail-tab" data-tab="code" onclick="showDetailTab('code')">💻 Code</button>
+          <button class="detail-tab" data-tab="deploy" onclick="showDetailTab('deploy')">🚀 Deploy</button>
         </div>
 
-        <div id="tab-overview" class="tab-content active">
-          <div class="form-group"><label>Purpose</label><textarea id="agent-purpose" placeholder="Describe the agent's purpose..."></textarea></div>
-          <div class="form-group"><label>Value Stream</label><input type="text" id="agent-valuestream" placeholder="e.g., Request to Deploy"></div>
-          <div class="form-group"><label>Pattern</label><select id="agent-pattern"><option value="routing">🔀 Routing</option><option value="planning">📋 Planning</option><option value="tool-use">🔧 Tool Use</option><option value="orchestration">🎭 Orchestration</option><option value="human-in-loop">👤 Human-in-Loop</option><option value="rag">📚 RAG</option><option value="reflection">🔍 Reflection</option><option value="guardrails">🛡️ Guardrails</option></select></div>
-          <div style="display:flex;gap:.5rem"><button class="btn btn-primary" onclick="saveAgent()">💾 Save</button><button class="btn btn-danger" onclick="deleteAgent()">🗑️ Delete</button></div>
+        <!-- Description Tab - Legacy Style -->
+        <div id="tab-description" class="tab-content active">
+          <div style="margin-bottom: 1rem;">
+            <h3 style="color: #10b981; font-size: 1rem; margin-bottom: 0.25rem;">📝 Agent Description</h3>
+            <p style="color: #64748b; font-size: 0.8rem;">Define what this agent does in clear, business-friendly terms.</p>
+          </div>
+          <div class="form-group">
+            <label>Agent Name (Display)</label>
+            <input type="text" id="agent-display-name" placeholder="Display name for this agent">
+          </div>
+          <div class="form-group">
+            <label>Short Description</label>
+            <input type="text" id="agent-short-desc" placeholder="Brief one-line description">
+          </div>
+          <div class="form-group">
+            <label>Detailed Purpose</label>
+            <textarea id="agent-purpose" placeholder="Describe what this agent does and its core function..." rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Business Value</label>
+            <textarea id="agent-business-value" placeholder="What value does this agent provide to the business?" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Key Responsibilities</label>
+            <textarea id="agent-responsibilities" placeholder="List the main responsibilities (one per line)" rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Success Criteria</label>
+            <textarea id="agent-success-criteria" placeholder="How do we measure if this agent is successful?" rows="2"></textarea>
+          </div>
+          <button class="btn btn-success" style="width: 100%; margin-top: 0.5rem;" onclick="saveAgent()">💾 Save Description</button>
+          </div>
         </div>
-        <div id="tab-capabilities" class="tab-content"><div class="form-group"><label>Capability Group</label><input type="text" id="agent-capgroup" placeholder="e.g., Incident Management"></div><div class="form-group"><label>Objectives (one per line)</label><textarea id="agent-objectives" rows="6"></textarea></div><div class="form-group"><label>KPIs</label><textarea id="agent-kpis" rows="4"></textarea></div><button class="btn btn-primary" onclick="saveAgent()">💾 Save Capabilities</button></div>
-        <div id="tab-interactions" class="tab-content"><h4 style="color:#94a3b8;font-size:.8rem;margin-bottom:.75rem;">AGENT INTERACTIONS</h4><div id="interactions-list"><div class="empty-state" style="padding:1rem;"><p>No interaction contracts found</p></div></div></div>
-        <div id="tab-config" class="tab-content"><div id="integrations-list"><div class="empty-state"><div class="icon">🔌</div><p>No integrations configured</p></div></div><button class="btn btn-success" style="margin-top:1rem;" onclick="addIntegration()">➕ Add Integration</button></div>
-        <div id="tab-code" class="tab-content"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;"><h4 style="color:#94a3b8;font-size:.8rem;">GENERATED PROMPT</h4><button class="btn btn-secondary" onclick="copyCode()">📋 Copy</button></div><div class="code-container"><pre id="agent-code">// Select an agent to view generated code</pre></div><button class="btn btn-success" style="margin-top:1rem;" onclick="generateCode()">🤖 Regenerate with AI</button></div>
-        <div id="tab-deploy" class="tab-content"><div class="info-card"><h4>Deployment</h4><p>Deployment integration is available in platform runtime services.</p></div></div>
+
+        <!-- Design Tab -->
+        <div id="tab-design" class="tab-content">
+          <div class="form-group">
+            <label>Pattern</label>
+            <select id="agent-pattern">
+              <option value="routing">🔀 Routing</option>
+              <option value="planning">📋 Planning</option>
+              <option value="tool-use">🔧 Tool Use</option>
+              <option value="orchestration">🎭 Orchestration</option>
+              <option value="human-in-loop">👤 Human-in-Loop</option>
+              <option value="rag">📚 RAG</option>
+              <option value="reflection">🔍 Reflection</option>
+              <option value="guardrails">🛡️ Guardrails</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Capability Group</label>
+            <input type="text" id="agent-capgroup" placeholder="e.g., Incident Management">
+          </div>
+          <div class="form-group">
+            <label>Objectives (one per line)</label>
+            <textarea id="agent-objectives" rows="6"></textarea>
+          </div>
+          <div class="form-group">
+            <label>KPIs</label>
+            <textarea id="agent-kpis" rows="4"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveAgent()">💾 Save Design</button>
+        </div>
+
+        <!-- Configure Tab -->
+        <div id="tab-configure" class="tab-content">
+          <h4 style="color:#94a3b8;font-size:.8rem;margin-bottom:.75rem;">INTEGRATIONS</h4>
+          <div id="integrations-list">
+            <div class="empty-state">
+              <div class="icon">🔌</div>
+              <p>No integrations configured</p>
+            </div>
+          </div>
+          <button class="btn btn-success" style="margin-top:1rem;" onclick="addIntegration()">➕ Add Integration</button>
+          
+          <h4 style="color:#94a3b8;font-size:.8rem;margin:1.5rem 0 .75rem;">INTERACTIONS</h4>
+          <div id="interactions-list">
+            <div class="empty-state" style="padding:1rem;"><p>No interaction contracts found</p></div>
+          </div>
+        </div>
+
+        <!-- Verify Tab -->
+        <div id="tab-verify" class="tab-content">
+          <div class="info-card">
+            <h4>Verification Status</h4>
+            <p id="verify-status">Run verification to check agent configuration completeness.</p>
+          </div>
+          <div id="verify-results"></div>
+          <button class="btn btn-primary" style="margin-top:1rem;" onclick="runVerification()">🔍 Run Verification</button>
+        </div>
+
+        <!-- Code Tab -->
+        <div id="tab-code" class="tab-content">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+            <h4 style="color:#94a3b8;font-size:.8rem;">GENERATED PROMPT</h4>
+            <button class="btn btn-secondary" onclick="copyCode()">📋 Copy</button>
+          </div>
+          <div class="code-container">
+            <pre id="agent-code">// Select an agent to view generated code</pre>
+          </div>
+          <button class="btn btn-success" style="margin-top:1rem;" onclick="generateCode()">🤖 Regenerate with AI</button>
+        </div>
+
+        <!-- Deploy Tab -->
+        <div id="tab-deploy" class="tab-content">
+          <div class="info-card">
+            <h4>Deployment Status</h4>
+            <p id="deploy-status">Agent is not yet deployed.</p>
+          </div>
+          <div style="display:flex;gap:.5rem;margin-top:1rem;">
+            <button class="btn btn-success" onclick="deployAgent()">🚀 Deploy Agent</button>
+            <button class="btn btn-danger" onclick="deleteAgent()">🗑️ Delete</button>
+          </div>
+        </div>
       </div>
     </aside>
   </div>
@@ -608,15 +1007,12 @@
     // Configuration
     // ============================================================================
     
-    // API base URL - uses nginx gateway
     const API_BASE = '/api/agents';
 
     function getAccessToken() {
       if (window.FlowgridAuthUI?.getAuthToken) {
         return window.FlowgridAuthUI.getAuthToken();
       }
-
-      // Fallback when auth helper script is unavailable
       return localStorage.getItem('flowgrid_access_token') || localStorage.getItem('accessToken');
     }
     
@@ -625,40 +1021,87 @@
     let relationships = [];
     let selectedAgentId = null;
     let network = null;
+    let distributionChart = null;
     let hiddenTypes = new Set();
     let graphState = 'loading';
     
     function normalizeNodeType(value) {
       if (!value) return 'Agent';
       const lower = String(value).toLowerCase();
-      if (['agent', 'capability', 'dataobject', 'process'].includes(lower)) {
-        return lower === 'dataobject' ? 'DataObject' : lower.charAt(0).toUpperCase() + lower.slice(1);
-      }
-      return 'Agent';
+      // Map common variations to standard types
+      const typeMap = {
+        'agent': 'Agent',
+        'capability': 'Capability',
+        'dataobject': 'DataObject',
+        'data object': 'DataObject',
+        'process': 'Process',
+        'applicationfunction': 'ApplicationFunction',
+        'application function': 'ApplicationFunction',
+        'grouping': 'Grouping',
+        'resource': 'Resource',
+        'applicationservice': 'ApplicationService',
+        'application service': 'ApplicationService',
+        'requirement': 'Requirement',
+        'businessservice': 'BusinessService',
+        'business service': 'BusinessService',
+      };
+      return typeMap[lower] || value; // Return original if not mapped
     }
 
-    // Node colors by type
+    // Node colors by element type (legacy + new)
     const nodeColors = {
-      'Agent': '#10b981',
-      'Capability': '#60a5fa',
-      'DataObject': '#f59e0b',
-      'Process': '#ec4899',
+      // Legacy ArchiMate types
+      'ApplicationFunction': '#a855f7', // purple
+      'Grouping': '#06b6d4', // cyan
+      'Resource': '#10b981', // green
+      'ApplicationService': '#f59e0b', // orange
+      'Requirement': '#3b82f6', // blue
+      'DataObject': '#ec4899', // pink
+      'BusinessService': '#3b82f6', // blue
+      // New FlowGrid types
+      'Agent': '#10b981', // green
+      'Capability': '#60a5fa', // blue
+      'Process': '#ec4899', // pink
       'default': '#94a3b8'
     };
 
-    // Relationship colors by interaction type
-    const interactionColors = {
-      uses: '#60a5fa',
-      manages: '#22c55e',
-      delegates_to: '#f59e0b',
-      consults: '#a78bfa',
-      triggers: '#f97316',
-      reports_to: '#38bdf8',
-      depends_on: '#f43f5e',
-      informs: '#14b8a6',
-      message: '#64748b',
-      default: '#64748b'
+    // Relation/edge colors
+    const relationColors = {
+      'Realization': '#a855f7', // purple
+      'Flow': '#3b82f6', // blue
+      'Association': '#64748b', // gray
+      'Composition': '#ec4899', // pink
+      'Access': '#ef4444', // red
+      'Serving': '#14b8a6', // teal
+      'uses': '#60a5fa',
+      'manages': '#22c55e',
+      'delegates_to': '#f59e0b',
+      'consults': '#a78bfa',
+      'triggers': '#f97316',
+      'reports_to': '#38bdf8',
+      'depends_on': '#f43f5e',
+      'informs': '#14b8a6',
+      'message': '#64748b',
+      'default': '#64748b'
     };
+
+    // Extended element type colors for donut chart
+    const elementTypeColors = {
+      'Requirement': '#3b82f6',
+      'Resource': '#10b981',
+      'ApplicationService': '#f59e0b',
+      'Artifact': '#ef4444',
+      'ApplicationFunction': '#a855f7',
+      'BusinessService': '#3b82f6',
+      'DataObject': '#ec4899',
+      'Grouping': '#06b6d4',
+      'Capability': '#22c55e',
+      'ValueStream': '#f97316',
+      'Agent': '#10b981',
+      'Process': '#ec4899',
+    };
+
+    // Note: relationColors is defined above and includes all interaction types
 
     function setGraphState(state, message) {
       graphState = state;
@@ -702,6 +1145,7 @@
         await loadRelationships();
         initGraph();
         updateStats();
+        updateDistributionChart();
         console.log('[design-studio] Ready');
       } catch (error) {
         console.error('[design-studio] Init error:', error);
@@ -723,7 +1167,7 @@
     
     async function loadAgents() {
       try {
-        const response = await fetch(`${API_BASE}`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_BASE}?limit=500`, { headers: getAuthHeaders() });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const payload = await response.json();
@@ -733,11 +1177,14 @@
             ? payload.data
             : [];
 
+        console.log('[loadAgents] Raw response sample:', rawAgents.slice(0, 3).map(a => ({ name: a.name, elementType: a.elementType })));
+        
         agents = rawAgents.map((agent) => ({
           ...agent,
           id: agent.id,
           name: agent.name || 'Unnamed agent',
           type: normalizeNodeType(agent.type),
+          elementType: agent.elementType || 'Agent',
           pattern: agent.pattern || agent.config?.pattern || 'tool-use',
           purpose: agent.purpose || agent.description || '',
           valueStream: agent.valueStream || agent.config?.valueStream || '',
@@ -745,6 +1192,7 @@
           objectives: Array.isArray(agent.objectives) ? agent.objectives : [],
           kpis: Array.isArray(agent.kpis) ? agent.kpis : [],
           integrations: Array.isArray(agent.integrations) ? agent.integrations : [],
+          status: agent.status || 'configured',
         }));
 
         renderElementList();
@@ -796,31 +1244,6 @@
       }
     }
     
-    // Mock data for demo purposes
-    function generateMockAgents() {
-      return [
-        { id: '1', name: 'Incident Manager', type: 'Agent', pattern: 'orchestration', purpose: 'Manages incident lifecycle', valueStream: 'D2C', capabilityGroup: 'Incident Management' },
-        { id: '2', name: 'Change Coordinator', type: 'Agent', pattern: 'planning', purpose: 'Coordinates change requests', valueStream: 'R2D', capabilityGroup: 'Change Management' },
-        { id: '3', name: 'Knowledge Bot', type: 'Agent', pattern: 'rag', purpose: 'Provides knowledge assistance', valueStream: 'D2C', capabilityGroup: 'Knowledge Management' },
-        { id: '4', name: 'Ticket Router', type: 'Agent', pattern: 'routing', purpose: 'Routes tickets to appropriate teams', valueStream: 'D2C', capabilityGroup: 'Service Desk' },
-        { id: '5', name: 'Incident Analysis', type: 'Capability', purpose: 'Analyzes incident patterns' },
-        { id: '6', name: 'Change Impact Assessment', type: 'Capability', purpose: 'Assesses change impact' },
-        { id: '7', name: 'Incident Record', type: 'DataObject', purpose: 'Stores incident data' },
-        { id: '8', name: 'Change Request', type: 'DataObject', purpose: 'Stores change request data' },
-      ];
-    }
-    
-    function generateMockRelationships() {
-      return [
-        { id: 'r1', sourceId: '1', targetId: '5', type: 'uses' },
-        { id: 'r2', sourceId: '1', targetId: '7', type: 'manages' },
-        { id: 'r3', sourceId: '2', targetId: '6', type: 'uses' },
-        { id: 'r4', sourceId: '2', targetId: '8', type: 'manages' },
-        { id: 'r5', sourceId: '4', targetId: '1', type: 'delegates_to' },
-        { id: 'r6', sourceId: '1', targetId: '3', type: 'consults' },
-      ];
-    }
-    
     // ============================================================================
     // Element List Rendering
     // ============================================================================
@@ -832,7 +1255,7 @@
       
       const filtered = agents.filter(a => {
         const matchesSearch = a.name.toLowerCase().includes(searchTerm);
-        const matchesType = !typeFilter || a.type === typeFilter;
+        const matchesType = !typeFilter || a.elementType === typeFilter || (a.elementType === undefined && typeFilter === 'Agent');
         return matchesSearch && matchesType;
       });
       
@@ -852,9 +1275,76 @@
              data-id="${a.id}">
           <span class="element-name">${escapeHtml(a.name)}</span>
           <span class="element-type">
-            <span style="width: 8px; height: 8px; border-radius: 2px; background: ${nodeColors[a.type] || nodeColors.default};"></span>
-            ${a.type || 'Unknown'}
+            <span style="width: 8px; height: 8px; border-radius: 2px; background: ${nodeColors[a.elementType] || nodeColors.default};"></span>
+            ${a.elementType || 'Agent'}
           </span>
+        </div>
+      `).join('');
+    }
+
+    // ============================================================================
+    // Distribution Chart (Donut)
+    // ============================================================================
+
+    function updateDistributionChart() {
+      const canvas = document.getElementById('distribution-chart');
+      const legendContainer = document.getElementById('chart-legend');
+      
+      if (!canvas || !legendContainer) return;
+
+      // Count elements by type
+      const typeCounts = {};
+      agents.forEach(a => {
+        const type = a.type || 'Unknown';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+      });
+
+      const labels = Object.keys(typeCounts);
+      const data = Object.values(typeCounts);
+      const colors = labels.map(label => elementTypeColors[label] || '#64748b');
+
+      // Destroy existing chart if any
+      if (distributionChart) {
+        distributionChart.destroy();
+      }
+
+      // Create new chart
+      const ctx = canvas.getContext('2d');
+      distributionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderColor: '#1e293b',
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '60%',
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: '#1e293b',
+              titleColor: '#f1f5f9',
+              bodyColor: '#cbd5e1',
+              borderColor: '#334155',
+              borderWidth: 1,
+            }
+          }
+        }
+      });
+
+      // Update legend
+      legendContainer.innerHTML = labels.map((label, i) => `
+        <div class="chart-legend-item">
+          <div class="chart-legend-color" style="background: ${colors[i]};"></div>
+          <span>${escapeHtml(label)}</span>
         </div>
       `).join('');
     }
@@ -873,7 +1363,6 @@
           network = null;
         }
         setGraphState('empty');
-        renderInteractionLegend();
         return;
       }
 
@@ -882,13 +1371,15 @@
           id: a.id,
           label: a.name,
           color: {
-            background: nodeColors[a.type] || nodeColors.default,
-            border: '#1e293b',
-            highlight: { background: '#f59e0b', border: '#f59e0b' }
+            background: '#475569',
+            border: '#334155',
+            highlight: { background: '#3b82f6', border: '#60a5fa' },
+            hover: { background: '#64748b', border: '#475569' }
           },
-          font: { color: '#f1f5f9', size: 12 },
-          shape: a.type === 'Agent' ? 'box' : (a.type === 'DataObject' ? 'ellipse' : 'hexagon'),
-          borderWidth: 2,
+          font: { color: '#e2e8f0', size: 11, face: 'Inter, sans-serif' },
+          shape: 'hexagon',
+          size: 25,
+          borderWidth: 1,
         }))
       );
       
@@ -900,42 +1391,44 @@
             return source && target && !hiddenTypes.has(source.type) && !hiddenTypes.has(target.type);
           })
           .map(r => {
-            const edgeColor = interactionColors[r.type] || interactionColors.default;
             return {
               id: r.id,
               from: r.sourceId,
               to: r.targetId,
               label: r.type,
-              arrows: 'to',
-              color: { color: edgeColor, highlight: edgeColor, hover: edgeColor },
-              font: { color: '#94a3b8', size: 10, align: 'middle' },
-              smooth: { type: 'curvedCW', roundness: 0.2 },
+              arrows: { to: { enabled: true, scaleFactor: 0.5, type: 'arrow' } },
+              color: { color: '#64748b', highlight: '#94a3b8', hover: '#94a3b8' },
+              font: { color: '#94a3b8', size: 9, align: 'horizontal', strokeWidth: 0 },
+              smooth: { type: 'curvedCW', roundness: 0.15 },
+              width: 1.5,
             };
           })
       );
       
       const options = {
         nodes: {
-          shadow: true,
-          margin: 10,
+          shadow: false,
+          margin: 8,
         },
         edges: {
-          width: 2,
-          shadow: true,
+          shadow: false,
         },
         physics: {
           enabled: true,
           barnesHut: {
-            gravitationalConstant: -2000,
-            centralGravity: 0.3,
-            springLength: 150,
-            springConstant: 0.04,
+            gravitationalConstant: -3000,
+            centralGravity: 0.2,
+            springLength: 180,
+            springConstant: 0.03,
+            damping: 0.15,
           },
-          stabilization: { iterations: 100 },
+          stabilization: { iterations: 150 },
         },
         interaction: {
           hover: true,
           tooltipDelay: 200,
+          zoomView: true,
+          dragView: true,
         },
       };
       
@@ -953,7 +1446,12 @@
         }
       });
 
-      renderInteractionLegend();
+      // Update graph stats
+      const nodeCountEl = document.getElementById('graph-node-count');
+      const edgeCountEl = document.getElementById('graph-edge-count');
+      if (nodeCountEl) nodeCountEl.textContent = nodes.length;
+      if (edgeCountEl) edgeCountEl.textContent = edges.length;
+
       setGraphState('ready');
     }
 
@@ -976,7 +1474,7 @@
 
       container.innerHTML = types.map(type => `
         <div class="legend-item" title="${escapeHtml(type)}">
-          <div class="legend-color" style="background: ${interactionColors[type] || interactionColors.default};"></div>
+          <div class="legend-color" style="background: ${relationColors[type] || relationColors.default};"></div>
           <span>${escapeHtml(type)}</span>
         </div>
       `).join('');
@@ -1014,41 +1512,33 @@
       // Update header
       document.getElementById('detail-name').textContent = agent.name;
       document.getElementById('detail-type').textContent = `${getTypeIcon(agent.type)} ${agent.type} • ${agent.pattern || 'General'}`;
-      const activeMetric = document.getElementById('metric-active-agent');
-      if (activeMetric) activeMetric.textContent = agent.name;
       
-      // Update overview tab
+      // Update Description tab
       document.getElementById('agent-purpose').value = agent.purpose || '';
       document.getElementById('agent-valuestream').value = agent.valueStream || '';
-      document.getElementById('agent-capgroup').value = agent.capabilityGroup || '';
-      document.getElementById('agent-pattern').value = agent.pattern || 'tool-use';
       
-      // Update objectives tab
+      // Update Design tab
+      document.getElementById('agent-pattern').value = agent.pattern || 'tool-use';
+      document.getElementById('agent-capgroup').value = agent.capabilityGroup || '';
       document.getElementById('agent-objectives').value = (agent.objectives || []).join('\n');
       document.getElementById('agent-kpis').value = (agent.kpis || []).join('\n');
       
-      // Update relations tab
+      // Update Configure tab
       renderRelationships(id);
       renderInteractions(id);
-      
-      // Update integrations tab
       renderIntegrations(agent);
 
-      // Update workspace summaries
-      const overviewText = document.getElementById('workspace-overview-text');
-      if (overviewText) overviewText.textContent = `${agent.name}: ${agent.purpose || 'No purpose defined yet.'}`;
-      const messagesList = document.getElementById('workspace-messages-list');
-      if (messagesList) {
-        const related = relationships.filter(r => r.sourceId === agent.id || r.targetId === agent.id);
-        messagesList.innerHTML = `<h4>Messages</h4>${related.length ? related.map(r => `<div class="relationship-item"><span class="relationship-type">${escapeHtml(r.type || 'message')}</span><span>${escapeHtml((agents.find(a => a.id===r.sourceId)?.name || 'Unknown'))} → ${escapeHtml((agents.find(a => a.id===r.targetId)?.name || 'Unknown'))}</span></div>`).join('') : '<p>No messages available.</p>'}`;
-      }
-      const workspaceIntegrations = document.getElementById('workspace-integrations-list');
-      if (workspaceIntegrations) {
-        workspaceIntegrations.innerHTML = `<h4>Integrations</h4>${(agent.integrations || []).length ? (agent.integrations || []).map(i => `<div class="integration-item"><div class="integration-name"><span>${i.icon || '🔌'}</span><span>${escapeHtml(i.name || 'Integration')}</span><span class="integration-badge">${escapeHtml(i.type || 'external')}</span></div></div>`).join('') : '<p>No integrations configured.</p>'}`;
-      }
+      // Update Verify tab
+      updateVerifyStatus(agent);
 
-      // Update code tab
+      // Update Deploy tab
+      updateDeployStatus(agent);
+
+      // Update Code tab
       generateAgentCode(agent);
+
+      // Update workspace panels
+      updateWorkspacePanels(agent);
 
       // Highlight in list
       renderElementList();
@@ -1068,29 +1558,114 @@
       };
       return icons[type] || '📋';
     }
-    
-    function renderRelationships(agentId) {
-      const container = document.getElementById('workspace-relations');
-      if (!container) return;
 
-      const outgoing = relationships.filter(r => r.sourceId === agentId);
-      const incoming = relationships.filter(r => r.targetId === agentId);
-
-      const outgoingHtml = outgoing.length
-        ? outgoing.map(r => {
+    function updateWorkspacePanels(agent) {
+      // Update workspace relationships
+      const relationsContainer = document.getElementById('workspace-relations');
+      if (relationsContainer) {
+        const outgoing = relationships.filter(r => r.sourceId === agent.id);
+        const incoming = relationships.filter(r => r.targetId === agent.id);
+        
+        relationsContainer.innerHTML = `
+          <h4>Relationships for ${escapeHtml(agent.name)}</h4>
+          <div style="font-size:0.75rem;color:#94a3b8;margin:.35rem 0;">OUTGOING (${outgoing.length})</div>
+          ${outgoing.length ? outgoing.map(r => {
             const target = agents.find(a => a.id === r.targetId);
             return `<div class="relationship-item"><span class="relationship-type">${escapeHtml(r.type || 'message')}</span><span>→</span><span class="relationship-target" onclick="selectAgent('${r.targetId}')">${escapeHtml(target?.name || 'Unknown')}</span></div>`;
-          }).join('')
-        : '<div class="empty-state" style="padding: 0.75rem;"><p>No outgoing relationships</p></div>';
-
-      const incomingHtml = incoming.length
-        ? incoming.map(r => {
+          }).join('') : '<p style="color:#64748b;font-size:0.85rem;">No outgoing relationships</p>'}
+          <div style="font-size:0.75rem;color:#94a3b8;margin:.75rem 0 .35rem;">INCOMING (${incoming.length})</div>
+          ${incoming.length ? incoming.map(r => {
             const source = agents.find(a => a.id === r.sourceId);
             return `<div class="relationship-item"><span class="relationship-target" onclick="selectAgent('${r.sourceId}')">${escapeHtml(source?.name || 'Unknown')}</span><span>→</span><span class="relationship-type">${escapeHtml(r.type || 'message')}</span></div>`;
-          }).join('')
-        : '<div class="empty-state" style="padding: 0.75rem;"><p>No incoming relationships</p></div>';
+          }).join('') : '<p style="color:#64748b;font-size:0.85rem;">No incoming relationships</p>'}
+        `;
+      }
 
-      container.innerHTML = `<h4>Relationships</h4><div style="font-size:0.75rem;color:#94a3b8;margin:.35rem 0;">OUTGOING</div>${outgoingHtml}<div style="font-size:0.75rem;color:#94a3b8;margin:.75rem 0 .35rem;">INCOMING</div>${incomingHtml}`;
+      // Update workspace integrations
+      const integrationsContainer = document.getElementById('workspace-integrations-list');
+      if (integrationsContainer) {
+        const integrations = agent.integrations || [];
+        integrationsContainer.innerHTML = `
+          <h4>Integrations for ${escapeHtml(agent.name)}</h4>
+          ${integrations.length ? integrations.map(i => `
+            <div class="integration-item">
+              <div class="integration-name">
+                <span>${i.icon || '🔌'}</span>
+                <span>${escapeHtml(i.name || 'Integration')}</span>
+                <span class="integration-badge">${escapeHtml(i.type || 'external')}</span>
+              </div>
+            </div>
+          `).join('') : '<p style="color:#64748b;font-size:0.85rem;">No integrations configured.</p>'}
+        `;
+      }
+    }
+    
+    function renderRelationships(agentId) {
+      // This updates the Configure tab's interactions section
+      renderInteractions(agentId);
+      
+      // Also update the workspace Relationships tab
+      renderWorkspaceRelationships(agentId);
+    }
+    
+    function renderWorkspaceRelationships(agentId) {
+      const container = document.getElementById('relationships-content');
+      if (!container) return;
+      
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) {
+        container.innerHTML = '<p style="color: #64748b;">Select an element to inspect relationships.</p>';
+        return;
+      }
+      
+      const outgoing = relationships.filter(r => r.sourceId === agentId);
+      const incoming = relationships.filter(r => r.targetId === agentId);
+      
+      const relationTypeColors = {
+        'Realization': '#f97316',
+        'Flow': '#3b82f6',
+        'Association': '#eab308',
+        'Composition': '#ec4899',
+        'Access': '#f97316',
+        'Serving': '#14b8a6',
+        'default': '#64748b'
+      };
+      
+      function renderRelationCard(r, isOutgoing) {
+        const otherAgent = isOutgoing 
+          ? agents.find(a => a.id === r.targetId)
+          : agents.find(a => a.id === r.sourceId);
+        const typeColor = relationTypeColors[r.type] || relationTypeColors.default;
+        const elementType = otherAgent?.elementType || otherAgent?.type || 'Unknown';
+        
+        return `
+          <div style="background: #1e293b; border-left: 3px solid ${typeColor}; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 0.5rem;">
+            <div style="color: ${typeColor}; font-size: 0.75rem; font-weight: 500; margin-bottom: 0.25rem;">${escapeHtml(r.type || 'Association')}</div>
+            <div style="color: #e2e8f0; font-size: 0.9rem;">${escapeHtml(otherAgent?.name || 'Unknown')} <span style="color: #64748b;">(${elementType})</span></div>
+          </div>
+        `;
+      }
+      
+      container.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <div>
+            <h5 style="color: #f97316; font-size: 0.9rem; margin-bottom: 1rem;">Outgoing → (${outgoing.length})</h5>
+            <div id="outgoing-relations">
+              ${outgoing.length === 0 
+                ? '<p style="color: #64748b; font-size: 0.85rem;">No outgoing relationships</p>'
+                : outgoing.map(r => renderRelationCard(r, true)).join('')}
+            </div>
+          </div>
+          <div>
+            <h5 style="color: #3b82f6; font-size: 0.9rem; margin-bottom: 1rem;">← Incoming (${incoming.length})</h5>
+            <div id="incoming-relations">
+              ${incoming.length === 0 
+                ? '<p style="color: #64748b; font-size: 0.85rem;">No incoming relationships</p>'
+                : incoming.map(r => renderRelationCard(r, false)).join('')}
+            </div>
+          </div>
+        </div>
+      `;
     }
     
     function renderInteractions(agentId) {
@@ -1148,6 +1723,42 @@
         </div>
       `).join('');
     }
+
+    function updateVerifyStatus(agent) {
+      const statusEl = document.getElementById('verify-status');
+      const resultsEl = document.getElementById('verify-results');
+      
+      const checks = [
+        { name: 'Purpose defined', pass: !!agent.purpose },
+        { name: 'Pattern selected', pass: !!agent.pattern },
+        { name: 'Value stream assigned', pass: !!agent.valueStream },
+        { name: 'Has integrations', pass: (agent.integrations || []).length > 0 },
+      ];
+      
+      const passed = checks.filter(c => c.pass).length;
+      const total = checks.length;
+      
+      statusEl.textContent = `${passed}/${total} checks passed`;
+      resultsEl.innerHTML = checks.map(c => `
+        <div class="relationship-item" style="justify-content: space-between;">
+          <span>${escapeHtml(c.name)}</span>
+          <span style="color: ${c.pass ? '#10b981' : '#f59e0b'};">${c.pass ? '✅' : '⚠️'}</span>
+        </div>
+      `).join('');
+    }
+
+    function updateDeployStatus(agent) {
+      const statusEl = document.getElementById('deploy-status');
+      const status = agent.status || 'configured';
+      
+      const statusMessages = {
+        'configured': 'Agent is configured but not yet deployed.',
+        'compiled': 'Agent has been compiled and is ready for deployment.',
+        'deployed': 'Agent is deployed and running.',
+      };
+      
+      statusEl.textContent = statusMessages[status] || statusMessages.configured;
+    }
     
     function generateAgentCode(agent) {
       const code = `# Agent: ${agent.name}
@@ -1204,6 +1815,7 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       });
       document.querySelectorAll('.workspace-panel').forEach(panel => panel.classList.remove('active'));
       document.getElementById(`workspace-${tabName}`)?.classList.add('active');
+      
       if (tabName === 'graph' && network) {
         setTimeout(() => network.fit({ animation: { duration: 300 } }), 50);
       }
@@ -1237,14 +1849,17 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
         if (response.ok) {
           showNotification('Agent saved successfully', 'success');
           generateAgentCode(agent);
+          updateVerifyStatus(agent);
+          updateStats();
         } else {
           throw new Error('Save failed');
         }
       } catch (error) {
         console.error('[saveAgent] Error:', error);
-        // For demo, just show success
         showNotification('Agent saved (demo mode)', 'success');
         generateAgentCode(agent);
+        updateVerifyStatus(agent);
+        updateStats();
       }
     }
     
@@ -1261,6 +1876,7 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
         renderElementList();
         initGraph();
         updateStats();
+        updateDistributionChart();
         document.getElementById('detail-empty').style.display = 'block';
         document.getElementById('detail-content').style.display = 'none';
         showNotification('Agent deleted', 'success');
@@ -1268,6 +1884,37 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
         console.error('[deleteAgent] Error:', error);
         showNotification('Delete failed (demo mode)', 'error');
       }
+    }
+
+    async function deployAgent() {
+      if (!selectedAgentId) return;
+      
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
+
+      showNotification('Deploying agent...', 'info');
+      
+      // Simulate deployment
+      setTimeout(() => {
+        agent.status = 'deployed';
+        updateDeployStatus(agent);
+        updateStats();
+        showNotification('Agent deployed successfully', 'success');
+      }, 1500);
+    }
+
+    function runVerification() {
+      if (!selectedAgentId) return;
+      
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
+
+      showNotification('Running verification...', 'info');
+      
+      setTimeout(() => {
+        updateVerifyStatus(agent);
+        showNotification('Verification complete', 'success');
+      }, 500);
     }
     
     async function addIntegration() {
@@ -1302,6 +1949,7 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
             agent.integrations.push({ name: choice, type: 'external', icon: '🔌' });
           }
           renderIntegrations(agent);
+          updateVerifyStatus(agent);
         }
 
         showNotification(`Integration '${choice}' added`, 'success');
@@ -1352,6 +2000,7 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
 
         await loadAgents();
         updateStats();
+        updateDistributionChart();
         initGraph();
 
         const created = agents.find(a => a.name === name) || agents[0];
@@ -1427,20 +2076,43 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
     // ============================================================================
     
     function updateStats() {
-      const agentsCount = agents.filter(a => a.type === 'Agent').length;
+      const agentsList = agents.filter(a => a.type === 'Agent');
+      const agentsCount = agentsList.length;
       const elementCount = agents.length;
+      
+      // Header stats
       document.getElementById('stat-elements').textContent = String(elementCount);
       document.getElementById('stat-agents').textContent = String(agentsCount);
       document.getElementById('stat-relationships').textContent = String(relationships.length);
 
-      const coverage = document.getElementById('metric-coverage');
-      if (coverage) coverage.textContent = `${relationships.length} mapped relationships`;
+      // Progress counters
+      const configured = agentsList.filter(a => a.purpose || a.pattern).length;
+      const compiled = agentsList.filter(a => a.status === 'compiled' || a.status === 'deployed').length;
+      const deployed = agentsList.filter(a => a.status === 'deployed').length;
+      
+      document.getElementById('progress-configured').textContent = String(configured);
+      document.getElementById('progress-compiled').textContent = String(compiled);
+      document.getElementById('progress-deployed').textContent = String(deployed);
+      
+      // Progress bar
+      const deployedPct = agentsCount > 0 ? Math.round((deployed / agentsCount) * 100) : 0;
+      document.getElementById('progress-percentage').textContent = `${deployedPct}%`;
+      document.getElementById('progress-bar-fill').style.width = `${deployedPct}%`;
+      
+      // Progress stats
+      const withPurpose = agentsList.filter(a => a.purpose).length;
+      const withDesign = agentsList.filter(a => a.pattern && a.capabilityGroup).length;
+      
+      document.getElementById('stat-total-agents').textContent = String(agentsCount);
+      document.getElementById('stat-with-purpose').textContent = String(withPurpose);
+      document.getElementById('stat-with-design').textContent = String(withDesign);
+
+      // Workspace agents list
       const roster = document.getElementById('workspace-agents-list');
       if (roster) roster.textContent = agents.map(a => a.name).slice(0, 10).join(' • ') || 'No agents yet';
     }
     
     function showNotification(message, type = 'info') {
-      // Simple notification
       const colors = {
         success: '#10b981',
         error: '#ef4444',

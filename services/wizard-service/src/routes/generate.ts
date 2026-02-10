@@ -219,7 +219,7 @@ router.post('/apply', async (req: Request, res: Response) => {
       },
       agents: result.agents,
       // Frontend success route after import/apply
-      redirectUrl: '/design',
+      redirectUrl: '/design/',
     };
 
     res.json(response);
