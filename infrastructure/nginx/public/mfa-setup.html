@@ -336,6 +336,7 @@
     </div>
   </div>
 
+  <script src="/js/auth-ui.js"></script>
   <script>
     const API_BASE = '/api/auth';
     let currentStep = 1;
@@ -349,11 +350,8 @@
       document.getElementById('skipOption').style.display = 'block';
     }
 
-    // Check auth
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-      window.location.href = '/login.html';
-    }
+    window.FlowgridAuthUI.initPage({ requireAuth: true });
+    const accessToken = window.FlowgridAuthUI.getAuthToken();
 
     function showError(message) {
       const errorDiv = document.getElementById('errorMessage');

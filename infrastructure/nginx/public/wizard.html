@@ -15,32 +15,32 @@
     <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/dist/vis-network.min.css" rel="stylesheet">
     <style>
         :root {
-            /* Teal/Cyan Network Theme */
-            --bg-primary: #152b2b;
-            --bg-secondary: #1a3636;
-            --bg-card: #1f4040;
-            --bg-card-hover: #254a4a;
-            --bg-input: #122424;
+            /* Flowgrid v1 Dark Blue Theme */
+            --bg-primary: #0f172a;
+            --bg-secondary: #172554;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --bg-input: #0b1220;
             
-            --border-default: #2d5555;
-            --border-hover: #3d7070;
-            --border-accent: #5dd5c0;
+            --border-default: #334155;
+            --border-hover: #475569;
+            --border-accent: #3b82f6;
             
-            --accent-primary: #5dd5c0;
-            --accent-secondary: #7de4d0;
-            --accent-tertiary: #a0f0e0;
-            --accent-glow: rgba(93, 213, 192, 0.3);
-            --accent-glow-strong: rgba(93, 213, 192, 0.5);
+            --accent-primary: #3b82f6;
+            --accent-secondary: #60a5fa;
+            --accent-tertiary: #93c5fd;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --accent-glow-strong: rgba(59, 130, 246, 0.45);
             
-            --text-primary: #e8f5f3;
-            --text-secondary: #a8c8c4;
-            --text-muted: #7a9a96;
+            --text-primary: #e2e8f0;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
             
-            --success: #5dd5c0;
-            --warning: #f5a623;
-            --error: #f56565;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
             --info: #60a5fa;
-            --purple: #a78bfa;
+            --purple: #8b5cf6;
         }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -105,6 +105,15 @@
             background: var(--bg-card-hover); 
             border-color: var(--accent-primary);
             color: var(--accent-primary);
+        }
+
+        .existing-data-cta {
+            margin-top: 0.9rem;
+            display: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-accent);
+            background: rgba(59, 130, 246, 0.10);
         }
 
         /* Progress Steps - Compact Horizontal */
@@ -815,6 +824,82 @@
             .step-line { width: 20px; }
             header { flex-direction: column; gap: 0.75rem; text-align: center; }
         }
+
+        /* Cookie Consent Banner */
+        .consent-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-top: 2px solid var(--accent-primary);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            z-index: 1001;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+        }
+        .consent-banner.hidden { display: none; }
+        .consent-text {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .consent-text a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        .consent-text a:hover { text-decoration: underline; }
+        .consent-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .consent-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .consent-accept {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+        .consent-accept:hover { background: var(--accent-secondary); }
+        .consent-decline {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-default);
+            color: var(--text-primary);
+        }
+        .consent-decline:hover { border-color: var(--accent-primary); }
+
+        /* Footer */
+        .wizard-footer {
+            text-align: center;
+            padding: 1rem;
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+        .wizard-footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        .wizard-footer a:hover { text-decoration: underline; }
+
+        /* Character counter */
+        .char-counter {
+            text-align: right;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        .char-counter.warning { color: var(--warning); }
+        .char-counter.error { color: var(--error); }
     </style>
 </head>
 <body>
@@ -870,6 +955,10 @@
                     <div style="font-size: 3rem; margin-bottom: 0.75rem; opacity: 0.8;">🎯</div>
                     <h2>Identify Your Capabilities</h2>
                     <p class="subtitle">Choose how to define your capabilities — describe them, upload XML, or use AI image analysis.</p>
+                    <div id="existingDataCta" class="existing-data-cta">
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.6rem;">✅ Existing organization data detected.</p>
+                        <a href="/design" class="btn btn-primary" style="display: inline-flex; text-decoration: none;">➡️ Go to Design Module</a>
+                    </div>
                 </div>
 
                 <!-- Input Method Tabs -->
@@ -889,7 +978,8 @@
                 <div id="input-text" class="input-content active">
                     <div class="input-group">
                         <label for="descriptionInput">📝 Description</label>
-                        <textarea id="descriptionInput" placeholder="Example: We are the IT Service Management department of a mid-sized company. We handle about 500 tickets per month, 60% incidents and 40% service requests. We use ServiceNow as our ITSM tool and want to automate: ticket triage, knowledge base searches, and standard approvals..."></textarea>
+                        <textarea id="descriptionInput" maxlength="50000" placeholder="Example: We are the IT Service Management department of a mid-sized company. We handle about 500 tickets per month, 60% incidents and 40% service requests. We use ServiceNow as our ITSM tool and want to automate: ticket triage, knowledge base searches, and standard approvals..." oninput="updateCharCounter(this, 50000)"></textarea>
+                        <div class="char-counter" id="descriptionCounter">0 / 50,000</div>
                         <p class="helper-text">The more detail you provide, the better the capability map. Describe processes, tools, volumes, and automatable tasks.</p>
                     </div>
                     <div class="input-group">
@@ -943,7 +1033,8 @@
                         <div id="advancedContent" style="display: none; margin-top: 0.6rem;">
                             <div class="input-group">
                                 <label>📝 Custom Instructions <span style="color: var(--text-muted); font-weight: 400;">(optional)</span></label>
-                                <textarea id="customPromptInput" rows="3" placeholder="e.g., This is an IT4IT capability model showing 5 value streams. Focus on the R2D and S2P streams..."></textarea>
+                                <textarea id="customPromptInput" rows="3" maxlength="5000" placeholder="e.g., This is an IT4IT capability model showing 5 value streams. Focus on the R2D and S2P streams..." oninput="updateCharCounter(this, 5000)"></textarea>
+                                <div class="char-counter" id="customPromptCounter">0 / 5,000</div>
                                 <p class="helper-text">💡 Describe what type of model this is, what the colors mean, or which areas to focus on.</p>
                             </div>
                         </div>
@@ -1219,6 +1310,26 @@
         </section>
     </div>
 
+        <!-- Footer with Privacy Policy link -->
+        <footer class="wizard-footer">
+            <p>© 2026 Flowgrid Platform · <a href="/privacy-policy.html" target="_blank">Privacy Policy</a></p>
+        </footer>
+    </div>
+
+    <!-- Cookie Consent Banner -->
+    <div class="consent-banner hidden" id="consentBanner">
+        <div class="consent-text">
+            🍪 We use cookies and local storage to save your wizard progress and provide our AI-powered services.
+            Your data may be processed by <a href="https://openai.com/privacy" target="_blank">OpenAI</a> and 
+            <a href="https://www.anthropic.com/privacy" target="_blank">Anthropic</a> for AI analysis.
+            <a href="/privacy-policy.html" target="_blank">Learn more</a>.
+        </div>
+        <div class="consent-buttons">
+            <button class="consent-btn consent-decline" onclick="handleConsent(false)">Decline</button>
+            <button class="consent-btn consent-accept" onclick="handleConsent(true)">Accept</button>
+        </div>
+    </div>
+
     <!-- ============================================================ -->
     <!-- AGENT EDIT MODAL -->
     <!-- ============================================================ -->
@@ -1355,6 +1466,7 @@
     <!-- ============================================================ -->
     <!-- JAVASCRIPT -->
     <!-- ============================================================ -->
+    <script src="/js/auth-ui.js"></script>
     <script>
         // ==========================================
         // STATE & CONFIGURATION
@@ -1365,9 +1477,20 @@
         let selectedCapabilities = new Set();
         let selectedImageFile = null;
         let interactionGraph = null;
+        let csrfToken = null;
+        let hasConsent = null;
         
-        const tenantId = '11111111-1111-1111-1111-111111111111'; // Demo tenant
         const STATE_KEY = 'flowgrid_wizard_state';
+        const CONSENT_KEY = 'flowgrid_consent';
+        const ENCRYPTION_KEY_STORAGE = 'flowgrid_encryption_key';
+        
+        // Rate limiting state
+        const rateLimitState = {
+            lastAnalyzeText: 0,
+            lastAnalyzeImage: 0,
+            lastGenerate: 0,
+            cooldownMs: 5000 // 5 seconds between AI calls
+        };
         
         const agenticPatterns = [
             { id: 'routing', name: 'Routing', emoji: '🔀', color: '#1e40af' },
@@ -1381,9 +1504,285 @@
         ];
         
         // ==========================================
-        // STATE PERSISTENCE
+        // SECURITY: AUTHENTICATION
         // ==========================================
-        function saveState() {
+        
+        function getAuthToken() {
+            return window.FlowgridAuthUI.getAuthToken();
+        }
+        
+        function setAuthToken(token) {
+            // Write both keys during transition to avoid auth regressions across pages
+            localStorage.setItem('accessToken', token);
+            localStorage.setItem('flowgrid_access_token', token);
+        }
+        
+        function clearAuthToken() {
+            window.FlowgridAuthUI.clearAuthState();
+        }
+        
+        function redirectToLogin(message) {
+            clearAuthToken();
+            alert(message || 'Please log in to use the wizard.');
+            window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+        }
+        
+        async function parseApiResponse(response) {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                return response.json().catch(() => null);
+            }
+
+            const text = await response.text().catch(() => '');
+            const snippet = (text || '').replace(/\s+/g, ' ').slice(0, 180);
+            return {
+                error: `Unexpected response format (${response.status})`,
+                details: snippet,
+            };
+        }
+
+        async function extractErrorMessage(response, fallback = 'Request failed') {
+            const payload = await parseApiResponse(response);
+            return payload?.error || payload?.message || payload?.details || `${fallback} (HTTP ${response.status})`;
+        }
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = getAuthToken();
+            
+            // Prepare headers
+            const headers = {
+                ...options.headers,
+            };
+            
+            // Add auth header if token exists
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            // Add CSRF token for state-changing requests
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes((options.method || 'GET').toUpperCase())) {
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+            }
+            
+            const response = await fetch(url, { ...options, headers });
+            
+            // Handle auth errors
+            if (response.status === 401) {
+                const data = await parseApiResponse(response) || {};
+                if (data.code === 'TOKEN_EXPIRED') {
+                    // Try to refresh token
+                    const refreshed = await refreshAuthToken();
+                    if (refreshed) {
+                        // Retry request with new token
+                        headers['Authorization'] = `Bearer ${getAuthToken()}`;
+                        return fetch(url, { ...options, headers });
+                    }
+                }
+                redirectToLogin(data.message || data.error || 'Session expired. Please log in again.');
+                throw new Error('Authentication required');
+            }
+            
+            // Handle CSRF errors
+            if (response.status === 403) {
+                const data = await parseApiResponse(response) || {};
+                if (data.code?.startsWith('CSRF_')) {
+                    // Refresh CSRF token and retry
+                    await fetchCsrfToken();
+                    headers['X-CSRF-Token'] = csrfToken;
+                    return fetch(url, { ...options, headers });
+                }
+            }
+            
+            return response;
+        }
+        
+        async function refreshAuthToken() {
+            try {
+                const response = await fetch('/api/auth/refresh', {
+                    method: 'POST',
+                    credentials: 'include' // Include cookies
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    setAuthToken(data.accessToken);
+                    return true;
+                }
+                return false;
+            } catch {
+                return false;
+            }
+        }
+        
+        async function fetchCsrfToken() {
+            try {
+                const response = await fetch('/api/wizard/csrf-token');
+                if (response.ok) {
+                    const data = await response.json();
+                    csrfToken = data.csrfToken;
+                }
+            } catch (e) {
+                console.error('Failed to fetch CSRF token:', e);
+            }
+        }
+        
+        // ==========================================
+        // SECURITY: LOCALSTORAGE ENCRYPTION
+        // ==========================================
+        
+        // Generate or retrieve encryption key (stored in sessionStorage - cleared on tab close)
+        async function getEncryptionKey() {
+            const storedKey = sessionStorage.getItem(ENCRYPTION_KEY_STORAGE);
+            if (storedKey) {
+                const keyData = Uint8Array.from(atob(storedKey), c => c.charCodeAt(0));
+                return await crypto.subtle.importKey('raw', keyData, 'AES-GCM', false, ['encrypt', 'decrypt']);
+            }
+            
+            // Generate new key
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+            
+            // Export and store key
+            const exported = await crypto.subtle.exportKey('raw', key);
+            sessionStorage.setItem(ENCRYPTION_KEY_STORAGE, btoa(String.fromCharCode(...new Uint8Array(exported))));
+            
+            return key;
+        }
+        
+        async function encryptData(data) {
+            try {
+                const key = await getEncryptionKey();
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const encoded = new TextEncoder().encode(JSON.stringify(data));
+                
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv },
+                    key,
+                    encoded
+                );
+                
+                // Combine IV and ciphertext
+                const combined = new Uint8Array(iv.length + encrypted.byteLength);
+                combined.set(iv);
+                combined.set(new Uint8Array(encrypted), iv.length);
+                
+                return btoa(String.fromCharCode(...combined));
+            } catch (e) {
+                console.error('Encryption failed:', e);
+                return null;
+            }
+        }
+        
+        async function decryptData(encryptedString) {
+            try {
+                const key = await getEncryptionKey();
+                const combined = Uint8Array.from(atob(encryptedString), c => c.charCodeAt(0));
+                
+                const iv = combined.slice(0, 12);
+                const ciphertext = combined.slice(12);
+                
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv },
+                    key,
+                    ciphertext
+                );
+                
+                return JSON.parse(new TextDecoder().decode(decrypted));
+            } catch (e) {
+                console.error('Decryption failed:', e);
+                return null;
+            }
+        }
+        
+        // ==========================================
+        // SECURITY: CONSENT MANAGEMENT
+        // ==========================================
+        
+        function checkConsent() {
+            const consent = localStorage.getItem(CONSENT_KEY);
+            if (consent !== null) {
+                hasConsent = consent === 'true';
+                return hasConsent;
+            }
+            // Show consent banner if no consent recorded
+            document.getElementById('consentBanner').classList.remove('hidden');
+            return null;
+        }
+        
+        function handleConsent(accepted) {
+            hasConsent = accepted;
+            localStorage.setItem(CONSENT_KEY, accepted ? 'true' : 'false');
+            document.getElementById('consentBanner').classList.add('hidden');
+            
+            if (!accepted) {
+                // Clear any stored data if consent declined
+                localStorage.removeItem(STATE_KEY);
+                alert('Storage consent declined. Wizard progress will not be saved.');
+            }
+        }
+        
+        // ==========================================
+        // SECURITY: RATE LIMITING (DEBOUNCE)
+        // ==========================================
+        
+        function canMakeAICall(type) {
+            const now = Date.now();
+            const lastCall = rateLimitState[`last${type}`] || 0;
+            const remaining = Math.max(0, rateLimitState.cooldownMs - (now - lastCall));
+            
+            if (remaining > 0) {
+                return { allowed: false, remainingMs: remaining };
+            }
+            return { allowed: true, remainingMs: 0 };
+        }
+        
+        function recordAICall(type) {
+            rateLimitState[`last${type}`] = Date.now();
+        }
+        
+        function updateButtonCooldown(button, remainingMs) {
+            if (remainingMs <= 0) {
+                button.disabled = false;
+                button.dataset.originalText = button.dataset.originalText || button.textContent;
+                button.textContent = button.dataset.originalText;
+                return;
+            }
+            
+            button.disabled = true;
+            const seconds = Math.ceil(remainingMs / 1000);
+            button.dataset.originalText = button.dataset.originalText || button.textContent;
+            button.textContent = `Wait ${seconds}s...`;
+            
+            setTimeout(() => updateButtonCooldown(button, remainingMs - 1000), 1000);
+        }
+        
+        // ==========================================
+        // UI HELPERS
+        // ==========================================
+        
+        function updateCharCounter(textarea, maxLength) {
+            const current = textarea.value.length;
+            const counter = document.getElementById(textarea.id + 'Counter');
+            if (counter) {
+                counter.textContent = `${current.toLocaleString()} / ${maxLength.toLocaleString()}`;
+                counter.className = 'char-counter';
+                if (current > maxLength * 0.9) counter.className = 'char-counter warning';
+                if (current >= maxLength) counter.className = 'char-counter error';
+            }
+        }
+        
+        // ==========================================
+        // STATE PERSISTENCE (with encryption)
+        // ==========================================
+        async function saveState() {
+            // Don't save if user declined consent
+            if (hasConsent === false) return;
+            
             const state = {
                 currentStep,
                 sessionId,
@@ -1391,14 +1790,35 @@
                 selectedCapabilities: Array.from(selectedCapabilities),
                 savedAt: new Date().toISOString()
             };
-            localStorage.setItem(STATE_KEY, JSON.stringify(state));
+            
+            try {
+                const encrypted = await encryptData(state);
+                if (encrypted) {
+                    localStorage.setItem(STATE_KEY, encrypted);
+                }
+            } catch (e) {
+                // Fallback to unencrypted if crypto fails (older browsers)
+                console.warn('Encryption not available, saving unencrypted');
+                localStorage.setItem(STATE_KEY, JSON.stringify(state));
+            }
         }
         
-        function loadState() {
+        async function loadState() {
             try {
                 const saved = localStorage.getItem(STATE_KEY);
-                if (saved) {
-                    const state = JSON.parse(saved);
+                if (!saved) return null;
+                
+                let state;
+                
+                // Try to decrypt first
+                try {
+                    state = await decryptData(saved);
+                } catch {
+                    // Fallback: try parsing as JSON (legacy or unencrypted)
+                    state = JSON.parse(saved);
+                }
+                
+                if (state && state.savedAt) {
                     const savedAt = new Date(state.savedAt);
                     if ((Date.now() - savedAt.getTime()) < 24 * 60 * 60 * 1000) {
                         return state;
@@ -1412,29 +1832,12 @@
         
         function clearState() {
             localStorage.removeItem(STATE_KEY);
-            location.reload();
+            sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE);
         }
         
-        function restoreState() {
-            const state = loadState();
-            if (state && state.currentStep > 1) {
-                const resume = confirm(
-                    `💾 Previous session found!\n\n` +
-                    `Step: ${state.currentStep}/6\n` +
-                    `Agents: ${state.analysisResult?.agents?.length || 0}\n` +
-                    `Saved: ${new Date(state.savedAt).toLocaleString()}\n\n` +
-                    `Continue where you left off?`
-                );
-                
-                if (resume) {
-                    currentStep = state.currentStep;
-                    sessionId = state.sessionId;
-                    analysisResult = state.analysisResult;
-                    selectedCapabilities = new Set(state.selectedCapabilities || []);
-                    goToStep(currentStep);
-                    return true;
-                }
-            }
+        async function restoreState() {
+            // Restore flow intentionally disabled.
+            // Always start a fresh wizard run from step 1.
             return false;
         }
         
@@ -1505,27 +1908,38 @@
                 return;
             }
             
+            // Rate limiting check
+            const button = event?.target;
+            const rateCheck = canMakeAICall('AnalyzeText');
+            if (!rateCheck.allowed) {
+                if (button) updateButtonCooldown(button, rateCheck.remainingMs);
+                showError('step1Error', `Please wait ${Math.ceil(rateCheck.remainingMs / 1000)} seconds before trying again`);
+                return;
+            }
+            
             hideError('step1Error');
             showLoading('step1', true);
             updateProgress('step1', 30, 'Sending to AI...');
             
             try {
+                recordAICall('AnalyzeText');
                 const websiteUrl = document.getElementById('websiteUrl').value.trim();
                 
-                const response = await fetch('/api/wizard/analyze-text', {
+                const response = await fetchWithAuth('/api/wizard/analyze-text', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ description, requirements: [], tenantId })
+                    body: JSON.stringify({ description, requirements: [] })
+                    // Note: tenantId is now extracted from JWT, not sent by client
                 });
                 
                 updateProgress('step1', 70, 'Processing response...');
                 
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'Analysis failed');
+                    const errorMessage = await extractErrorMessage(response, 'Analysis failed');
+                    throw new Error(errorMessage);
                 }
                 
-                const data = await response.json();
+                const data = await parseApiResponse(response);
                 sessionId = data.sessionId;
                 analysisResult = data.analysis;
                 
@@ -1589,7 +2003,7 @@
             try {
                 const formData = new FormData();
                 formData.append('file', selectedImageFile);
-                formData.append('tenantId', tenantId);
+                // Note: tenantId is extracted server-side from JWT auth context
                 
                 const customPrompt = document.getElementById('customPromptInput').value.trim();
                 if (customPrompt) {
@@ -1598,7 +2012,7 @@
                 
                 updateProgress('step1', 50, 'AI is analyzing the image...');
                 
-                const response = await fetch('/api/wizard/upload-image', {
+                const response = await fetchWithAuth('/api/wizard/upload-image', {
                     method: 'POST',
                     body: formData
                 });
@@ -1606,11 +2020,11 @@
                 updateProgress('step1', 80, 'Processing response...');
                 
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'Image analysis failed');
+                    const errorMessage = await extractErrorMessage(response, 'Image analysis failed');
+                    throw new Error(errorMessage);
                 }
                 
-                const data = await response.json();
+                const data = await parseApiResponse(response);
                 sessionId = data.sessionId;
                 analysisResult = data.analysis;
                 
@@ -1795,7 +2209,7 @@
         
         function getPatternInfo(pattern) {
             const p = agenticPatterns.find(ap => ap.id === pattern || ap.name === pattern);
-            return p || { emoji: '🤖', name: pattern || 'Specialist', color: '#5dd5c0' };
+            return p || { emoji: '🤖', name: pattern || 'Specialist', color: '#3b82f6' };
         }
         
         function openAgentModal(agentId) {
@@ -1911,18 +2325,18 @@
             errorsEl.value = '';
             
             try {
-                const response = await fetch('/api/wizard/generate-process', {
+                const response = await fetchWithAuth('/api/wizard/generate-process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ agent })
                 });
                 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`API returned ${response.status}: ${errorText}`);
+                    const errorMessage = await extractErrorMessage(response, 'Process generation failed');
+                    throw new Error(errorMessage);
                 }
                 
-                const data = await response.json();
+                const data = await parseApiResponse(response);
                 const reply = `PROCESS STEPS:\n${data.processSteps}\n\nDECISION POINTS:\n${data.decisionPoints}\n\nERROR HANDLING:\n${data.errorHandling}`;
                 
                 const stepsMatch = reply.match(/PROCESS STEPS:([\s\S]*?)(?=DECISION POINTS:|$)/i);
@@ -2045,16 +2459,16 @@
             const nodes = agents.map((a, i) => ({
                 id: a.id,
                 label: a.name,
-                color: { background: '#1f4040', border: '#5dd5c0' },
-                font: { color: '#e8f5f3' }
+                color: { background: '#1e293b', border: '#3b82f6' },
+                font: { color: '#e2e8f0' }
             }));
             
             const edges = relationships.map(r => ({
                 from: r.sourceAgentId || r.from,
                 to: r.targetAgentId || r.to,
                 label: r.messageType || '',
-                color: { color: '#5dd5c0' },
-                font: { color: '#e8f5f3', size: 10 },
+                color: { color: '#60a5fa' },
+                font: { color: '#cbd5e1', size: 10 },
                 arrows: 'to'
             }));
             
@@ -2074,13 +2488,17 @@
             try {
                 const agents = analysisResult?.filteredAgents || analysisResult?.agents || [];
                 
-                const response = await fetch('/api/design/suggest-interactions', {
+                const response = await fetchWithAuth('/api/design/suggest-interactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tenantId })
+                    body: JSON.stringify({})
                 });
+
+                if (!response.ok) {
+                    throw new Error(await extractErrorMessage(response, 'Interaction generation failed'));
+                }
                 
-                const data = await response.json();
+                const data = await parseApiResponse(response);
                 
                 if (data.suggestions && data.suggestions.length > 0) {
                     const newRelationships = data.suggestions.map(s => {
@@ -2144,18 +2562,19 @@
             document.getElementById('step6Loading').classList.add('active');
             
             try {
-                const response = await fetch('/api/wizard/apply', {
+                const response = await fetchWithAuth('/api/wizard/apply', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId, tenantId })
+                    // tenantId is resolved by backend from authenticated request context
+                    body: JSON.stringify({ sessionId })
                 });
                 
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'Import failed');
+                    const errorMessage = await extractErrorMessage(response, 'Import failed');
+                    throw new Error(errorMessage);
                 }
                 
-                const data = await response.json();
+                const data = await parseApiResponse(response);
                 
                 document.getElementById('step6Loading').classList.remove('active');
                 
@@ -2177,8 +2596,19 @@
                     </div>
                 `;
                 
-                clearState();
+                // Primary success path: open Design module immediately.
+                // NOTE: Keep wizard state until navigation succeeds. Clearing it too early
+                // can force users back to step 1 if /design is temporarily unavailable.
+                const redirectUrl = data.redirectUrl || '/design';
+                try {
+                    window.location.href = redirectUrl;
+                    return;
+                } catch (navError) {
+                    console.warn('Navigation to Design module failed, showing success screen:', navError);
+                }
                 
+                // Fallback: show success screen in place and clear state only here.
+                clearState();
                 document.querySelectorAll('.step-content').forEach(s => s.classList.add('hidden'));
                 document.getElementById('step7').classList.remove('hidden');
                 
@@ -2231,6 +2661,23 @@
         
         function delay(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function checkExistingOrgData() {
+            const cta = document.getElementById('existingDataCta');
+            if (!cta) return;
+
+            try {
+                const response = await fetchWithAuth('/api/agents', { method: 'GET' });
+                if (!response.ok) return;
+
+                const data = await parseApiResponse(response);
+                if (Array.isArray(data) && data.length > 0) {
+                    cta.style.display = 'block';
+                }
+            } catch (e) {
+                console.warn('Could not check existing org data:', e);
+            }
         }
         
         // ==========================================
@@ -2288,10 +2735,13 @@
         // ==========================================
         // INITIALIZATION
         // ==========================================
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!restoreState()) {
-                goToStep(1);
-            }
+        document.addEventListener('DOMContentLoaded', async () => {
+            window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
+            await checkExistingOrgData();
+
+            // Remove prior-session restore behavior completely.
+            clearState();
+            goToStep(1);
         });
     </script>
 </body>

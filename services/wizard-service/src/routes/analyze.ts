@@ -43,14 +43,14 @@ const upload = multer({
 
 router.post('/analyze-text', async (req: Request, res: Response) => {
   try {
-    const { description, requirements, tenantId } = req.body as AnalyzeTextRequest;
-    const tid = tenantId || req.headers['x-tenant-id'] as string;
+    const { description, requirements } = req.body as AnalyzeTextRequest;
+    const tid = req.tenantId;
 
     if (!description) {
       return res.status(400).json({ error: 'Description is required' });
     }
     if (!tid) {
-      return res.status(400).json({ error: 'tenantId is required' });
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
     }
 
     console.log(`[${SERVICE_NAME}] Analyzing text description (${description.length} chars)`);
@@ -108,9 +108,9 @@ router.post('/upload-image', upload.single('file'), async (req: Request, res: Re
       return res.status(400).json({ error: 'No image file uploaded' });
     }
 
-    const tenantId = req.headers['x-tenant-id'] as string || req.body.tenantId;
+    const tenantId = req.tenantId;
     if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId required' });
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
     }
 
     const customPrompt = req.body.customPrompt?.trim() || undefined;

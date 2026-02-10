@@ -113,6 +113,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "3003:3003"
     depends_on:
@@ -139,6 +140,7 @@ services:
       PORT: 3004
       DATABASE_URL: postgres://flowgrid:${DB_PASSWORD:-flowgrid_dev_password}@postgres:5432/flowgrid
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
       SERVICENOW_INSTANCE: ${SERVICENOW_INSTANCE}
       SERVICENOW_USER: ${SERVICENOW_USER}
       SERVICENOW_PASSWORD: ${SERVICENOW_PASSWORD}
@@ -168,6 +170,7 @@ services:
       PORT: 3005
       DATABASE_URL: postgres://flowgrid:${DB_PASSWORD:-flowgrid_dev_password}@postgres:5432/flowgrid
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       AI_PROVIDER: ${AI_PROVIDER:-anthropic}
@@ -226,6 +229,8 @@ services:
       - auth-service
       - design-service
       - integration-service
+      - wizard-service
+      - design-module
     restart: unless-stopped
     networks:
       - flowgrid-network

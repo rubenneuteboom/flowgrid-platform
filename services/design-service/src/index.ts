@@ -5,11 +5,30 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { Pool } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
+import jwt from 'jsonwebtoken';
 
 const app = express();
 const PORT = process.env.PORT || 3003;
 const SERVICE_NAME = 'design-service';
 const AI_PROVIDER = process.env.AI_PROVIDER || 'anthropic';
+const JWT_SECRET = process.env.JWT_SECRET || 'flowgrid_jwt_secret_dev_CHANGE_IN_PRODUCTION';
+
+interface AuthTokenPayload {
+  userId: string;
+  email: string;
+  tenantId: string;
+  role: string;
+  type: 'access' | 'refresh';
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthTokenPayload;
+      tenantId?: string;
+    }
+  }
+}
 
 // Database connection
 const pool = new Pool({
@@ -26,6 +45,28 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('combined'));
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(authHeader.substring(7), JWT_SECRET) as AuthTokenPayload;
+    if (decoded.type !== 'access' || !decoded.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
+    }
+
+    req.user = decoded;
+    req.tenantId = decoded.tenantId;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
+  }
+}
+
+app.use('/api/design', requireAuth);
 
 // ============================================================================
 // Agentic Design Patterns (shared reference)
@@ -225,6 +266,7 @@ Return an improved agent configuration as JSON:
 app.post('/api/design/generate-code/:agentId', async (req: Request, res: Response) => {
   try {
     const { agentId } = req.params;
+    const tenantId = req.tenantId;
     const { language = 'typescript', framework = 'express' } = req.body;
 
     const agentResult = await pool.query(
@@ -234,9 +276,9 @@ app.post('/api/design/generate-code/:agentId', async (req: Request, res: Respons
        FROM agents a
        LEFT JOIN agent_capabilities ac ON a.id = ac.agent_id
        LEFT JOIN agent_integrations ai ON a.id = ai.agent_id
-       WHERE a.id = $1
+       WHERE a.id = $1 AND a.tenant_id = $2
        GROUP BY a.id`,
-      [agentId]
+      [agentId, tenantId]
     );
 
     if (agentResult.rows.length === 0) {
@@ -302,12 +344,12 @@ Provide the complete code in a single file.`;
 // Suggest interactions between agents
 app.post('/api/design/suggest-interactions', async (req: Request, res: Response) => {
   try {
-    const { tenantId } = req.body;
+    const tenantId = req.tenantId;
 
     if (!tenantId) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'tenantId is required',
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authenticated tenant context required',
       });
     }
 

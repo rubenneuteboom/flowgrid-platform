@@ -1521,8 +1521,9 @@ app.post('/api/auth/mfa/backup-codes', requireAuth, mfaLimiter, async (req: Requ
 app.post('/api/auth/oauth/microsoft/url', async (req: Request, res: Response) => {
   try {
     if (!config.azure.clientId || !config.azure.tenantName) {
-      return res.status(501).json({
-        error: 'Not Implemented',
+      // OAuth is optional in local/dev setups; return 200 so UI can feature-detect
+      return res.json({
+        configured: false,
         message: 'Microsoft OAuth not configured',
       });
     }

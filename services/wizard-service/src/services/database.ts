@@ -64,10 +64,10 @@ export async function createWizardSession(
   return sessionId;
 }
 
-export async function getWizardSession(sessionId: string): Promise<WizardSession | null> {
+export async function getWizardSession(sessionId: string, tenantId: string): Promise<WizardSession | null> {
   const result = await pool.query(
-    'SELECT * FROM wizard_sessions WHERE id = $1',
-    [sessionId]
+    'SELECT * FROM wizard_sessions WHERE id = $1 AND tenant_id = $2',
+    [sessionId, tenantId]
   );
 
   if (result.rows.length === 0) return null;
@@ -141,23 +141,27 @@ export async function listWizardSessions(tenantId: string, limit = 50): Promise<
 
 export async function updateWizardSession(
   sessionId: string,
+  tenantId: string,
   analysisResult: AnalysisResult
-): Promise<void> {
-  await pool.query(
-    'UPDATE wizard_sessions SET analysis_result = $1, updated_at = NOW() WHERE id = $2',
-    [analysisResult, sessionId]
+): Promise<boolean> {
+  const result = await pool.query(
+    'UPDATE wizard_sessions SET analysis_result = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3',
+    [analysisResult, sessionId, tenantId]
   );
+  return (result.rowCount ?? 0) > 0;
 }
 
-export async function markSessionApplied(sessionId: string): Promise<void> {
-  await pool.query(
-    `UPDATE wizard_sessions SET status = 'applied', applied_at = NOW() WHERE id = $1`,
-    [sessionId]
+export async function markSessionApplied(sessionId: string, tenantId: string): Promise<boolean> {
+  const result = await pool.query(
+    `UPDATE wizard_sessions SET status = 'applied', applied_at = NOW() WHERE id = $1 AND tenant_id = $2`,
+    [sessionId, tenantId]
   );
+  return (result.rowCount ?? 0) > 0;
 }
 
-export async function deleteWizardSession(sessionId: string): Promise<void> {
-  await pool.query('DELETE FROM wizard_sessions WHERE id = $1', [sessionId]);
+export async function deleteWizardSession(sessionId: string, tenantId: string): Promise<boolean> {
+  const result = await pool.query('DELETE FROM wizard_sessions WHERE id = $1 AND tenant_id = $2', [sessionId, tenantId]);
+  return (result.rowCount ?? 0) > 0;
 }
 
 // ============================================================================

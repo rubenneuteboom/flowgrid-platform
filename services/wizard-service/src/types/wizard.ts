@@ -190,6 +190,7 @@ export interface ApplyWizardResponse {
     name: string;
     type: AgenticPattern;
   }>;
+  redirectUrl?: string;
 }
 
 export interface GenerateProcessRequest {

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile • Flowgrid</title>
+  <style>
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#0f172a; color:#e2e8f0; }
+    .wrap { max-width: 840px; margin: 2rem auto; padding: 0 1rem; }
+    .card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:1.2rem; margin-bottom:1rem; }
+    h1 { margin-bottom:0.3rem; color:#5dd5c0; }
+    p { color:#94a3b8; }
+    .kv { display:grid; grid-template-columns:180px 1fr; gap:0.6rem; font-size:0.95rem; margin-top:1rem; }
+    .label { color:#94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Profile</h1>
+    <p>Authenticated user profile for this tenant workspace.</p>
+
+    <div class="card">
+      <h3>Account</h3>
+      <div id="account" class="kv">
+        <span class="label">Status</span><span>Loading…</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth-ui.js"></script>
+  <script>
+    async function loadProfile() {
+      window.FlowgridAuthUI.initPage({ requireAuth: true });
+      const token = window.FlowgridAuthUI.getAuthToken();
+      const res = await fetch('/api/auth/me', { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: 'include' });
+      const account = document.getElementById('account');
+      if (!res.ok) {
+        account.innerHTML = '<span class="label">Error</span><span>Failed to load profile.</span>';
+        return;
+      }
+      const data = await res.json();
+      account.innerHTML = `
+        <span class="label">Name</span><span>${data.user?.name || '-'}</span>
+        <span class="label">Email</span><span>${data.user?.email || '-'}</span>
+        <span class="label">Role</span><span>${data.user?.role || '-'}</span>
+        <span class="label">Tenant</span><span>${data.tenant?.name || data.user?.tenantId || '-'}</span>
+      `;
+    }
+    document.addEventListener('DOMContentLoaded', loadProfile);
+  </script>
+</body>
+</html>

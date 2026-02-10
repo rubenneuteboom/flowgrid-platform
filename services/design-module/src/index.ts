@@ -11,7 +11,7 @@
  *    - Separate from core wizard onboarding
  * 
  * 2. SINGLE RESPONSIBILITY
- *    - Serves static UI for agent design/management
+ *    - Serves static UI for FlowGrid Design Studio
  *    - All data operations go through agent-service API
  *    - No direct database connections
  * 
@@ -107,7 +107,7 @@ app.listen(PORT, () => {
   console.log('═══════════════════════════════════════════════════════════════');
   console.log('');
   console.log('  Platform Architecture: Hohpe "Platform Strategy"');
-  console.log('  Role: Optional Agent Management UI Module');
+  console.log('  Role: Optional Design Studio Module');
   console.log('');
   console.log(`  Port:        ${PORT}`);
   console.log(`  Version:     ${VERSION}`);

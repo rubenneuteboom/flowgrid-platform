@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>🎨 Agent Design Module - Flowgrid Platform</title>
+  <title>🎨 FlowGrid Design Studio - Flowgrid Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -182,6 +182,47 @@
       background: #0f172a; 
       border-radius: 8px; 
       border: 1px solid #334155;
+      position: relative;
+    }
+
+    .graph-state-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.82);
+      border-radius: 8px;
+      z-index: 10;
+      text-align: center;
+      padding: 1rem;
+    }
+    .graph-state-overlay.active { display: flex; }
+    .graph-state-card { max-width: 420px; }
+    .graph-state-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .graph-state-title { font-size: 1rem; color: #f1f5f9; margin-bottom: 0.35rem; }
+    .graph-state-message { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.75rem; }
+
+    /* Interaction Legend */
+    .interaction-legend {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #1e293b;
+    }
+    .interaction-legend-title {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+    .interaction-legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
     }
     
     /* Detail Panel */
@@ -411,191 +452,157 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .workspace-panel { display: none; }
+    .workspace-panel.active { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; flex: 1; }
+    .legacy-header { gap: 1rem; }
+
+    @media (max-width: 1400px) {
+      .detail-panel { width: 360px; min-width: 320px; }
+      .sidebar { width: 240px; }
+    }
+
+    @media (max-width: 1080px) {
+      .container { flex-direction: column; height: auto; }
+      .sidebar, .detail-panel { width: 100%; min-width: 0; max-width: none; border: 0; border-top: 1px solid #334155; }
+      .main-content { min-height: 55vh; }
+      .resize-handle { display: none; }
+      .header { flex-wrap: wrap; }
+    }
   </style>
 </head>
 <body>
   <!-- Header -->
-  <header class="header">
-    <h1>🎨 Agent Design Module</h1>
-    <div class="nav-links">
-      <a href="/" class="nav-link">🏠 Home</a>
-      <a href="/wizard.html" class="nav-link">✨ Wizard</a>
-    </div>
+  <header class="header legacy-header">
+    <h1>🎨 FlowGrid Design Studio</h1>
     <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-elements">0</div>
+        <div>Elements</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-relationships">0</div>
+        <div>Relationships</div>
+      </div>
       <div class="stat">
         <div class="stat-value" id="stat-agents">0</div>
         <div>Agents</div>
       </div>
-      <div class="stat">
-        <div class="stat-value" id="stat-relationships">0</div>
-        <div>Relations</div>
-      </div>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="nav-link">🏠 Home</a>
+      <a href="#" class="nav-link" onclick="exportDesignBundle(); return false;">📤 Export</a>
+      <a href="#" class="nav-link" onclick="triggerImportDesignBundle(); return false;">📥 Import</a>
+      <a href="#" class="nav-link" onclick="refreshData(); return false;">🔄 Refresh</a>
+      <a href="#" class="nav-link" onclick="createAgent(); return false;">➕ New Agent</a>
+      <a href="/wizard.html" class="btn btn-primary">✨ Start Wizard</a>
     </div>
   </header>
-  
-  <!-- Main Container -->
+  <input type="file" id="design-import-input" accept="application/json" style="display: none;">
+
   <div class="container">
-    <!-- Left Sidebar - Element Browser -->
     <aside class="sidebar">
       <div class="resize-handle" id="sidebar-resize"></div>
-      
       <div class="sidebar-section">
         <h3>🔍 Search</h3>
-        <input type="text" id="search-input" placeholder="Search agents...">
+        <input type="text" id="search-input" placeholder="Search elements...">
         <select id="type-filter">
           <option value="">All Types</option>
           <option value="Agent">🤖 Agents</option>
           <option value="Capability">📦 Capabilities</option>
           <option value="DataObject">📄 Data Objects</option>
+          <option value="Process">🔄 Process</option>
         </select>
       </div>
-      
       <div class="sidebar-section">
         <h3>📋 Elements</h3>
         <div class="element-list" id="element-list">
-          <div class="loading">
-            <div class="loading-spinner"></div>
-            <p style="margin-top: 0.5rem;">Loading...</p>
-          </div>
+          <div class="loading"><div class="loading-spinner"></div><p style="margin-top: 0.5rem;">Loading...</p></div>
         </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>📈 Progress</h3>
+        <div class="info-card"><h4>Coverage</h4><p id="metric-coverage">0 mapped relationships</p></div>
+        <div class="info-card"><h4>Active Agent</h4><p id="metric-active-agent">No selection</p></div>
       </div>
     </aside>
-    
-    <!-- Main Content - Graph -->
+
     <main class="main-content">
-      <!-- Legend -->
-      <div class="graph-legend" id="graph-legend">
-        <div class="legend-item" data-type="Agent" onclick="toggleLegend('Agent')">
-          <div class="legend-color" style="background: #10b981;"></div>
-          <span>Agent</span>
-        </div>
-        <div class="legend-item" data-type="Capability" onclick="toggleLegend('Capability')">
-          <div class="legend-color" style="background: #60a5fa;"></div>
-          <span>Capability</span>
-        </div>
-        <div class="legend-item" data-type="DataObject" onclick="toggleLegend('DataObject')">
-          <div class="legend-color" style="background: #f59e0b;"></div>
-          <span>Data Object</span>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <h2 style="font-size:1rem;color:#60a5fa;">Agent Explore</h2>
       </div>
-      
-      <!-- Graph Canvas -->
-      <div class="graph-container" id="graph-container"></div>
+      <div class="detail-tabs" style="margin-bottom:0.75rem;">
+        <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
+        <button class="detail-tab workspace-tab" data-tab="messages" onclick="showWorkspaceTab('messages')">Messages</button>
+        <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
+        <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
+        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">Integrations</button>
+        <button class="detail-tab workspace-tab" data-tab="a2a" onclick="showWorkspaceTab('a2a')">A2A Interactions</button>
+        <button class="detail-tab workspace-tab" data-tab="tools" onclick="showWorkspaceTab('tools')">Tools</button>
+        <button class="detail-tab workspace-tab" data-tab="agents" onclick="showWorkspaceTab('agents')">Agents</button>
+        <button class="detail-tab workspace-tab" data-tab="process" onclick="showWorkspaceTab('process')">Process Design</button>
+      </div>
+
+      <section class="workspace-panel active" id="workspace-overview"><div class="info-card"><h4>Design Summary</h4><p id="workspace-overview-text">Select an element to inspect and edit details.</p></div></section>
+      <section class="workspace-panel" id="workspace-messages"><div id="workspace-messages-list" class="info-card"><h4>Messages</h4><p>No messages available.</p></div></section>
+      <section class="workspace-panel" id="workspace-graph">
+        <div class="graph-legend" id="graph-legend">
+          <div class="legend-item" data-type="Agent" onclick="toggleLegend('Agent')"><div class="legend-color" style="background: #10b981;"></div><span>Agent</span></div>
+          <div class="legend-item" data-type="Capability" onclick="toggleLegend('Capability')"><div class="legend-color" style="background: #60a5fa;"></div><span>Capability</span></div>
+          <div class="legend-item" data-type="DataObject" onclick="toggleLegend('DataObject')"><div class="legend-color" style="background: #f59e0b;"></div><span>Data Object</span></div>
+          <div class="legend-item" data-type="Process" onclick="toggleLegend('Process')"><div class="legend-color" style="background: #ec4899;"></div><span>Process</span></div>
+        </div>
+        <div class="graph-container" id="graph-container">
+          <div class="graph-state-overlay" id="graph-overlay">
+            <div class="graph-state-card">
+              <div class="graph-state-icon" id="graph-overlay-icon">⏳</div>
+              <div class="graph-state-title" id="graph-overlay-title">Loading graph</div>
+              <div class="graph-state-message" id="graph-overlay-message">Preparing network data...</div>
+              <button class="btn btn-secondary" id="graph-overlay-action" style="display:none;" onclick="refreshData()">Retry</button>
+            </div>
+          </div>
+        </div>
+        <div class="interaction-legend" id="interaction-legend"><div class="interaction-legend-title">Interaction Types</div><div class="interaction-legend-items" id="interaction-legend-items"></div></div>
+      </section>
+      <section class="workspace-panel" id="workspace-relationships"><div id="workspace-relations" class="info-card"><h4>Relationships</h4><p>Select an element to inspect relationships.</p></div></section>
+      <section class="workspace-panel" id="workspace-integrations"><div id="workspace-integrations-list" class="info-card"><h4>Integrations</h4><p>Select an agent to inspect integrations.</p></div></section>
+      <section class="workspace-panel" id="workspace-a2a"><div class="info-card"><h4>A2A Interactions</h4><p>Interaction contracts are shown in the right panel and messages tab.</p></div></section>
+      <section class="workspace-panel" id="workspace-tools"><div class="info-card"><h4>Tools</h4><p>Tool mapping is available through integrations and generated configuration.</p></div></section>
+      <section class="workspace-panel" id="workspace-agents"><div class="info-card"><h4>Agents</h4><p id="workspace-agents-list">Loading agent roster…</p></div></section>
+      <section class="workspace-panel" id="workspace-process"><div class="info-card"><h4>Process Design</h4><p>Use graph and relationships to shape process flow.</p></div></section>
     </main>
-    
-    <!-- Right Panel - Detail View -->
+
     <aside class="detail-panel" id="detail-panel">
       <div class="resize-handle" id="detail-resize"></div>
-      
-      <!-- Empty State -->
-      <div id="detail-empty" class="empty-state">
-        <div class="icon">👈</div>
-        <p>Select an agent to view details</p>
-      </div>
-      
-      <!-- Agent Detail View -->
+      <div id="detail-empty" class="empty-state"><div class="icon">👈</div><p>Select an agent to open Agent Design</p></div>
       <div id="detail-content" style="display: none;">
         <h2 id="detail-name">Agent Name</h2>
         <div class="agent-type" id="detail-type">🤖 Agent • Specialist</div>
-        
-        <!-- Tabs -->
         <div class="detail-tabs">
-          <button class="detail-tab active" data-tab="overview" onclick="showTab('overview')">📋 Overview</button>
-          <button class="detail-tab" data-tab="objectives" onclick="showTab('objectives')">🎯 Objectives</button>
-          <button class="detail-tab" data-tab="integrations" onclick="showTab('integrations')">🔌 Integrations</button>
-          <button class="detail-tab" data-tab="relations" onclick="showTab('relations')">🔗 Relations</button>
-          <button class="detail-tab" data-tab="code" onclick="showTab('code')">🤖 Code</button>
+          <button class="detail-tab active" data-tab="overview" onclick="showDetailTab('overview')">Overview</button>
+          <button class="detail-tab" data-tab="capabilities" onclick="showDetailTab('capabilities')">Capabilities</button>
+          <button class="detail-tab" data-tab="interactions" onclick="showDetailTab('interactions')">Interactions</button>
+          <button class="detail-tab" data-tab="config" onclick="showDetailTab('config')">Config</button>
+          <button class="detail-tab" data-tab="code" onclick="showDetailTab('code')">Code</button>
+          <button class="detail-tab" data-tab="deploy" onclick="showDetailTab('deploy')">Deploy</button>
         </div>
-        
-        <!-- Tab: Overview -->
+
         <div id="tab-overview" class="tab-content active">
-          <div class="form-group">
-            <label>Purpose</label>
-            <textarea id="agent-purpose" placeholder="Describe the agent's purpose..."></textarea>
-          </div>
-          <div class="form-group">
-            <label>Value Stream</label>
-            <input type="text" id="agent-valuestream" placeholder="e.g., Request to Deploy">
-          </div>
-          <div class="form-group">
-            <label>Capability Group</label>
-            <input type="text" id="agent-capgroup" placeholder="e.g., Incident Management">
-          </div>
-          <div class="form-group">
-            <label>Pattern</label>
-            <select id="agent-pattern">
-              <option value="routing">🔀 Routing</option>
-              <option value="planning">📋 Planning</option>
-              <option value="tool-use">🔧 Tool Use</option>
-              <option value="orchestration">🎭 Orchestration</option>
-              <option value="human-in-loop">👤 Human-in-Loop</option>
-              <option value="rag">📚 RAG</option>
-              <option value="reflection">🔍 Reflection</option>
-              <option value="guardrails">🛡️ Guardrails</option>
-            </select>
-          </div>
-          <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-            <button class="btn btn-primary" onclick="saveAgent()">💾 Save Changes</button>
-            <button class="btn btn-danger" onclick="deleteAgent()">🗑️ Delete</button>
-          </div>
+          <div class="form-group"><label>Purpose</label><textarea id="agent-purpose" placeholder="Describe the agent's purpose..."></textarea></div>
+          <div class="form-group"><label>Value Stream</label><input type="text" id="agent-valuestream" placeholder="e.g., Request to Deploy"></div>
+          <div class="form-group"><label>Pattern</label><select id="agent-pattern"><option value="routing">🔀 Routing</option><option value="planning">📋 Planning</option><option value="tool-use">🔧 Tool Use</option><option value="orchestration">🎭 Orchestration</option><option value="human-in-loop">👤 Human-in-Loop</option><option value="rag">📚 RAG</option><option value="reflection">🔍 Reflection</option><option value="guardrails">🛡️ Guardrails</option></select></div>
+          <div style="display:flex;gap:.5rem"><button class="btn btn-primary" onclick="saveAgent()">💾 Save</button><button class="btn btn-danger" onclick="deleteAgent()">🗑️ Delete</button></div>
         </div>
-        
-        <!-- Tab: Objectives -->
-        <div id="tab-objectives" class="tab-content">
-          <div class="form-group">
-            <label>Objectives (one per line)</label>
-            <textarea id="agent-objectives" rows="6" placeholder="Reduce incident resolution time by 30%&#10;Automate routine ticket triage&#10;Improve SLA compliance to 95%"></textarea>
-          </div>
-          <div class="form-group">
-            <label>KPIs</label>
-            <textarea id="agent-kpis" rows="4" placeholder="Average resolution time&#10;Ticket automation rate&#10;SLA compliance percentage"></textarea>
-          </div>
-          <button class="btn btn-primary" onclick="saveAgent()">💾 Save Objectives</button>
-        </div>
-        
-        <!-- Tab: Integrations -->
-        <div id="tab-integrations" class="tab-content">
-          <div id="integrations-list">
-            <div class="empty-state">
-              <div class="icon">🔌</div>
-              <p>No integrations configured</p>
-            </div>
-          </div>
-          <button class="btn btn-success" style="margin-top: 1rem;" onclick="addIntegration()">➕ Add Integration</button>
-        </div>
-        
-        <!-- Tab: Relations -->
-        <div id="tab-relations" class="tab-content">
-          <h4 style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.75rem;">OUTGOING</h4>
-          <div id="relations-outgoing">
-            <div class="empty-state" style="padding: 1rem;">
-              <p>No outgoing relationships</p>
-            </div>
-          </div>
-          
-          <h4 style="color: #94a3b8; font-size: 0.8rem; margin: 1rem 0 0.75rem;">INCOMING</h4>
-          <div id="relations-incoming">
-            <div class="empty-state" style="padding: 1rem;">
-              <p>No incoming relationships</p>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Tab: Code -->
-        <div id="tab-code" class="tab-content">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <h4 style="color: #94a3b8; font-size: 0.8rem;">GENERATED PROMPT</h4>
-            <button class="btn btn-secondary" onclick="copyCode()">📋 Copy</button>
-          </div>
-          <div class="code-container">
-            <pre id="agent-code">// Select an agent to view generated code</pre>
-          </div>
-          <button class="btn btn-success" style="margin-top: 1rem;" onclick="generateCode()">🤖 Regenerate with AI</button>
-        </div>
+        <div id="tab-capabilities" class="tab-content"><div class="form-group"><label>Capability Group</label><input type="text" id="agent-capgroup" placeholder="e.g., Incident Management"></div><div class="form-group"><label>Objectives (one per line)</label><textarea id="agent-objectives" rows="6"></textarea></div><div class="form-group"><label>KPIs</label><textarea id="agent-kpis" rows="4"></textarea></div><button class="btn btn-primary" onclick="saveAgent()">💾 Save Capabilities</button></div>
+        <div id="tab-interactions" class="tab-content"><h4 style="color:#94a3b8;font-size:.8rem;margin-bottom:.75rem;">AGENT INTERACTIONS</h4><div id="interactions-list"><div class="empty-state" style="padding:1rem;"><p>No interaction contracts found</p></div></div></div>
+        <div id="tab-config" class="tab-content"><div id="integrations-list"><div class="empty-state"><div class="icon">🔌</div><p>No integrations configured</p></div></div><button class="btn btn-success" style="margin-top:1rem;" onclick="addIntegration()">➕ Add Integration</button></div>
+        <div id="tab-code" class="tab-content"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;"><h4 style="color:#94a3b8;font-size:.8rem;">GENERATED PROMPT</h4><button class="btn btn-secondary" onclick="copyCode()">📋 Copy</button></div><div class="code-container"><pre id="agent-code">// Select an agent to view generated code</pre></div><button class="btn btn-success" style="margin-top:1rem;" onclick="generateCode()">🤖 Regenerate with AI</button></div>
+        <div id="tab-deploy" class="tab-content"><div class="info-card"><h4>Deployment</h4><p>Deployment integration is available in platform runtime services.</p></div></div>
       </div>
     </aside>
   </div>
   
+  <script src="./auth-ui.js"></script>
   <script>
     // ============================================================================
     // Configuration
@@ -603,6 +610,15 @@
     
     // API base URL - uses nginx gateway
     const API_BASE = '/api/agents';
+
+    function getAccessToken() {
+      if (window.FlowgridAuthUI?.getAuthToken) {
+        return window.FlowgridAuthUI.getAuthToken();
+      }
+
+      // Fallback when auth helper script is unavailable
+      return localStorage.getItem('flowgrid_access_token') || localStorage.getItem('accessToken');
+    }
     
     // State
     let agents = [];
@@ -610,7 +626,17 @@
     let selectedAgentId = null;
     let network = null;
     let hiddenTypes = new Set();
+    let graphState = 'loading';
     
+    function normalizeNodeType(value) {
+      if (!value) return 'Agent';
+      const lower = String(value).toLowerCase();
+      if (['agent', 'capability', 'dataobject', 'process'].includes(lower)) {
+        return lower === 'dataobject' ? 'DataObject' : lower.charAt(0).toUpperCase() + lower.slice(1);
+      }
+      return 'Agent';
+    }
+
     // Node colors by type
     const nodeColors = {
       'Agent': '#10b981',
@@ -619,22 +645,67 @@
       'Process': '#ec4899',
       'default': '#94a3b8'
     };
+
+    // Relationship colors by interaction type
+    const interactionColors = {
+      uses: '#60a5fa',
+      manages: '#22c55e',
+      delegates_to: '#f59e0b',
+      consults: '#a78bfa',
+      triggers: '#f97316',
+      reports_to: '#38bdf8',
+      depends_on: '#f43f5e',
+      informs: '#14b8a6',
+      message: '#64748b',
+      default: '#64748b'
+    };
+
+    function setGraphState(state, message) {
+      graphState = state;
+      const overlay = document.getElementById('graph-overlay');
+      if (!overlay) return;
+
+      const icon = document.getElementById('graph-overlay-icon');
+      const title = document.getElementById('graph-overlay-title');
+      const text = document.getElementById('graph-overlay-message');
+      const action = document.getElementById('graph-overlay-action');
+
+      if (state === 'ready') {
+        overlay.classList.remove('active');
+        return;
+      }
+
+      const byState = {
+        loading: { icon: '⏳', title: 'Loading graph', message: 'Preparing network data...', action: false },
+        empty: { icon: '🕸️', title: 'No graph data yet', message: 'Create an agent or import a design bundle to start.', action: true },
+        error: { icon: '⚠️', title: 'Graph unavailable', message: message || 'Could not load graph data. Try refreshing.', action: true },
+      };
+
+      const config = byState[state] || byState.loading;
+      icon.textContent = config.icon;
+      title.textContent = config.title;
+      text.textContent = message || config.message;
+      action.style.display = config.action ? 'inline-flex' : 'none';
+      overlay.classList.add('active');
+    }
     
     // ============================================================================
     // Initialization
     // ============================================================================
     
     async function init() {
-      console.log('[design-module] Initializing...');
-      
+      console.log('[design-studio] Initializing...');
+      setGraphState('loading');
+
       try {
         await loadAgents();
         await loadRelationships();
         initGraph();
         updateStats();
-        console.log('[design-module] Ready');
+        console.log('[design-studio] Ready');
       } catch (error) {
-        console.error('[design-module] Init error:', error);
+        console.error('[design-studio] Init error:', error);
+        setGraphState('error', 'Failed to load data. Make sure the gateway and agent-service are running.');
         showError('Failed to load data. Make sure agent-service is running.');
       }
     }
@@ -642,29 +713,86 @@
     // ============================================================================
     // Data Loading
     // ============================================================================
+
+    function getAuthHeaders(extra = {}) {
+      const accessToken = getAccessToken();
+      return accessToken
+        ? { ...extra, Authorization: `Bearer ${accessToken}` }
+        : { ...extra };
+    }
     
     async function loadAgents() {
       try {
-        const response = await fetch(`${API_BASE}`);
+        const response = await fetch(`${API_BASE}`, { headers: getAuthHeaders() });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        agents = await response.json();
+
+        const payload = await response.json();
+        const rawAgents = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : [];
+
+        agents = rawAgents.map((agent) => ({
+          ...agent,
+          id: agent.id,
+          name: agent.name || 'Unnamed agent',
+          type: normalizeNodeType(agent.type),
+          pattern: agent.pattern || agent.config?.pattern || 'tool-use',
+          purpose: agent.purpose || agent.description || '',
+          valueStream: agent.valueStream || agent.config?.valueStream || '',
+          capabilityGroup: agent.capabilityGroup || agent.config?.capabilityGroup || '',
+          objectives: Array.isArray(agent.objectives) ? agent.objectives : [],
+          kpis: Array.isArray(agent.kpis) ? agent.kpis : [],
+          integrations: Array.isArray(agent.integrations) ? agent.integrations : [],
+        }));
+
         renderElementList();
       } catch (error) {
         console.error('[loadAgents] Error:', error);
-        // Use mock data for demo
-        agents = generateMockAgents();
+        agents = [];
         renderElementList();
       }
     }
     
     async function loadRelationships() {
       try {
-        const response = await fetch(`${API_BASE}/relationships`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        relationships = await response.json();
+        const [relationshipsRes, interactionsRes] = await Promise.all([
+          fetch(`${API_BASE}/relationships`, { headers: getAuthHeaders() }),
+          fetch('/api/agent-interactions', { headers: getAuthHeaders() }),
+        ]);
+
+        const allRaw = [];
+
+        if (relationshipsRes.ok) {
+          const payload = await relationshipsRes.json();
+          allRaw.push(...(Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])));
+        }
+
+        if (interactionsRes.ok) {
+          const payload = await interactionsRes.json();
+          allRaw.push(...(Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])));
+        }
+
+        const dedupe = new Map();
+        allRaw.forEach((relation) => {
+          const normalized = {
+            id: relation.id,
+            sourceId: relation.sourceId || relation.source_agent_id || relation.sourceAgentId,
+            targetId: relation.targetId || relation.target_agent_id || relation.targetAgentId,
+            type: relation.type || relation.message_type || relation.messageType || 'message',
+            description: relation.description || '',
+            config: relation.config || {},
+          };
+          if (normalized.sourceId && normalized.targetId) {
+            dedupe.set(normalized.id || `${normalized.sourceId}:${normalized.targetId}:${normalized.type}`, normalized);
+          }
+        });
+
+        relationships = Array.from(dedupe.values());
       } catch (error) {
         console.error('[loadRelationships] Error:', error);
-        relationships = generateMockRelationships();
+        relationships = [];
       }
     }
     
@@ -737,22 +865,31 @@
     
     function initGraph() {
       const container = document.getElementById('graph-container');
-      
+
+      const visibleAgents = agents.filter(a => !hiddenTypes.has(a.type));
+      if (visibleAgents.length === 0) {
+        if (network) {
+          network.destroy();
+          network = null;
+        }
+        setGraphState('empty');
+        renderInteractionLegend();
+        return;
+      }
+
       const nodes = new vis.DataSet(
-        agents
-          .filter(a => !hiddenTypes.has(a.type))
-          .map(a => ({
-            id: a.id,
-            label: a.name,
-            color: {
-              background: nodeColors[a.type] || nodeColors.default,
-              border: '#1e293b',
-              highlight: { background: '#f59e0b', border: '#f59e0b' }
-            },
-            font: { color: '#f1f5f9', size: 12 },
-            shape: a.type === 'Agent' ? 'box' : (a.type === 'DataObject' ? 'ellipse' : 'hexagon'),
-            borderWidth: 2,
-          }))
+        visibleAgents.map(a => ({
+          id: a.id,
+          label: a.name,
+          color: {
+            background: nodeColors[a.type] || nodeColors.default,
+            border: '#1e293b',
+            highlight: { background: '#f59e0b', border: '#f59e0b' }
+          },
+          font: { color: '#f1f5f9', size: 12 },
+          shape: a.type === 'Agent' ? 'box' : (a.type === 'DataObject' ? 'ellipse' : 'hexagon'),
+          borderWidth: 2,
+        }))
       );
       
       const edges = new vis.DataSet(
@@ -762,16 +899,19 @@
             const target = agents.find(a => a.id === r.targetId);
             return source && target && !hiddenTypes.has(source.type) && !hiddenTypes.has(target.type);
           })
-          .map(r => ({
-            id: r.id,
-            from: r.sourceId,
-            to: r.targetId,
-            label: r.type,
-            arrows: 'to',
-            color: { color: '#475569', highlight: '#60a5fa' },
-            font: { color: '#64748b', size: 10, align: 'middle' },
-            smooth: { type: 'curvedCW', roundness: 0.2 },
-          }))
+          .map(r => {
+            const edgeColor = interactionColors[r.type] || interactionColors.default;
+            return {
+              id: r.id,
+              from: r.sourceId,
+              to: r.targetId,
+              label: r.type,
+              arrows: 'to',
+              color: { color: edgeColor, highlight: edgeColor, hover: edgeColor },
+              font: { color: '#94a3b8', size: 10, align: 'middle' },
+              smooth: { type: 'curvedCW', roundness: 0.2 },
+            };
+          })
       );
       
       const options = {
@@ -780,7 +920,7 @@
           margin: 10,
         },
         edges: {
-          width: 1.5,
+          width: 2,
           shadow: true,
         },
         physics: {
@@ -812,6 +952,34 @@
           network.focus(params.nodes[0], { scale: 1.5, animation: true });
         }
       });
+
+      renderInteractionLegend();
+      setGraphState('ready');
+    }
+
+    function renderInteractionLegend() {
+      const container = document.getElementById('interaction-legend-items');
+      if (!container) return;
+
+      const visibleRelationships = relationships.filter(r => {
+        const source = agents.find(a => a.id === r.sourceId);
+        const target = agents.find(a => a.id === r.targetId);
+        return source && target && !hiddenTypes.has(source.type) && !hiddenTypes.has(target.type);
+      });
+
+      const types = [...new Set(visibleRelationships.map(r => r.type).filter(Boolean))].sort();
+
+      if (types.length === 0) {
+        container.innerHTML = '<span style="font-size: 0.75rem; color: #64748b;">No interactions to display</span>';
+        return;
+      }
+
+      container.innerHTML = types.map(type => `
+        <div class="legend-item" title="${escapeHtml(type)}">
+          <div class="legend-color" style="background: ${interactionColors[type] || interactionColors.default};"></div>
+          <span>${escapeHtml(type)}</span>
+        </div>
+      `).join('');
     }
     
     function toggleLegend(type) {
@@ -846,6 +1014,8 @@
       // Update header
       document.getElementById('detail-name').textContent = agent.name;
       document.getElementById('detail-type').textContent = `${getTypeIcon(agent.type)} ${agent.type} • ${agent.pattern || 'General'}`;
+      const activeMetric = document.getElementById('metric-active-agent');
+      if (activeMetric) activeMetric.textContent = agent.name;
       
       // Update overview tab
       document.getElementById('agent-purpose').value = agent.purpose || '';
@@ -859,16 +1029,30 @@
       
       // Update relations tab
       renderRelationships(id);
+      renderInteractions(id);
       
       // Update integrations tab
       renderIntegrations(agent);
-      
+
+      // Update workspace summaries
+      const overviewText = document.getElementById('workspace-overview-text');
+      if (overviewText) overviewText.textContent = `${agent.name}: ${agent.purpose || 'No purpose defined yet.'}`;
+      const messagesList = document.getElementById('workspace-messages-list');
+      if (messagesList) {
+        const related = relationships.filter(r => r.sourceId === agent.id || r.targetId === agent.id);
+        messagesList.innerHTML = `<h4>Messages</h4>${related.length ? related.map(r => `<div class="relationship-item"><span class="relationship-type">${escapeHtml(r.type || 'message')}</span><span>${escapeHtml((agents.find(a => a.id===r.sourceId)?.name || 'Unknown'))} → ${escapeHtml((agents.find(a => a.id===r.targetId)?.name || 'Unknown'))}</span></div>`).join('') : '<p>No messages available.</p>'}`;
+      }
+      const workspaceIntegrations = document.getElementById('workspace-integrations-list');
+      if (workspaceIntegrations) {
+        workspaceIntegrations.innerHTML = `<h4>Integrations</h4>${(agent.integrations || []).length ? (agent.integrations || []).map(i => `<div class="integration-item"><div class="integration-name"><span>${i.icon || '🔌'}</span><span>${escapeHtml(i.name || 'Integration')}</span><span class="integration-badge">${escapeHtml(i.type || 'external')}</span></div></div>`).join('') : '<p>No integrations configured.</p>'}`;
+      }
+
       // Update code tab
       generateAgentCode(agent);
-      
+
       // Highlight in list
       renderElementList();
-      
+
       // Focus in graph
       if (network) {
         network.selectNodes([id]);
@@ -886,43 +1070,59 @@
     }
     
     function renderRelationships(agentId) {
+      const container = document.getElementById('workspace-relations');
+      if (!container) return;
+
       const outgoing = relationships.filter(r => r.sourceId === agentId);
       const incoming = relationships.filter(r => r.targetId === agentId);
-      
-      const outContainer = document.getElementById('relations-outgoing');
-      const inContainer = document.getElementById('relations-incoming');
-      
-      if (outgoing.length === 0) {
-        outContainer.innerHTML = '<div class="empty-state" style="padding: 1rem;"><p>No outgoing relationships</p></div>';
-      } else {
-        outContainer.innerHTML = outgoing.map(r => {
-          const target = agents.find(a => a.id === r.targetId);
-          return `
-            <div class="relationship-item">
-              <span class="relationship-type">${r.type}</span>
-              <span>→</span>
-              <span class="relationship-target" onclick="selectAgent('${r.targetId}')">${target?.name || 'Unknown'}</span>
-            </div>
-          `;
-        }).join('');
-      }
-      
-      if (incoming.length === 0) {
-        inContainer.innerHTML = '<div class="empty-state" style="padding: 1rem;"><p>No incoming relationships</p></div>';
-      } else {
-        inContainer.innerHTML = incoming.map(r => {
-          const source = agents.find(a => a.id === r.sourceId);
-          return `
-            <div class="relationship-item">
-              <span class="relationship-target" onclick="selectAgent('${r.sourceId}')">${source?.name || 'Unknown'}</span>
-              <span>→</span>
-              <span class="relationship-type">${r.type}</span>
-            </div>
-          `;
-        }).join('');
-      }
+
+      const outgoingHtml = outgoing.length
+        ? outgoing.map(r => {
+            const target = agents.find(a => a.id === r.targetId);
+            return `<div class="relationship-item"><span class="relationship-type">${escapeHtml(r.type || 'message')}</span><span>→</span><span class="relationship-target" onclick="selectAgent('${r.targetId}')">${escapeHtml(target?.name || 'Unknown')}</span></div>`;
+          }).join('')
+        : '<div class="empty-state" style="padding: 0.75rem;"><p>No outgoing relationships</p></div>';
+
+      const incomingHtml = incoming.length
+        ? incoming.map(r => {
+            const source = agents.find(a => a.id === r.sourceId);
+            return `<div class="relationship-item"><span class="relationship-target" onclick="selectAgent('${r.sourceId}')">${escapeHtml(source?.name || 'Unknown')}</span><span>→</span><span class="relationship-type">${escapeHtml(r.type || 'message')}</span></div>`;
+          }).join('')
+        : '<div class="empty-state" style="padding: 0.75rem;"><p>No incoming relationships</p></div>';
+
+      container.innerHTML = `<h4>Relationships</h4><div style="font-size:0.75rem;color:#94a3b8;margin:.35rem 0;">OUTGOING</div>${outgoingHtml}<div style="font-size:0.75rem;color:#94a3b8;margin:.75rem 0 .35rem;">INCOMING</div>${incomingHtml}`;
     }
     
+    function renderInteractions(agentId) {
+      const container = document.getElementById('interactions-list');
+      if (!container) return;
+
+      const relevant = relationships.filter(r => r.sourceId === agentId || r.targetId === agentId);
+
+      if (!relevant.length) {
+        container.innerHTML = '<div class="empty-state" style="padding: 1rem;"><p>No interaction contracts found</p></div>';
+        return;
+      }
+
+      container.innerHTML = relevant.map((r) => {
+        const source = agents.find(a => a.id === r.sourceId);
+        const target = agents.find(a => a.id === r.targetId);
+        const direction = r.sourceId === agentId ? 'outbound' : 'inbound';
+        return `
+          <div class="relationship-item" style="display:flex; flex-direction:column; gap:0.25rem;">
+            <div style="display:flex; justify-content:space-between; gap:0.5rem;">
+              <span class="relationship-type">${escapeHtml(r.type || 'message')}</span>
+              <span style="font-size:0.7rem; color:#94a3b8; text-transform:uppercase;">${direction}</span>
+            </div>
+            <div style="font-size:0.8rem; color:#cbd5e1;">
+              ${escapeHtml(source?.name || 'Unknown')} → ${escapeHtml(target?.name || 'Unknown')}
+            </div>
+            ${r.description ? `<div style="font-size:0.75rem; color:#94a3b8;">${escapeHtml(r.description)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
     function renderIntegrations(agent) {
       const container = document.getElementById('integrations-list');
       const integrations = agent.integrations || [];
@@ -987,17 +1187,26 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
     // Tab Navigation
     // ============================================================================
     
-    function showTab(tabName) {
-      // Update tab buttons
-      document.querySelectorAll('.detail-tab').forEach(tab => {
+    function showDetailTab(tabName) {
+      document.querySelectorAll('#detail-content .detail-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tab === tabName);
       });
-      
-      // Update tab content
-      document.querySelectorAll('.tab-content').forEach(content => {
+
+      document.querySelectorAll('#detail-content .tab-content').forEach(content => {
         content.classList.remove('active');
       });
-      document.getElementById(`tab-${tabName}`).classList.add('active');
+      document.getElementById(`tab-${tabName}`)?.classList.add('active');
+    }
+
+    function showWorkspaceTab(tabName) {
+      document.querySelectorAll('.workspace-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+      });
+      document.querySelectorAll('.workspace-panel').forEach(panel => panel.classList.remove('active'));
+      document.getElementById(`workspace-${tabName}`)?.classList.add('active');
+      if (tabName === 'graph' && network) {
+        setTimeout(() => network.fit({ animation: { duration: 300 } }), 50);
+      }
     }
     
     // ============================================================================
@@ -1021,7 +1230,7 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       try {
         const response = await fetch(`${API_BASE}/${selectedAgentId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(agent),
         });
         
@@ -1045,7 +1254,7 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       if (!confirm('Are you sure you want to delete this agent?')) return;
       
       try {
-        await fetch(`${API_BASE}/${selectedAgentId}`, { method: 'DELETE' });
+        await fetch(`${API_BASE}/${selectedAgentId}`, { method: 'DELETE', headers: getAuthHeaders() });
         agents = agents.filter(a => a.id !== selectedAgentId);
         relationships = relationships.filter(r => r.sourceId !== selectedAgentId && r.targetId !== selectedAgentId);
         selectedAgentId = null;
@@ -1061,14 +1270,151 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       }
     }
     
-    function addIntegration() {
-      showNotification('Integration wizard coming soon!', 'info');
+    async function addIntegration() {
+      if (!selectedAgentId) return;
+
+      try {
+        const catalogRes = await fetch('/api/integrations/catalog', { headers: getAuthHeaders() });
+        if (!catalogRes.ok) throw new Error(`Catalog HTTP ${catalogRes.status}`);
+        const catalogPayload = await catalogRes.json();
+        const options = (catalogPayload.integrations || []).filter(i => i.status === 'available');
+
+        if (!options.length) {
+          showNotification('No integrations currently available', 'info');
+          return;
+        }
+
+        const choice = prompt(`Add integration (${options.map(i => i.name).join(', ')})`, options[0].name);
+        if (!choice) return;
+
+        const putRes = await fetch(`/api/integrations/agent/${selectedAgentId}/${encodeURIComponent(choice)}`, {
+          method: 'PUT',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ status: 'pending', config: {} }),
+        });
+
+        if (!putRes.ok) throw new Error(`Save HTTP ${putRes.status}`);
+
+        const agent = agents.find(a => a.id === selectedAgentId);
+        if (agent) {
+          agent.integrations = Array.isArray(agent.integrations) ? agent.integrations : [];
+          if (!agent.integrations.some(i => i.name === choice)) {
+            agent.integrations.push({ name: choice, type: 'external', icon: '🔌' });
+          }
+          renderIntegrations(agent);
+        }
+
+        showNotification(`Integration '${choice}' added`, 'success');
+      } catch (error) {
+        console.error('[addIntegration] Error:', error);
+        showNotification('Failed to add integration', 'error');
+      }
     }
     
-    function generateCode() {
-      showNotification('AI code generation coming soon!', 'info');
+    async function generateCode() {
+      if (!selectedAgentId) return;
+
+      try {
+        const response = await fetch(`/api/design/generate-code/${selectedAgentId}`, {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ language: 'typescript', framework: 'express' }),
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const payload = await response.json();
+        document.getElementById('agent-code').textContent = payload.code || '// No code generated';
+        showNotification('Code generated successfully', 'success');
+      } catch (error) {
+        console.error('[generateCode] Error:', error);
+        showNotification('AI code generation failed', 'error');
+      }
+    }
+
+    async function refreshData() {
+      await init();
+      showNotification('Data refreshed', 'success');
+    }
+
+    async function createAgent() {
+      const name = prompt('New agent name');
+      if (!name) return;
+
+      try {
+        const response = await fetch(`${API_BASE}`, {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ name, type: 'Agent', description: '' }),
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        await loadAgents();
+        updateStats();
+        initGraph();
+
+        const created = agents.find(a => a.name === name) || agents[0];
+        if (created) selectAgent(created.id);
+
+        showNotification('Agent created', 'success');
+      } catch (error) {
+        console.error('[createAgent] Error:', error);
+        showNotification('Failed to create agent', 'error');
+      }
     }
     
+    async function exportDesignBundle() {
+      try {
+        const response = await fetch(`${API_BASE}/design/export`, { headers: getAuthHeaders() });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const payload = await response.json();
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `flowgrid-design-export-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showNotification('Design export downloaded', 'success');
+      } catch (error) {
+        console.error('[exportDesignBundle] Error:', error);
+        showNotification('Failed to export design bundle', 'error');
+      }
+    }
+
+    function triggerImportDesignBundle() {
+      const input = document.getElementById('design-import-input');
+      if (!input) return;
+      input.value = '';
+      input.click();
+    }
+
+    async function importDesignBundle(file) {
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const payload = JSON.parse(text);
+
+        const response = await fetch(`${API_BASE}/design/import`, {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const result = await response.json();
+        await init();
+        showNotification(`Import complete: ${result?.imported?.agentsCreated || 0} created, ${result?.imported?.agentsUpdated || 0} updated`, 'success');
+      } catch (error) {
+        console.error('[importDesignBundle] Error:', error);
+        showNotification('Failed to import design bundle', 'error');
+      }
+    }
+
     function copyCode() {
       const code = document.getElementById('agent-code').textContent;
       navigator.clipboard.writeText(code).then(() => {
@@ -1081,8 +1427,16 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
     // ============================================================================
     
     function updateStats() {
-      document.getElementById('stat-agents').textContent = agents.filter(a => a.type === 'Agent').length;
-      document.getElementById('stat-relationships').textContent = relationships.length;
+      const agentsCount = agents.filter(a => a.type === 'Agent').length;
+      const elementCount = agents.length;
+      document.getElementById('stat-elements').textContent = String(elementCount);
+      document.getElementById('stat-agents').textContent = String(agentsCount);
+      document.getElementById('stat-relationships').textContent = String(relationships.length);
+
+      const coverage = document.getElementById('metric-coverage');
+      if (coverage) coverage.textContent = `${relationships.length} mapped relationships`;
+      const roster = document.getElementById('workspace-agents-list');
+      if (roster) roster.textContent = agents.map(a => a.name).slice(0, 10).join(' • ') || 'No agents yet';
     }
     
     function showNotification(message, type = 'info') {
@@ -1139,9 +1493,21 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
     
     document.getElementById('search-input').addEventListener('input', renderElementList);
     document.getElementById('type-filter').addEventListener('change', renderElementList);
+    document.getElementById('design-import-input').addEventListener('change', (event) => {
+      const file = event?.target?.files?.[0];
+      if (file) importDesignBundle(file);
+    });
     
     // Initialize on load
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.FlowgridAuthUI?.initPage) {
+        window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
+      } else {
+        console.warn('[design-studio] auth-ui.js not loaded; continuing with local token fallback');
+      }
+
+      init();
+    });
     
     // CSS Animations
     const style = document.createElement('style');

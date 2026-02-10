@@ -23,7 +23,7 @@ Azure Kubernetes (€300-600/maand) ← Max flexibiliteit
 ### Setup
 ```bash
 # Op je Mac
-cd ~/Documents/Projects/CIA
+cd ~/Documents/Projects/flowgrid-design-v2
 docker-compose up -d
 ```
 
@@ -105,8 +105,8 @@ apt-get install -y docker.io docker-compose git
 #### Step 4: Deploy Flowgrid (5 min)
 ```bash
 # Clone je code
-git clone https://github.com/rubenneuteboom/cia-flowgrid-design
-cd cia-flowgrid-design
+git clone https://github.com/rubenneuteboom/flowgrid-design-studio
+cd flowgrid-design-studio
 
 # Create .env file
 nano .env
@@ -401,7 +401,7 @@ Need max flexibility?
 **Time:** 2-3 hours  
 
 ```bash
-cd ~/Documents/Projects/CIA
+cd ~/Documents/Projects/flowgrid-design-v2
 # Follow MICROSERVICES-QUICKSTART.md
 docker-compose up -d
 ```
@@ -459,7 +459,7 @@ docker-compose up -d
 
 ### This Week: Local Development
 ```bash
-cd ~/Documents/Projects/CIA
+cd ~/Documents/Projects/flowgrid-design-v2
 # Follow MICROSERVICES-QUICKSTART.md
 docker-compose up -d
 # Proof of concept in 2-3 hours!
@@ -469,7 +469,7 @@ docker-compose up -d
 ```bash
 # Create Hetzner server (€10/maand)
 ssh root@your-vps
-git clone https://github.com/rubenneuteboom/cia-flowgrid-design
+git clone https://github.com/rubenneuteboom/flowgrid-design-studio
 docker-compose up -d
 # Production ready!
 ```

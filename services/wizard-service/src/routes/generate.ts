@@ -39,13 +39,13 @@ const SERVICE_NAME = 'wizard-service';
 router.post('/generate-network', async (req: Request, res: Response) => {
   try {
     const { sessionId, selectedCapabilities } = req.body as GenerateNetworkRequest;
-    const tenantId = req.body.tenantId || req.headers['x-tenant-id'] as string;
+    const tenantId = req.tenantId;
 
     if (!sessionId) {
       return res.status(400).json({ error: 'sessionId is required' });
     }
     if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId is required' });
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
     }
 
     // Get session
@@ -83,7 +83,7 @@ router.post('/generate-network', async (req: Request, res: Response) => {
       agents: filteredAgents,
     };
 
-    await updateWizardSession(sessionId, updatedAnalysis);
+    await updateWizardSession(sessionId, tenantId, updatedAnalysis);
 
     const response: GenerateNetworkResponse = {
       success: true,
@@ -163,13 +163,13 @@ router.post('/suggest-interactions', async (req: Request, res: Response) => {
 router.post('/apply', async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.body as ApplyWizardRequest;
-    const tenantId = req.body.tenantId || req.headers['x-tenant-id'] as string;
+    const tenantId = req.tenantId;
 
     if (!sessionId) {
       return res.status(400).json({ error: 'sessionId is required' });
     }
     if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId is required' });
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
     }
 
     // Get session
@@ -197,7 +197,7 @@ router.post('/apply', async (req: Request, res: Response) => {
     const result = await applyWizardSession(tenantId, agents, relationships, integrations);
 
     // Mark session as applied
-    await markSessionApplied(sessionId);
+    await markSessionApplied(sessionId, tenantId);
 
     // Audit log
     await logAuditEvent(
@@ -218,6 +218,8 @@ router.post('/apply', async (req: Request, res: Response) => {
         integrations: result.integrations,
       },
       agents: result.agents,
+      // Frontend success route after import/apply
+      redirectUrl: '/design',
     };
 
     res.json(response);

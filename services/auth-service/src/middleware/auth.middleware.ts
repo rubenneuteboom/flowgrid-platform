@@ -46,7 +46,7 @@ export function createAuthMiddleware(pool: Pool) {
 
         // Verify user still exists and is active
         const userResult = await pool.query(
-          'SELECT id, is_active, mfa_enabled FROM users WHERE id = $1',
+          'SELECT id, is_active, mfa_enabled, tenant_id, role, email FROM users WHERE id = $1',
           [decoded.userId]
         );
 
@@ -57,11 +57,16 @@ export function createAuthMiddleware(pool: Pool) {
           });
         }
 
+        const dbUser = userResult.rows[0];
+
         req.user = {
           ...decoded,
-          mfaEnabled: userResult.rows[0].mfa_enabled,
+          email: dbUser.email,
+          role: dbUser.role,
+          tenantId: dbUser.tenant_id,
+          mfaEnabled: dbUser.mfa_enabled,
         };
-        req.tenantId = decoded.tenantId;
+        req.tenantId = dbUser.tenant_id;
         
         next();
       } catch (error) {
@@ -147,16 +152,20 @@ export function createAuthMiddleware(pool: Pool) {
         
         if (decoded.type === 'access') {
           const userResult = await pool.query(
-            'SELECT id, is_active, mfa_enabled FROM users WHERE id = $1',
+            'SELECT id, is_active, mfa_enabled, tenant_id, role, email FROM users WHERE id = $1',
             [decoded.userId]
           );
 
           if (userResult.rows.length > 0 && userResult.rows[0].is_active) {
+            const dbUser = userResult.rows[0];
             req.user = {
               ...decoded,
-              mfaEnabled: userResult.rows[0].mfa_enabled,
+              email: dbUser.email,
+              role: dbUser.role,
+              tenantId: dbUser.tenant_id,
+              mfaEnabled: dbUser.mfa_enabled,
             };
-            req.tenantId = decoded.tenantId;
+            req.tenantId = dbUser.tenant_id;
           }
         }
       } catch {

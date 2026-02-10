@@ -1,10 +1,10 @@
-# 🎨 Design Module
+# 🎨 Design Studio
 
 Agent Management UI for the Flowgrid Platform.
 
 ## Overview
 
-The Design Module is a **separate, optional service** that provides a rich UI for managing agents after they've been created through the Wizard. It follows Hohpe's platform architecture principles:
+The Design Studio is a **separate, optional service** that provides a rich UI for managing agents after they've been created through the Wizard. It follows Hohpe's platform architecture principles:
 
 - **Independently deployable** - Can be updated without affecting other services
 - **Optional module** - Can be enabled/disabled per tenant
@@ -82,7 +82,7 @@ npm start
 
 ## API Integration
 
-The Design Module makes these calls to agent-service:
+The Design Studio makes these calls to agent-service:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -104,7 +104,7 @@ docker run -p 3006:3006 flowgrid/design-module
 
 ## Nginx Gateway Route
 
-The design module is accessible at `/design` through the nginx gateway:
+The Design Studio is accessible at `/design` through the nginx gateway:
 
 ```nginx
 location /design {
@@ -129,5 +129,5 @@ Following Gregor Hohpe's platform principles:
 | Service | Port | Purpose |
 |---------|------|---------|
 | Wizard Service | 3005 | Agent onboarding (creates agents) |
-| Design Module | 3006 | Agent management (manages agents) |
+| Design Studio | 3006 | Agent management (manages agents) |
 | Agent Service | 3001 | Data API (stores/retrieves agents) |

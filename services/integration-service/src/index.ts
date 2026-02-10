@@ -3,10 +3,29 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import { Pool } from 'pg';
+import jwt from 'jsonwebtoken';
 
 const app = express();
 const PORT = process.env.PORT || 3004;
 const SERVICE_NAME = 'integration-service';
+const JWT_SECRET = process.env.JWT_SECRET || 'flowgrid_jwt_secret_dev_CHANGE_IN_PRODUCTION';
+
+interface AuthTokenPayload {
+  userId: string;
+  email: string;
+  tenantId: string;
+  role: string;
+  type: 'access' | 'refresh';
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthTokenPayload;
+      tenantId?: string;
+    }
+  }
+}
 
 // Database connection
 const pool = new Pool({
@@ -18,6 +37,28 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(morgan('combined'));
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(authHeader.substring(7), JWT_SECRET) as AuthTokenPayload;
+    if (decoded.type !== 'access' || !decoded.tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
+    }
+
+    req.user = decoded;
+    req.tenantId = decoded.tenantId;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
+  }
+}
+
+app.use('/api', requireAuth);
 
 // Health check
 app.get('/health', async (req: Request, res: Response) => {
@@ -291,14 +332,20 @@ app.post('/api/integrations/github/repos/:owner/:repo/issues', async (req: Reque
 app.get('/api/integrations/agent/:agentId/status', async (req: Request, res: Response) => {
   try {
     const { agentId } = req.params;
-    
+    const tenantId = req.tenantId;
+
+    const ownership = await pool.query('SELECT id FROM agents WHERE id = $1 AND tenant_id = $2', [agentId, tenantId]);
+    if (ownership.rows.length === 0) {
+      return res.status(404).json({ error: 'Not Found', message: `Agent ${agentId} not found` });
+    }
+
     const result = await pool.query(
       `SELECT integration_type, status, config, last_sync_at
        FROM agent_integrations
        WHERE agent_id = $1`,
       [agentId]
     );
-    
+
     res.json({
       agentId,
       integrations: result.rows.map(row => ({
@@ -321,7 +368,13 @@ app.put('/api/integrations/agent/:agentId/:integrationType', async (req: Request
   try {
     const { agentId, integrationType } = req.params;
     const { config, status } = req.body;
-    
+    const tenantId = req.tenantId;
+
+    const ownership = await pool.query('SELECT id FROM agents WHERE id = $1 AND tenant_id = $2', [agentId, tenantId]);
+    if (ownership.rows.length === 0) {
+      return res.status(404).json({ error: 'Not Found', message: `Agent ${agentId} not found` });
+    }
+
     const result = await pool.query(
       `UPDATE agent_integrations
        SET config = COALESCE($1, config),

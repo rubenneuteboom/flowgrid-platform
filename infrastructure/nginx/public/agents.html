@@ -6,29 +6,29 @@
     <title>🤖 Agents - Flowgrid Platform</title>
     <style>
         :root {
-            /* Teal/Cyan Network Theme */
-            --bg-primary: #152b2b;
-            --bg-secondary: #1a3636;
-            --bg-card: #1f4040;
-            --bg-card-hover: #254a4a;
-            --bg-input: #122424;
+            /* Dark Blue v1 Theme */
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #243245;
+            --bg-card-hover: #2d3f57;
+            --bg-input: #0b1220;
             
-            --border-default: #2d5555;
-            --border-hover: #3d7070;
-            --border-accent: #5dd5c0;
+            --border-default: #334155;
+            --border-hover: #475569;
+            --border-accent: #3b82f6;
             
-            --accent-primary: #5dd5c0;
-            --accent-secondary: #7de4d0;
-            --accent-tertiary: #a0f0e0;
-            --accent-glow: rgba(93, 213, 192, 0.3);
+            --accent-primary: #3b82f6;
+            --accent-secondary: #60a5fa;
+            --accent-tertiary: #93c5fd;
+            --accent-glow: rgba(59, 130, 246, 0.28);
             
-            --text-primary: #e8f5f3;
-            --text-secondary: #a8c8c4;
-            --text-muted: #7a9a96;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
             
-            --success: #5dd5c0;
-            --warning: #f5a623;
-            --error: #f56565;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
             --info: #60a5fa;
             --purple: #a78bfa;
         }
@@ -52,8 +52,8 @@
             width: 100%;
             height: 100%;
             background-image: 
-                radial-gradient(circle at 20% 30%, rgba(93, 213, 192, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(93, 213, 192, 0.03) 0%, transparent 50%);
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.07) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(96, 165, 250, 0.06) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
         }
@@ -220,6 +220,78 @@
             color: var(--text-secondary);
             margin-bottom: 2rem;
         }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+            padding: 1rem;
+        }
+
+        .modal {
+            width: min(560px, 100%);
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            box-shadow: 0 12px 38px rgba(0, 0, 0, 0.35);
+            padding: 1.2rem;
+        }
+
+        .modal h3 {
+            margin-bottom: 0.35rem;
+            color: var(--text-primary);
+        }
+
+        .modal p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-row { margin-bottom: 0.8rem; }
+
+        .form-row label {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .form-row input,
+        .form-row select,
+        .form-row textarea {
+            width: 100%;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            padding: 0.55rem 0.65rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .form-row textarea {
+            min-height: 96px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.6rem;
+        }
+
+        .form-error {
+            color: var(--error);
+            font-size: 0.86rem;
+            min-height: 1.1rem;
+            margin-top: 0.25rem;
+        }
         
         .loading {
             text-align: center;
@@ -265,7 +337,7 @@
             <h1>🤖 Agents</h1>
             <div class="actions">
                 <a href="/" class="btn">← Dashboard</a>
-                <a href="/wizard.html" class="btn btn-primary">+ Create Agents</a>
+                <button id="openCreateAgent" class="btn btn-primary">+ Create Agent</button>
             </div>
         </header>
 
@@ -298,10 +370,105 @@
         </div>
     </div>
 
+    <div id="createAgentModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="createAgentTitle">
+            <h3 id="createAgentTitle">Create Custom Agent</h3>
+            <p>Create an agent directly without running the wizard.</p>
+
+            <div class="form-row">
+                <label for="agentName">Name *</label>
+                <input id="agentName" type="text" placeholder="e.g. Campaign Planner" />
+            </div>
+            <div class="form-row">
+                <label for="agentType">Type *</label>
+                <select id="agentType">
+                    <option value="ai">AI</option>
+                    <option value="orchestrator">Orchestrator</option>
+                    <option value="monitor">Monitor</option>
+                    <option value="servicenow">ServiceNow</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="agentDescription">Description</label>
+                <textarea id="agentDescription" placeholder="What this agent does..."></textarea>
+            </div>
+            <div id="createAgentError" class="form-error"></div>
+
+            <div class="modal-actions">
+                <button id="cancelCreateAgent" class="btn" type="button">Cancel</button>
+                <button id="submitCreateAgent" class="btn btn-primary" type="button">Create Agent</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/auth-ui.js"></script>
     <script>
+        function getAuthHeaders() {
+            const accessToken = window.FlowgridAuthUI.getAuthToken();
+            return accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {};
+        }
+
+        function openCreateAgentModal() {
+            document.getElementById('createAgentError').textContent = '';
+            document.getElementById('createAgentModal').style.display = 'flex';
+            document.getElementById('agentName').focus();
+        }
+
+        function closeCreateAgentModal() {
+            document.getElementById('createAgentModal').style.display = 'none';
+        }
+
+        async function createAgent() {
+            const name = document.getElementById('agentName').value.trim();
+            const type = document.getElementById('agentType').value;
+            const description = document.getElementById('agentDescription').value.trim();
+            const errorEl = document.getElementById('createAgentError');
+            const submitBtn = document.getElementById('submitCreateAgent');
+
+            if (!name) {
+                errorEl.textContent = 'Agent name is required.';
+                return;
+            }
+
+            errorEl.textContent = '';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+
+            try {
+                const response = await fetch('/api/agents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ name, type, description, status: 'draft' }),
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    let msg = `Create failed (${response.status})`;
+                    try {
+                        const payload = await response.json();
+                        msg = payload?.message || payload?.error || msg;
+                    } catch (_) {}
+                    throw new Error(msg);
+                }
+
+                closeCreateAgentModal();
+                document.getElementById('agentName').value = '';
+                document.getElementById('agentDescription').value = '';
+                await loadAgents();
+            } catch (error) {
+                errorEl.textContent = error.message || 'Failed to create agent.';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Agent';
+            }
+        }
+
         async function loadAgents() {
             try {
-                const response = await fetch('/api/agents');
+                const response = await fetch('/api/agents', {
+                    headers: getAuthHeaders(),
+                    credentials: 'include'
+                });
                 const data = await response.json();
                 
                 const agents = data.data || [];
@@ -353,7 +520,21 @@
             }
         }
         
-        loadAgents();
+        document.addEventListener('DOMContentLoaded', () => {
+            window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
+
+            document.getElementById('openCreateAgent').addEventListener('click', openCreateAgentModal);
+            document.getElementById('cancelCreateAgent').addEventListener('click', closeCreateAgentModal);
+            document.getElementById('submitCreateAgent').addEventListener('click', createAgent);
+            document.getElementById('createAgentModal').addEventListener('click', (e) => {
+                if (e.target.id === 'createAgentModal') closeCreateAgentModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeCreateAgentModal();
+            });
+
+            loadAgents();
+        });
     </script>
 </body>
 </html>

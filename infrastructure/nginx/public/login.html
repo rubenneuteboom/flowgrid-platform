@@ -238,10 +238,14 @@
     if (params.get('reset')) {
       showSuccess('Password reset successfully. Please log in with your new password.');
     }
+    if (params.get('signedOut')) {
+      showSuccess('You have been signed out.');
+    }
 
     // Check for OAuth tokens in URL
     if (params.get('accessToken')) {
       localStorage.setItem('accessToken', params.get('accessToken'));
+      localStorage.setItem('flowgrid_access_token', params.get('accessToken')); // backward compatibility
       localStorage.setItem('refreshToken', params.get('refreshToken'));
       window.location.href = '/index.html';
     }
@@ -306,6 +310,7 @@
           } else {
             // Success - store tokens and redirect
             localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('flowgrid_access_token', data.accessToken); // backward compatibility
             localStorage.setItem('refreshToken', data.refreshToken);
             localStorage.setItem('user', JSON.stringify(data.user));
             localStorage.setItem('tenant', JSON.stringify(data.tenant));

@@ -6,349 +6,294 @@
     <title>Flowgrid Platform</title>
     <style>
         :root {
-            /* Teal/Cyan Network Theme */
-            --bg-primary: #152b2b;
-            --bg-secondary: #1a3636;
-            --bg-card: #1f4040;
-            --bg-card-hover: #254a4a;
-            --bg-input: #122424;
-            
-            --border-default: #2d5555;
-            --border-hover: #3d7070;
-            --border-accent: #5dd5c0;
-            
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #0b1220;
+            --border-default: #334155;
+            --border-hover: #475569;
             --accent-primary: #5dd5c0;
-            --accent-secondary: #7de4d0;
-            --accent-tertiary: #a0f0e0;
-            --accent-glow: rgba(93, 213, 192, 0.3);
-            
-            --text-primary: #e8f5f3;
-            --text-secondary: #a8c8c4;
-            --text-muted: #7a9a96;
-            
-            --success: #5dd5c0;
-            --warning: #f5a623;
-            --error: #f56565;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --danger: #ef4444;
         }
-        
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
+
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: var(--bg-primary);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+            color: var(--text-primary);
+            height: 100vh;
             overflow: hidden;
         }
-        
-        /* Animated network background */
-        .network-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 0;
+
+        .app-shell {
+            display: none;
+            height: 100vh;
         }
-        
-        .network-bg svg {
-            width: 100%;
-            height: 100%;
-            opacity: 0.15;
-        }
-        
-        .node {
-            fill: var(--accent-primary);
-            animation: pulse 3s ease-in-out infinite;
-        }
-        
-        .node:nth-child(odd) { animation-delay: -1.5s; }
-        .node:nth-child(3n) { animation-delay: -0.75s; }
-        
-        .line {
-            stroke: var(--accent-primary);
-            stroke-width: 1.5;
-            opacity: 0.6;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 0.4; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
-        }
-        
-        /* Gradient overlay */
-        .gradient-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(ellipse at center, transparent 0%, var(--bg-primary) 70%);
-            pointer-events: none;
-            z-index: 1;
-        }
-        
-        .container {
-            position: relative;
-            z-index: 2;
-            text-align: center;
-            color: var(--text-primary);
-            padding: 2rem;
-            max-width: 900px;
-        }
-        
-        .logo {
-            margin-bottom: 1.5rem;
-        }
-        
-        .logo svg {
-            width: 80px;
-            height: 80px;
-        }
-        
-        h1 { 
-            font-size: 3rem; 
-            margin-bottom: 0.75rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-tertiary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .subtitle {
-            font-size: 1.3rem;
-            color: var(--text-secondary);
-            margin-bottom: 2.5rem;
-        }
-        
-        .status {
-            background: var(--bg-card);
-            border: 1px solid var(--border-default);
-            padding: 1.25rem 2rem;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.1rem;
-            margin-bottom: 2.5rem;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-        }
-        
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            background: var(--accent-primary);
-            border-radius: 50%;
-            box-shadow: 0 0 12px var(--accent-glow);
-            animation: statusPulse 2s ease-in-out infinite;
-        }
-        
-        @keyframes statusPulse {
-            0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
-            50% { box-shadow: 0 0 20px var(--accent-glow), 0 0 30px var(--accent-glow); }
-        }
-        
-        .status span { color: var(--accent-primary); font-weight: 600; }
-        
-        .links { 
+
+        .sidebar {
+            width: 230px;
+            min-width: 200px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-default);
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 3rem;
+            flex-direction: column;
+            padding: 1rem 0.8rem;
         }
-        
-        .links a {
-            color: var(--text-primary);
-            text-decoration: none;
-            padding: 0.75rem 1.5rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border-default);
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            font-weight: 500;
+
+        .brand {
+            padding: 0.4rem 0.5rem 1rem;
+            border-bottom: 1px solid var(--border-default);
+            margin-bottom: 0.9rem;
         }
-        
-        .links a:hover { 
-            background: var(--bg-card-hover);
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(93, 213, 192, 0.15);
-        }
-        
-        .quick-actions {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1rem;
-        }
-        
-        .action-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 1rem 2rem;
-            background: linear-gradient(135deg, var(--accent-primary), #4dc0ac);
-            color: var(--bg-primary);
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
+
+        .brand h1 {
             font-size: 1rem;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 16px var(--accent-glow);
+            color: var(--accent-primary);
+            font-weight: 700;
+            margin-bottom: 0.25rem;
         }
-        
-        .action-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 28px var(--accent-glow);
+
+        .brand p {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
         }
-        
-        .action-btn.secondary {
-            background: var(--bg-card);
+
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .nav-label {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin: 0.3rem 0.25rem;
+        }
+
+        .nav-link {
+            text-align: left;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            padding: 0.55rem 0.7rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .nav-link:hover {
+            background: #243245;
+            border-color: var(--border-default);
             color: var(--text-primary);
-            border: 1px solid var(--border-default);
-            box-shadow: none;
         }
-        
-        .action-btn.secondary:hover {
+
+        .nav-link.active {
             border-color: var(--accent-primary);
             color: var(--accent-primary);
-            box-shadow: 0 4px 16px rgba(93, 213, 192, 0.1);
+            background: rgba(93, 213, 192, 0.08);
         }
-        
-        /* Footer */
-        .footer {
-            position: fixed;
-            bottom: 1.5rem;
-            left: 50%;
-            transform: translateX(-50%);
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            z-index: 2;
+
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-default);
+            padding-top: 0.8rem;
         }
-        
-        .footer a {
-            color: var(--accent-primary);
-            text-decoration: none;
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--bg-tertiary);
         }
-        
-        .footer a:hover {
-            text-decoration: underline;
+
+        .content-header {
+            height: 52px;
+            padding: 0 1rem;
+            border-bottom: 1px solid var(--border-default);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            font-size: 0.86rem;
+            background: var(--bg-secondary);
         }
-        
-        @media (max-width: 600px) {
-            h1 { font-size: 2rem; }
-            .subtitle { font-size: 1rem; }
-            .links { flex-direction: column; }
-            .links a { width: 100%; }
+
+        #active-title { color: var(--text-primary); font-weight: 600; }
+
+        .frame-wrap {
+            flex: 1;
+            min-height: 0;
+            position: relative;
         }
+
+        #module-frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: var(--bg-primary);
+        }
+
+        .boot-state {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border-default);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .error { color: var(--danger); }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <!-- Network background animation -->
-    <div class="network-bg">
-        <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
-            <!-- Connection lines -->
-            <line class="line" x1="100" y1="100" x2="200" y2="180"/>
-            <line class="line" x1="200" y1="180" x2="350" y2="150"/>
-            <line class="line" x1="350" y1="150" x2="450" y2="220"/>
-            <line class="line" x1="200" y1="180" x2="250" y2="300"/>
-            <line class="line" x1="450" y1="220" x2="550" y2="180"/>
-            <line class="line" x1="550" y1="180" x2="650" y2="250"/>
-            <line class="line" x1="650" y1="250" x2="750" y2="200"/>
-            <line class="line" x1="750" y1="200" x2="850" y2="280"/>
-            <line class="line" x1="250" y1="300" x2="400" y2="350"/>
-            <line class="line" x1="400" y1="350" x2="550" y2="320"/>
-            <line class="line" x1="550" y1="320" x2="650" y2="400"/>
-            <line class="line" x1="650" y1="400" x2="800" y2="380"/>
-            <line class="line" x1="100" y1="450" x2="200" y2="400"/>
-            <line class="line" x1="200" y1="400" x2="350" y2="450"/>
-            <line class="line" x1="350" y1="450" x2="500" y2="480"/>
-            <line class="line" x1="500" y1="480" x2="650" y2="500"/>
-            <line class="line" x1="850" y1="280" x2="900" y2="150"/>
-            <line class="line" x1="450" y1="220" x2="400" y2="350"/>
-            <line class="line" x1="550" y1="180" x2="550" y2="320"/>
-            <line class="line" x1="750" y1="200" x2="800" y2="380"/>
-            
-            <!-- Network nodes -->
-            <circle class="node" cx="100" cy="100" r="6"/>
-            <circle class="node" cx="200" cy="180" r="8"/>
-            <circle class="node" cx="350" cy="150" r="5"/>
-            <circle class="node" cx="450" cy="220" r="9"/>
-            <circle class="node" cx="550" cy="180" r="6"/>
-            <circle class="node" cx="650" cy="250" r="7"/>
-            <circle class="node" cx="750" cy="200" r="5"/>
-            <circle class="node" cx="850" cy="280" r="8"/>
-            <circle class="node" cx="900" cy="150" r="4"/>
-            <circle class="node" cx="250" cy="300" r="6"/>
-            <circle class="node" cx="400" cy="350" r="7"/>
-            <circle class="node" cx="550" cy="320" r="5"/>
-            <circle class="node" cx="650" cy="400" r="8"/>
-            <circle class="node" cx="800" cy="380" r="6"/>
-            <circle class="node" cx="100" cy="450" r="5"/>
-            <circle class="node" cx="200" cy="400" r="6"/>
-            <circle class="node" cx="350" cy="450" r="7"/>
-            <circle class="node" cx="500" cy="480" r="5"/>
-            <circle class="node" cx="650" cy="500" r="6"/>
-        </svg>
+    <div id="boot" class="boot-state">
+        <div class="spinner"></div>
+        <p>Loading workspace…</p>
     </div>
-    
-    <div class="gradient-overlay"></div>
-    
-    <div class="container">
-        <!-- Logo -->
-        <div class="logo">
-            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="50" cy="30" r="8" fill="url(#grad1)"/>
-                <circle cx="25" cy="55" r="6" fill="url(#grad1)"/>
-                <circle cx="75" cy="55" r="6" fill="url(#grad1)"/>
-                <circle cx="35" cy="80" r="5" fill="url(#grad1)"/>
-                <circle cx="65" cy="80" r="5" fill="url(#grad1)"/>
-                <line x1="50" y1="38" x2="25" y2="49" stroke="url(#grad1)" stroke-width="2"/>
-                <line x1="50" y1="38" x2="75" y2="49" stroke="url(#grad1)" stroke-width="2"/>
-                <line x1="25" y1="61" x2="35" y2="75" stroke="url(#grad1)" stroke-width="2"/>
-                <line x1="75" y1="61" x2="65" y2="75" stroke="url(#grad1)" stroke-width="2"/>
-                <line x1="35" y1="80" x2="65" y2="80" stroke="url(#grad1)" stroke-width="2"/>
-                <defs>
-                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#5dd5c0"/>
-                        <stop offset="100%" style="stop-color:#a0f0e0"/>
-                    </linearGradient>
-                </defs>
-            </svg>
-        </div>
-        
-        <h1>Flowgrid Platform</h1>
-        <p class="subtitle">AI-Powered IT Service Management</p>
-        
-        <div class="status">
-            <span>Gateway Status:</span>
-            <div class="status-dot"></div>
-            <span>Online</span>
-        </div>
-        
-        <div class="links">
-            <a href="/api/auth/health">🔐 Auth Service</a>
-            <a href="/api/agents">🤖 Agents API</a>
-            <a href="/api/design">🎨 Design API</a>
-            <a href="/api/integrations/catalog">🔌 Integrations</a>
-        </div>
-        
-        <div class="quick-actions">
-            <a href="/wizard.html" class="action-btn">✨ Create Agent Network</a>
-            <a href="/agents.html" class="action-btn secondary">📋 View Agents</a>
-        </div>
+
+    <div id="app-shell" class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>Flowgrid</h1>
+                <p>Platform workspace</p>
+            </div>
+
+            <div class="nav-group" id="module-links">
+                <div class="nav-label">Modules</div>
+                <button class="nav-link" data-url="/wizard.html" data-title="Onboarding Wizard">✨ Onboarding Wizard</button>
+                <button class="nav-link" data-url="/design/" data-title="FlowGrid Design Studio">🎨 FlowGrid Design Studio</button>
+                <button class="nav-link" data-url="/status.html" data-title="Status">📊 Status</button>
+            </div>
+
+            <div class="sidebar-footer nav-group">
+                <div class="nav-label">Account</div>
+                <button class="nav-link" data-url="/profile.html" data-title="Profile">👤 Profile</button>
+                <button class="nav-link" data-url="/configuration.html" data-title="Configuration">⚙️ Configuration</button>
+            </div>
+        </aside>
+
+        <section class="content">
+            <div class="content-header">
+                <span id="active-title">Flowgrid</span>
+                <span>Authenticated tenant workspace</span>
+            </div>
+            <div class="frame-wrap">
+                <iframe id="module-frame" title="Flowgrid Module"></iframe>
+            </div>
+        </section>
     </div>
-    
-    <div class="footer">
-        Powered by <a href="#">Flowgrid</a> • Multi-Agent IT Department
-    </div>
+
+    <script src="/js/auth-ui.js"></script>
+    <script>
+      const shellEl = document.getElementById('app-shell');
+      const bootEl = document.getElementById('boot');
+      const frameEl = document.getElementById('module-frame');
+      const titleEl = document.getElementById('active-title');
+      const navLinks = Array.from(document.querySelectorAll('.nav-link'));
+
+      function getAuthHeaders(extra = {}) {
+        const token = window.FlowgridAuthUI.getAuthToken();
+        return token ? { ...extra, Authorization: `Bearer ${token}` } : { ...extra };
+      }
+
+      async function isTenantPopulated() {
+        const response = await fetch('/api/agents?limit=1', {
+          headers: getAuthHeaders(),
+          credentials: 'include'
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          const target = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.replace(`/login.html?redirect=${target}`);
+          return null;
+        }
+
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+          try {
+            if (contentType.includes('application/json')) {
+              const payload = await response.json();
+              detail = payload?.error || payload?.message || '';
+            } else {
+              detail = (await response.text()).slice(0, 120);
+            }
+          } catch (_) {}
+          throw new Error(`Population check failed: ${response.status}${detail ? ` - ${detail}` : ''}`);
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error('Population check returned non-JSON response');
+        }
+
+        const payload = await response.json();
+        const total = payload?.meta?.total;
+        return Number.isFinite(total) ? total > 0 : Array.isArray(payload?.data) && payload.data.length > 0;
+      }
+
+      function activateNav(activeButton) {
+        navLinks.forEach(btn => btn.classList.toggle('active', btn === activeButton));
+      }
+
+      function loadModule(button) {
+        const url = button.dataset.url;
+        const title = button.dataset.title || 'Flowgrid';
+        if (!url) return;
+        frameEl.src = url;
+        titleEl.textContent = title;
+        activateNav(button);
+      }
+
+      async function bootstrap() {
+        window.FlowgridAuthUI.initPage({ requireAuth: true });
+
+        try {
+          const populated = await isTenantPopulated();
+          if (populated === null) return; // redirected to login
+
+          if (!populated) {
+            window.location.replace('/wizard.html?onboarding=true');
+            return;
+          }
+
+          bootEl.style.display = 'none';
+          shellEl.style.display = 'flex';
+
+          navLinks.forEach((button) => {
+            button.addEventListener('click', () => loadModule(button));
+          });
+
+          const defaultButton = navLinks.find((btn) => btn.dataset.url === '/design/') || navLinks[0];
+          if (defaultButton) {
+            loadModule(defaultButton);
+          }
+        } catch (error) {
+          console.error('[index-shell] bootstrap failed', error);
+          bootEl.innerHTML = '<p class="error">Failed to load workspace. Please refresh.</p>';
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', bootstrap);
+    </script>
 </body>
 </html>

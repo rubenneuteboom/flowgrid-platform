@@ -38,9 +38,9 @@ router.get('/patterns', async (req: Request, res: Response) => {
 
 router.get('/sessions', async (req: Request, res: Response) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] as string || req.query.tenantId as string;
+    const tenantId = req.tenantId;
     if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId required' });
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
     }
 
     const sessions = await listWizardSessions(tenantId);
@@ -58,7 +58,12 @@ router.get('/sessions', async (req: Request, res: Response) => {
 
 router.get('/sessions/:id', async (req: Request, res: Response) => {
   try {
-    const session = await getWizardSession(req.params.id);
+    const tenantId = req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
+    }
+
+    const session = await getWizardSession(req.params.id, tenantId);
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
@@ -78,7 +83,16 @@ router.get('/sessions/:id', async (req: Request, res: Response) => {
 
 router.delete('/sessions/:id', async (req: Request, res: Response) => {
   try {
-    await deleteWizardSession(req.params.id);
+    const tenantId = req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
+    }
+
+    const deleted = await deleteWizardSession(req.params.id, tenantId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error(`[${SERVICE_NAME}] Delete session error:`, error);

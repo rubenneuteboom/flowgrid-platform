@@ -1,18 +1,18 @@
-# Wizard Migration: CIA → Flowgrid Platform
+# Wizard Migration: Legacy Design Module → Flowgrid Platform
 
 **Migrated:** 2026-02-09
-**Source:** ~/Documents/Projects/CIA/web-ui/server.js (4,116 lines)
+**Source:** ~/Documents/Projects/flowgrid-design-v2/web-ui/server.js (4,116 lines)
 **Target:** design-service (port 3003)
 
 ## Overview
 
-The CIA Flowgrid Design wizard provides an AI-powered workflow for:
+The legacy Flowgrid Design wizard provides an AI-powered workflow for:
 1. **Image Upload** → GPT-4 Vision extracts capabilities from screenshots/diagrams
 2. **Text Analysis** → Claude/OpenAI designs agent architecture
 3. **Agent Generation** → Creates agents with agentic patterns
 4. **Database Save** → Persists to database with relationships
 
-## Source Endpoints (CIA)
+## Source Endpoints (legacy module)
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
@@ -147,7 +147,7 @@ curl -X POST http://localhost:8080/api/wizard/apply \
 
 ## Migration Steps
 
-1. ✅ Document CIA wizard flow
+1. ✅ Document legacy wizard flow
 2. ✅ Add wizard schema to PostgreSQL (002_wizard_schema.sql)
 3. ✅ Port endpoints to design-service (wizard routes added)
 4. ✅ Create wizard.html frontend (multi-step form)

@@ -35,10 +35,15 @@ import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 
 // Services
 import { checkDatabaseHealth, pool } from './services/database';
 import { isAnthropicConfigured, isOpenAIConfigured, getCurrentModels } from './services/ai';
+
+// Middleware
+import { requireAuth, optionalAuth } from './middleware/auth';
+import { setCsrfCookie, verifyCsrfToken, getCsrfTokenEndpoint } from './middleware/csrf';
 
 // Routes
 import analyzeRoutes from './routes/analyze';
@@ -53,15 +58,85 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 const SERVICE_NAME = 'wizard-service';
 const AI_PROVIDER = process.env.AI_PROVIDER || 'anthropic';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // ============================================================================
-// Middleware
+// Security Middleware
 // ============================================================================
 
-app.use(helmet());
-app.use(cors());
+// Helmet with strict Content Security Policy
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        'https://cdn.jsdelivr.net', // Chart.js, vis-network
+        // Add nonce for inline scripts if needed (see below)
+      ],
+      scriptSrcAttr: ["'none'"], // Disable inline event handlers
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'", // Required for inline styles (CSS-in-JS, etc.)
+        'https://fonts.googleapis.com',
+        'https://cdn.jsdelivr.net',
+      ],
+      fontSrc: [
+        "'self'",
+        'https://fonts.gstatic.com',
+      ],
+      imgSrc: [
+        "'self'",
+        'data:', // For base64 images
+        'blob:', // For blob URLs
+      ],
+      connectSrc: [
+        "'self'",
+        // Add API endpoints if different origin
+      ],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: IS_PRODUCTION ? [] : null,
+    },
+  },
+  // HSTS - Force HTTPS for 1 year
+  strictTransportSecurity: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  // Prevent clickjacking
+  frameguard: { action: 'deny' },
+  // Prevent MIME type sniffing
+  noSniff: true,
+  // XSS filter
+  xssFilter: true,
+  // Referrer policy
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || (IS_PRODUCTION ? false : '*'),
+  credentials: true, // Allow cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  exposedHeaders: ['X-CSRF-Token'],
+}));
+
+// Cookie parser (required for CSRF)
+app.use(cookieParser());
+
+// Body parsing with size limits
 app.use(express.json({ limit: '10mb' }));
+
+// Request logging
 app.use(morgan('combined'));
+
+// Set CSRF cookie on all requests
+app.use(setCsrfCookie);
 
 // ============================================================================
 // Health Check (Platform Observability)
@@ -98,8 +173,20 @@ app.get('/health', async (req: Request, res: Response) => {
 });
 
 // ============================================================================
-// API Routes
+// CSRF Token Endpoint (public - no auth required)
 // ============================================================================
+
+app.get('/api/wizard/csrf-token', getCsrfTokenEndpoint);
+
+// ============================================================================
+// API Routes (protected by auth + CSRF)
+// ============================================================================
+
+// Apply authentication to all wizard API routes
+app.use('/api/wizard', requireAuth);
+
+// Apply CSRF protection to state-changing requests
+app.use('/api/wizard', verifyCsrfToken);
 
 // Session management routes (list, get, delete)
 app.use('/api/wizard', sessionRoutes);
