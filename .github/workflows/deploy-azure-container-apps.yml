@@ -1,0 +1,453 @@
+# =============================================================================
+# Deploy to Azure Container Apps
+# Production-grade deployment with automatic scaling
+# Cost: ~€200-400/month depending on usage
+# =============================================================================
+
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'infrastructure/**'
+      - '.github/workflows/deploy-azure-container-apps.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      services:
+        description: 'Services to deploy (comma-separated, or "all")'
+        required: false
+        default: 'all'
+        type: string
+
+env:
+  AZURE_RESOURCE_GROUP: rg-flowgrid-${{ inputs.environment || 'staging' }}
+  AZURE_LOCATION: westeurope
+  ACR_NAME: flowgridacr${{ inputs.environment || 'staging' }}
+  CONTAINER_APP_ENV: flowgrid-env-${{ inputs.environment || 'staging' }}
+
+jobs:
+  # ===========================================================================
+  # Setup and Validation
+  # ===========================================================================
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      services: ${{ steps.services.outputs.list }}
+      image_tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine services to deploy
+        id: services
+        run: |
+          SERVICES="${{ inputs.services || 'all' }}"
+          if [ "$SERVICES" == "all" ]; then
+            echo "list=[\"agent-service\",\"auth-service\",\"design-service\",\"integration-service\",\"wizard-service\",\"design-module\",\"gateway\"]" >> $GITHUB_OUTPUT
+          else
+            # Convert comma-separated to JSON array
+            JSON_ARRAY=$(echo $SERVICES | tr ',' '\n' | jq -R . | jq -s .)
+            echo "list=$JSON_ARRAY" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "tag=${{ steps.env.outputs.environment }}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # Build and Push Docker Images
+  # ===========================================================================
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - agent-service
+          - auth-service
+          - design-service
+          - integration-service
+          - wizard-service
+          - design-module
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if service should be deployed
+        id: check
+        run: |
+          SERVICES='${{ needs.setup.outputs.services }}'
+          if echo $SERVICES | jq -e 'index("${{ matrix.service }}")' > /dev/null 2>&1; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Azure
+        if: steps.check.outputs.deploy == 'true'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.deploy == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        if: steps.check.outputs.deploy == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: services/${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service }}:${{ needs.setup.outputs.image_tag }}
+            ${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+  # ===========================================================================
+  # Build Gateway (nginx)
+  # ===========================================================================
+  build-gateway:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if gateway should be deployed
+        id: check
+        run: |
+          SERVICES='${{ needs.setup.outputs.services }}'
+          if echo $SERVICES | jq -e 'index("gateway")' > /dev/null 2>&1; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Azure
+        if: steps.check.outputs.deploy == 'true'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push gateway image
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          cd infrastructure/nginx
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/gateway:${{ needs.setup.outputs.image_tag }} -f Dockerfile.azure .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/gateway:${{ needs.setup.outputs.image_tag }}
+          docker tag ${{ env.ACR_NAME }}.azurecr.io/gateway:${{ needs.setup.outputs.image_tag }} ${{ env.ACR_NAME }}.azurecr.io/gateway:latest
+          docker push ${{ env.ACR_NAME }}.azurecr.io/gateway:latest
+
+  # ===========================================================================
+  # Deploy to Azure Container Apps
+  # ===========================================================================
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [setup, build-and-push, build-gateway]
+    environment: ${{ needs.setup.outputs.environment }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        service:
+          - name: agent-service
+            port: 3001
+            minReplicas: 1
+            maxReplicas: 5
+          - name: auth-service
+            port: 3002
+            minReplicas: 1
+            maxReplicas: 5
+          - name: design-service
+            port: 3003
+            minReplicas: 1
+            maxReplicas: 3
+          - name: integration-service
+            port: 3004
+            minReplicas: 1
+            maxReplicas: 3
+          - name: wizard-service
+            port: 3005
+            minReplicas: 1
+            maxReplicas: 3
+          - name: design-module
+            port: 3006
+            minReplicas: 1
+            maxReplicas: 3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if service should be deployed
+        id: check
+        run: |
+          SERVICES='${{ needs.setup.outputs.services }}'
+          if echo $SERVICES | jq -e 'index("${{ matrix.service.name }}")' > /dev/null 2>&1; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Azure
+        if: steps.check.outputs.deploy == 'true'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Container App
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          # Check if container app exists
+          EXISTS=$(az containerapp show \
+            --name ${{ matrix.service.name }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query name -o tsv 2>/dev/null || echo "")
+          
+          if [ -z "$EXISTS" ]; then
+            echo "Creating new container app: ${{ matrix.service.name }}"
+            az containerapp create \
+              --name ${{ matrix.service.name }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --environment ${{ env.CONTAINER_APP_ENV }} \
+              --image ${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service.name }}:${{ needs.setup.outputs.image_tag }} \
+              --target-port ${{ matrix.service.port }} \
+              --ingress internal \
+              --min-replicas ${{ matrix.service.minReplicas }} \
+              --max-replicas ${{ matrix.service.maxReplicas }} \
+              --cpu 0.5 --memory 1Gi \
+              --registry-server ${{ env.ACR_NAME }}.azurecr.io \
+              --registry-identity system \
+              --env-vars \
+                NODE_ENV=production \
+                PORT=${{ matrix.service.port }}
+          else
+            echo "Updating existing container app: ${{ matrix.service.name }}"
+            az containerapp update \
+              --name ${{ matrix.service.name }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service.name }}:${{ needs.setup.outputs.image_tag }}
+          fi
+
+      - name: Configure secrets
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          # Get secrets from Key Vault
+          KEYVAULT_NAME="kv-flowgrid-${{ needs.setup.outputs.environment }}"
+          
+          # Apply service-specific secrets
+          case "${{ matrix.service.name }}" in
+            auth-service)
+              JWT_SECRET=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name jwt-secret --query value -o tsv 2>/dev/null || echo "")
+              if [ -n "$JWT_SECRET" ]; then
+                az containerapp secret set \
+                  --name ${{ matrix.service.name }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --secrets jwt-secret="$JWT_SECRET"
+                  
+                az containerapp update \
+                  --name ${{ matrix.service.name }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --set-env-vars JWT_SECRET=secretref:jwt-secret
+              fi
+              ;;
+            design-service|wizard-service)
+              ANTHROPIC_KEY=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name anthropic-api-key --query value -o tsv 2>/dev/null || echo "")
+              if [ -n "$ANTHROPIC_KEY" ]; then
+                az containerapp secret set \
+                  --name ${{ matrix.service.name }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --secrets anthropic-api-key="$ANTHROPIC_KEY"
+                  
+                az containerapp update \
+                  --name ${{ matrix.service.name }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --set-env-vars ANTHROPIC_API_KEY=secretref:anthropic-api-key AI_PROVIDER=anthropic
+              fi
+              ;;
+          esac
+
+      - name: Configure database connection
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          KEYVAULT_NAME="kv-flowgrid-${{ needs.setup.outputs.environment }}"
+          DB_URL=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name database-url --query value -o tsv 2>/dev/null || echo "")
+          REDIS_URL=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name redis-url --query value -o tsv 2>/dev/null || echo "")
+          
+          if [ -n "$DB_URL" ]; then
+            az containerapp secret set \
+              --name ${{ matrix.service.name }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --secrets database-url="$DB_URL" redis-url="$REDIS_URL"
+              
+            az containerapp update \
+              --name ${{ matrix.service.name }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --set-env-vars DATABASE_URL=secretref:database-url REDIS_URL=secretref:redis-url
+          fi
+
+  # ===========================================================================
+  # Deploy Gateway
+  # ===========================================================================
+  deploy-gateway:
+    runs-on: ubuntu-latest
+    needs: [setup, build-gateway, deploy]
+    environment: ${{ needs.setup.outputs.environment }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if gateway should be deployed
+        id: check
+        run: |
+          SERVICES='${{ needs.setup.outputs.services }}'
+          if echo $SERVICES | jq -e 'index("gateway")' > /dev/null 2>&1; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Azure
+        if: steps.check.outputs.deploy == 'true'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Gateway
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          # Check if container app exists
+          EXISTS=$(az containerapp show \
+            --name gateway \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query name -o tsv 2>/dev/null || echo "")
+          
+          if [ -z "$EXISTS" ]; then
+            echo "Creating gateway container app"
+            az containerapp create \
+              --name gateway \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --environment ${{ env.CONTAINER_APP_ENV }} \
+              --image ${{ env.ACR_NAME }}.azurecr.io/gateway:${{ needs.setup.outputs.image_tag }} \
+              --target-port 80 \
+              --ingress external \
+              --min-replicas 1 \
+              --max-replicas 5 \
+              --cpu 0.25 --memory 0.5Gi \
+              --registry-server ${{ env.ACR_NAME }}.azurecr.io \
+              --registry-identity system
+          else
+            echo "Updating gateway container app"
+            az containerapp update \
+              --name gateway \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.ACR_NAME }}.azurecr.io/gateway:${{ needs.setup.outputs.image_tag }}
+          fi
+
+  # ===========================================================================
+  # Health Checks
+  # ===========================================================================
+  health-check:
+    runs-on: ubuntu-latest
+    needs: [setup, deploy, deploy-gateway]
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get gateway URL
+        id: gateway
+        run: |
+          URL=$(az containerapp show \
+            --name gateway \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "url=https://$URL" >> $GITHUB_OUTPUT
+
+      - name: Wait for deployment to stabilize
+        run: sleep 30
+
+      - name: Run health checks
+        run: |
+          echo "🏥 Running health checks on ${{ steps.gateway.outputs.url }}"
+          
+          # Gateway health
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.gateway.outputs.url }}/health" || echo "000")
+          if [ "$STATUS" == "200" ]; then
+            echo "✅ Gateway: healthy"
+          else
+            echo "❌ Gateway: unhealthy (HTTP $STATUS)"
+            exit 1
+          fi
+          
+          # Services health via gateway
+          for SERVICE in auth agents design integrations; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.gateway.outputs.url }}/api/$SERVICE/health" || echo "000")
+            if [ "$STATUS" == "200" ]; then
+              echo "✅ $SERVICE: healthy"
+            else
+              echo "⚠️ $SERVICE: responded with HTTP $STATUS"
+            fi
+          done
+
+      - name: Post deployment summary
+        run: |
+          echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ needs.setup.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Gateway URL:** ${{ steps.gateway.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.setup.outputs.services }}" | jq -r '.[]' | while read service; do
+            echo "- ✅ $service" >> $GITHUB_STEP_SUMMARY
+          done
+
+  # ===========================================================================
+  # Notify on Failure
+  # ===========================================================================
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: [setup, build-and-push, deploy, deploy-gateway, health-check]
+    if: failure()
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "❌ Deployment to ${{ needs.setup.outputs.environment }} failed!"
+          echo "Check the workflow run for details."
+          # Add Slack/Discord/Email notification here if needed

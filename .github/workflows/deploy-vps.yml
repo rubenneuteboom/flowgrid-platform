@@ -1,0 +1,224 @@
+# =============================================================================
+# Deploy to VPS (Budget Option)
+# Simple docker-compose deployment via SSH
+# Cost: ~€10-50/month (Hetzner/DigitalOcean VPS)
+# =============================================================================
+
+name: Deploy to VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+      action:
+        description: 'Deployment action'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - restart
+          - logs
+          - status
+
+env:
+  DOCKER_COMPOSE_VERSION: '2.24.0'
+
+jobs:
+  # ===========================================================================
+  # Deploy to VPS
+  # ===========================================================================
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}-vps
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS
+        if: inputs.action == 'deploy'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH || '/opt/flowgrid' }}
+        run: |
+          ssh ${VPS_USER}@${VPS_HOST} << 'ENDSSH'
+            set -e
+            
+            echo "📂 Navigating to project directory..."
+            cd ${VPS_PATH:-/opt/flowgrid}
+            
+            echo "📥 Pulling latest code..."
+            git fetch origin
+            git reset --hard origin/main
+            
+            echo "🔧 Updating environment file..."
+            # Ensure .env exists (copy from .env.example if needed)
+            if [ ! -f infrastructure/.env ]; then
+              cp infrastructure/.env.example infrastructure/.env
+              echo "⚠️ Created .env from example - please configure secrets!"
+            fi
+            
+            echo "🐳 Pulling latest Docker images..."
+            cd infrastructure
+            docker compose pull
+            
+            echo "🔨 Building services..."
+            docker compose build --no-cache
+            
+            echo "🚀 Starting services..."
+            docker compose up -d
+            
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+            
+            echo "⏳ Waiting for services to start..."
+            sleep 10
+            
+            echo "🏥 Running health checks..."
+            for service in agent-service auth-service design-service integration-service; do
+              PORT=$(docker compose port $service 3001 2>/dev/null | cut -d: -f2 || echo "")
+              if [ -n "$PORT" ]; then
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/health" || echo "000")
+                echo "  $service: HTTP $STATUS"
+              fi
+            done
+            
+            echo "✅ Deployment complete!"
+          ENDSSH
+
+      - name: Restart services
+        if: inputs.action == 'restart'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH || '/opt/flowgrid' }}
+        run: |
+          ssh ${VPS_USER}@${VPS_HOST} << 'ENDSSH'
+            cd ${VPS_PATH:-/opt/flowgrid}/infrastructure
+            echo "🔄 Restarting services..."
+            docker compose restart
+            echo "✅ Services restarted!"
+            docker compose ps
+          ENDSSH
+
+      - name: Show logs
+        if: inputs.action == 'logs'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH || '/opt/flowgrid' }}
+        run: |
+          ssh ${VPS_USER}@${VPS_HOST} << 'ENDSSH'
+            cd ${VPS_PATH:-/opt/flowgrid}/infrastructure
+            echo "📋 Last 100 lines of logs:"
+            docker compose logs --tail=100
+          ENDSSH
+
+      - name: Show status
+        if: inputs.action == 'status'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH || '/opt/flowgrid' }}
+        run: |
+          ssh ${VPS_USER}@${VPS_HOST} << 'ENDSSH'
+            cd ${VPS_PATH:-/opt/flowgrid}/infrastructure
+            echo "📊 Service Status:"
+            docker compose ps
+            echo ""
+            echo "💾 Disk Usage:"
+            df -h /
+            echo ""
+            echo "🧠 Memory Usage:"
+            free -h
+            echo ""
+            echo "🐳 Docker Stats:"
+            docker stats --no-stream
+          ENDSSH
+
+      - name: Post deployment summary
+        if: inputs.action == 'deploy'
+        run: |
+          echo "## 🖥️ VPS Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Host:** ${{ secrets.VPS_HOST }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Action:** ${{ inputs.action }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Access" >> $GITHUB_STEP_SUMMARY
+          echo "- Gateway: http://${{ secrets.VPS_HOST }}:8080" >> $GITHUB_STEP_SUMMARY
+          echo "- Health: http://${{ secrets.VPS_HOST }}:8080/health" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # Database Backup (Optional)
+  # ===========================================================================
+  backup:
+    runs-on: ubuntu-latest
+    if: inputs.action == 'deploy'
+    environment: ${{ inputs.environment }}-vps
+    
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create database backup
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH || '/opt/flowgrid' }}
+        run: |
+          ssh ${VPS_USER}@${VPS_HOST} << 'ENDSSH'
+            cd ${VPS_PATH:-/opt/flowgrid}/infrastructure
+            
+            # Create backup directory if not exists
+            mkdir -p /opt/flowgrid/backups
+            
+            # Create timestamped backup
+            BACKUP_FILE="/opt/flowgrid/backups/flowgrid_$(date +%Y%m%d_%H%M%S).sql"
+            
+            echo "📦 Creating database backup: $BACKUP_FILE"
+            docker compose exec -T postgres pg_dump -U flowgrid flowgrid > $BACKUP_FILE
+            
+            # Compress backup
+            gzip $BACKUP_FILE
+            
+            # Keep only last 7 backups
+            cd /opt/flowgrid/backups
+            ls -t *.gz | tail -n +8 | xargs -r rm --
+            
+            echo "✅ Backup complete!"
+            ls -lh /opt/flowgrid/backups/
+          ENDSSH
+        continue-on-error: true
+
+  # ===========================================================================
+  # Notify on Failure
+  # ===========================================================================
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: failure()
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "❌ VPS deployment to ${{ inputs.environment }} failed!"
+          echo "Check the workflow run for details."
