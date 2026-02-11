@@ -67,10 +67,11 @@ Steps 2-6 → Display pre-computed results only
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ WIZARD STEP 5: DEFINE PROCESSES                                          │
 ├─────────────────────────────────────────────────────────────────────────┤
-│ User Action: Review process elements, adjust flow                        │
-│ Prompts: 4a (Generate Process Flow) - for Process-type elements          │
-│ Output: BPMN XML for each process                                        │
-│ Time: ~15-20 seconds (per process)                                       │
+│ User Action: Review process elements, click "Generate BPMN" per process  │
+│ Prompts: 4a (Generate BPMN Flow) - AI Business Process Consultant        │
+│ Output: Valid BPMN 2.0 XML compatible with bpmn-js                       │
+│ Time: ~20-30 seconds (per process)                                       │
+│ Note: Also available in Design Module → Process tab                      │
 └─────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -441,6 +442,146 @@ function onPatternOverride(agentId, newPattern) {
 1. End-to-end wizard flow
 2. Verify all data appears in design module
 3. Test edit → re-run scenarios
+
+---
+
+---
+
+## Prompt 4a: Generate BPMN Flow
+
+### System Prompt
+
+```
+You are a Business Process Consultant, specialized in creating BPMN flows 
+and process documentation. You have deep expertise in:
+
+- BPMN 2.0 specification and best practices
+- Process modeling patterns (sequential, parallel, conditional)
+- Error handling and compensation flows
+- Integration with agent-based systems
+
+Your task is to generate valid BPMN 2.0 XML that can be rendered by bpmn-js.
+```
+
+### User Prompt Template
+
+```
+Create a BPMN 2.0 process flow for the following process:
+
+**Process Name:** {{processName}}
+**Description:** {{processDescription}}
+**Involved Agents:** {{involvedAgents}}
+**Capabilities Used:** {{capabilities}}
+**Expected Triggers:** {{triggers}}
+**Expected Outputs:** {{outputs}}
+
+Requirements:
+1. Generate valid BPMN 2.0 XML
+2. Include appropriate start/end events
+3. Use service tasks for agent interactions
+4. Add gateways for decision points
+5. Include error boundary events where appropriate
+6. Use descriptive task names
+7. Add lane pools for different agents/roles if multiple agents involved
+
+Output ONLY the BPMN XML, no explanation.
+```
+
+### Output Schema
+
+```typescript
+interface BPMNGenerationOutput {
+  processId: string;
+  processName: string;
+  bpmnXml: string;  // Valid BPMN 2.0 XML
+  summary: {
+    taskCount: number;
+    gatewayCount: number;
+    laneCount: number;
+    estimatedDuration?: string;
+  };
+}
+```
+
+### BPMN XML Template (for AI reference)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1"
+                  targetNamespace="http://flowgrid.ai/bpmn">
+  <bpmn:process id="Process_{{id}}" name="{{name}}" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <!-- Tasks, gateways, events here -->
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_N</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_{{id}}">
+      <!-- Visual layout coordinates -->
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
+```
+
+### API Endpoints
+
+```
+# Wizard context
+POST /api/wizard/sessions/:id/generate-bpmn
+Body: { processElementId: string }
+Returns: { bpmnXml: string, summary: {...} }
+
+# Design Module context (standalone)
+POST /api/agents/:id/generate-bpmn
+Body: { context?: string }  // Optional additional context
+Returns: { bpmnXml: string, summary: {...} }
+```
+
+### UI Integration
+
+**Wizard Step 5:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 📋 Identified Processes                                         │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ ☐ Ticket Routing Process                                    │ │
+│ │   Routes incoming tickets to appropriate agents             │ │
+│ │   Agents: Triage Agent, Router Agent                        │ │
+│ │   [🔄 Generate BPMN] [👁️ Preview]                           │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ ☐ Escalation Process                                        │ │
+│ │   Handles ticket escalation to human operators              │ │
+│ │   Agents: Escalation Agent, Notification Agent              │ │
+│ │   [🔄 Generate BPMN] [👁️ Preview]                           │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Design Module → Process Tab:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Process: Ticket Routing                          [🔄 Regenerate]│
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │                    [BPMN Diagram Viewer]                    │ │
+│ │                                                             │ │
+│ │    (○)──▶[Receive Ticket]──▶◇──▶[Route to Agent]──▶(◉)     │ │
+│ │                              │                              │ │
+│ │                              ▼                              │ │
+│ │                        [Escalate]                           │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│ No BPMN defined. [🔄 Generate with AI]                          │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
