@@ -2078,10 +2078,6 @@
                 await delay(300);
                 showLoading('step1', false);
                 
-                // Show stats
-                const stats = data.stats || {};
-                console.log(`[wizard] Imported ${stats.elements || 0} elements, ${stats.relationships || 0} relationships`);
-                
                 goToStep(2);
                 
             } catch (error) {
@@ -2632,27 +2628,20 @@
                 `;
                 
                 // Primary success path: go to shell (which loads design module)
-                console.log('[wizard] Import success, attempting redirect...');
-                console.log('[wizard] window.parent !== window:', window.parent !== window);
-                console.log('[wizard] window.parent.loadModuleByUrl:', typeof window.parent?.loadModuleByUrl);
-                
                 try {
                     // If running inside the shell iframe, use parent's loadModuleByUrl
                     if (window.parent !== window && window.parent.loadModuleByUrl) {
-                        console.log('[wizard] Calling parent.loadModuleByUrl');
                         window.parent.loadModuleByUrl('/design/', 'Design Module');
                         return;
                     }
-                    // Otherwise navigate to the shell (use index.html explicitly)
-                    console.log('[wizard] Redirecting to /index.html');
+                    // Otherwise navigate to the shell
                     window.location.href = '/index.html';
                     return;
                 } catch (navError) {
-                    console.warn('[wizard] Navigation failed:', navError);
+                    // Fallback on navigation error
                 }
                 
-                // Fallback: show success screen in place and clear state only here.
-                console.log('[wizard] Showing fallback success screen');
+                // Fallback: show success screen in place
                 clearState();
                 document.querySelectorAll('.step-content').forEach(s => s.classList.add('hidden'));
                 document.getElementById('step7').classList.remove('hidden');
