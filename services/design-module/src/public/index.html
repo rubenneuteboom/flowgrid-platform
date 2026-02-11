@@ -1302,7 +1302,12 @@
     
     async function loadAgents() {
       try {
-        const response = await fetch(`${API_BASE}?limit=500`, { headers: getAuthHeaders() });
+        // Cache-bust to ensure fresh data after wizard completion
+        const cacheBuster = `_t=${Date.now()}`;
+        const response = await fetch(`${API_BASE}?limit=500&${cacheBuster}`, { 
+          headers: getAuthHeaders(),
+          cache: 'no-store'
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const payload = await response.json();
@@ -1340,9 +1345,10 @@
     
     async function loadRelationships() {
       try {
+        const cacheBuster = `_t=${Date.now()}`;
         const [relationshipsRes, interactionsRes] = await Promise.all([
-          fetch(`${API_BASE}/relationships`, { headers: getAuthHeaders() }),
-          fetch('/api/agent-interactions', { headers: getAuthHeaders() }),
+          fetch(`${API_BASE}/relationships?${cacheBuster}`, { headers: getAuthHeaders(), cache: 'no-store' }),
+          fetch(`/api/agent-interactions?${cacheBuster}`, { headers: getAuthHeaders(), cache: 'no-store' }),
         ]);
 
         const allRaw = [];
