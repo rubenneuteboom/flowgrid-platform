@@ -66,10 +66,11 @@ Optionally provide ArchiMate type mappings:
 - Process → Business Process, Business Interaction
 
 ## JSON Output Format
+IMPORTANT: Preserve the EXACT input IDs (from the brackets [id]) in your output.
 {
   "elements": [
     {
-      "id": "cap-001",
+      "id": "PRESERVE_THE_ORIGINAL_ID_FROM_INPUT",
       "name": "Customer Service Manager",
       "elementType": "Agent",
       "rationale": "Active role that coordinates support activities",
@@ -97,10 +98,11 @@ const buildUserMessage = (input: ClassifyElementsInput): string => {
   
   message += `\n\n## Instructions
 1. Classify EACH capability into exactly one element type
-2. Provide a brief rationale (max 100 chars)
-3. Optionally map to ArchiMate types
-4. Return counts in summary
-5. Return ONLY the JSON object, no additional text`;
+2. PRESERVE the original ID from brackets [id] in your output - do NOT generate new IDs
+3. Provide a brief rationale (max 100 chars)
+4. Optionally map to ArchiMate types
+5. Return counts in summary
+6. Return ONLY the JSON object, no additional text`;
 
   return message;
 };
@@ -119,7 +121,7 @@ registerPrompt<ClassifyElementsInput, ClassifyElementsOutput>({
   modelPreferences: {
     preferredModel: 'claude-sonnet-4-20250514',
     temperature: 0.2,  // Lower temp for more consistent classification
-    maxTokens: 4096,
+    maxTokens: 16000,
   },
 });
 

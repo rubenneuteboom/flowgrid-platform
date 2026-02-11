@@ -1230,9 +1230,11 @@
                         <div id="intMessages" class="int-content"></div>
                     </div>
 
-                    <!-- Graph visualization -->
-                    <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">📊 Interaction Graph</h3>
-                    <div class="graph-container" id="interactionGraph"></div>
+                    <!-- Graph visualization (Relations tab only) -->
+                    <div id="relationGraphSection">
+                        <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">📊 Interaction Graph</h3>
+                        <div class="graph-container" id="interactionGraph"></div>
+                    </div>
 
                     <div class="btn-group">
                         <button class="btn btn-secondary" onclick="goToStep(4)">← Back</button>
@@ -1285,7 +1287,7 @@
                 <!-- Loading state -->
                 <div class="loading" id="step6Loading">
                     <div class="spinner"></div>
-                    <p class="loading-status">Creating agents in database...</p>
+                    <p class="loading-status" id="step6LoadingText">Defining relationships...</p>
                 </div>
 
                 <div class="btn-group">
@@ -1655,7 +1657,13 @@
             
             // Export and store key
             const exported = await crypto.subtle.exportKey('raw', key);
-            sessionStorage.setItem(ENCRYPTION_KEY_STORAGE, btoa(String.fromCharCode(...new Uint8Array(exported))));
+            // Use chunked approach to avoid stack overflow
+            const keyBytes = new Uint8Array(exported);
+            let keyBinary = '';
+            for (let i = 0; i < keyBytes.length; i++) {
+                keyBinary += String.fromCharCode(keyBytes[i]);
+            }
+            sessionStorage.setItem(ENCRYPTION_KEY_STORAGE, btoa(keyBinary));
             
             return key;
         }
@@ -1677,7 +1685,13 @@
                 combined.set(iv);
                 combined.set(new Uint8Array(encrypted), iv.length);
                 
-                return btoa(String.fromCharCode(...combined));
+                // Use chunked approach to avoid stack overflow with large arrays
+                let binary = '';
+                const bytes = new Uint8Array(combined);
+                for (let i = 0; i < bytes.length; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
             } catch (e) {
                 console.error('Encryption failed:', e);
                 return null;
@@ -1899,7 +1913,7 @@
                 showStep3Results();
             } else if (step === 4 && (stepData.step4 || stepData.step3 || analysisResult?.agents?.length)) {
                 showStep4Results();
-            } else if (step === 5 && (stepData.step4 || analysisResult?.agents?.length)) {
+            } else if (step === 5 && (stepData.step5 || stepData.step4 || analysisResult?.agents?.length)) {
                 showStep5Results();
             } else if (step === 6 && (stepData.step6 || stepData.step4 || analysisResult?.agents?.length)) {
                 showStep6Summary();
@@ -1924,8 +1938,8 @@
                     case 2: await executeStep2(); break;
                     case 3: await executeStep3(); break;
                     case 4: await executeStep4(); break;
-                    case 5: /* Step 5 uses manual BPMN generation */ break;
-                    case 6: await executeStep6(); break;
+                    case 5: await executeStep5Interactions(); break;  // Relationships & integrations
+                    case 6: /* Summary - no AI call needed */ break;
                 }
             } finally {
                 if (loadingEl) loadingEl.classList.remove('active');
@@ -1998,10 +2012,36 @@
             updateProgress('step4', 100, 'Agents configured!');
         }
         
-        async function executeStep6() {
-            if (!stepData.step3?.agents || !stepData.step4?.patterns) return;
+        async function executeStep5Interactions() {
+            // UI Step 5 = Backend Step 6 (relationships & integrations)
+            if (!stepData.step3?.proposedAgents?.agents && !stepData.step3?.agents) return;
+            if (!stepData.step4?.patterns) return;
             
-            updateProgress('step6', 30, 'Defining relationships (~30s)...');
+            updateProgress('step5', 30, 'Defining relationships (~30s)...');
+            
+            const response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step6`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            
+            if (!response.ok) throw new Error(await extractErrorMessage(response, 'Relationship definition failed'));
+            
+            const data = await parseApiResponse(response);
+            stepData.step5 = data.data;  // Store as step5 for UI consistency
+            
+            // Update analysisResult for compatibility
+            analysisResult.agentRelationships = data.data.relationships?.relationships || [];
+            analysisResult.integrations = data.data.integrations?.integrations || [];
+            
+            updateProgress('step5', 100, 'Relationships defined!');
+        }
+        
+        async function executeStep6() {
+            // Legacy - now handled by executeStep5Interactions
+            // Keep for backward compatibility
+            if (!stepData.step3?.agents && !stepData.step3?.proposedAgents?.agents) return;
+            if (!stepData.step4?.patterns) return;
             
             const response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step6`, {
                 method: 'POST',
@@ -2017,8 +2057,6 @@
             // Update analysisResult for compatibility
             analysisResult.agentRelationships = data.data.relationships?.relationships || [];
             analysisResult.integrations = data.data.integrations?.integrations || [];
-            
-            updateProgress('step6', 100, 'Relationships defined!');
         }
         
         // ==========================================
@@ -2035,7 +2073,7 @@
         }
         
         // Per-step mode: Each step triggers its own AI call
-        const perStepMode = true; // Toggle for per-step execution
+        let perStepMode = true; // Toggle for per-step execution (disabled for XML/image uploads)
         const stepData = {}; // Stores intermediate step results
         
         async function analyzeText() {
@@ -2211,6 +2249,8 @@
                 const data = await parseApiResponse(response);
                 sessionId = data.sessionId;
                 analysisResult = data.analysis;
+                sourceType = 'image';
+                perStepMode = false; // Image uses legacy flow, not per-step
                 
                 updateProgress('step1', 100, 'Complete!');
                 await delay(500);
@@ -2258,6 +2298,27 @@
                 analysisResult = data.analysis;
                 sourceType = 'xml';
                 
+                // New: XML now extracts capabilities for AI processing
+                // Use per-step mode if server signals it (has capabilities, no agents)
+                perStepMode = data.usePerStepMode || (!analysisResult?.agents?.length && analysisResult?.extractedCapabilities?.length > 0);
+                
+                if (perStepMode) {
+                    // Store capabilities in stepData for per-step flow
+                    stepData.step1 = {
+                        capabilities: analysisResult.extractedCapabilities,
+                        metadata: analysisResult.summary,
+                    };
+                    console.log('[XML Upload] Per-step mode enabled:', {
+                        capabilities: analysisResult?.extractedCapabilities?.length,
+                        topLevel: analysisResult?.extractedCapabilities?.filter(c => c.level === 0).length,
+                    });
+                } else {
+                    console.log('[XML Upload] Legacy mode:', {
+                        agents: analysisResult?.agents?.length,
+                        relationships: analysisResult?.agentRelationships?.length,
+                    });
+                }
+                
                 updateProgress('step1', 100, 'Done!');
                 await delay(300);
                 showLoading('step1', false);
@@ -2277,10 +2338,10 @@
             document.getElementById('step2Loading').classList.remove('active');
             document.getElementById('step2Results').classList.add('active');
             
-            // In perStepMode, use stepData; otherwise use analysisResult
-            const capabilities = perStepMode 
-                ? (stepData.step1?.capabilities || [])
-                : (analysisResult?.extractedCapabilities || []);
+            // Use stepData.step1 if available (per-step mode or XML with AI), otherwise analysisResult
+            const capabilities = stepData.step1?.capabilities 
+                || analysisResult?.extractedCapabilities 
+                || [];
             selectedCapabilities = new Set(capabilities.map(c => c.name || c.id));
             
             renderCapabilityTree(capabilities);
@@ -2384,6 +2445,8 @@
             // Filter by selected capabilities (only if we have capability names to filter by)
             if (selected.length > 0 && !perStepMode) {
                 agents = agents.filter(agent => {
+                    // For XML imports, agent.name IS the capability - check both
+                    if (selected.includes(agent.name)) return true;
                     const agentCaps = agent.capabilities || agent.ownedElements || [];
                     return agentCaps.some(cap => selected.includes(typeof cap === 'string' ? cap : cap.name));
                 }).map(agent => ({
@@ -2635,10 +2698,14 @@
                 const triggers = agent.triggers || [];
                 const outputs = agent.outputs || [];
                 
-                const response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step5`, {
+                // Always use generate-bpmn - step5 has complex validation requirements
+                const endpoint = '/api/wizard/generate-bpmn';
+                
+                const response = await fetchWithAuth(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        processId: agent.id || `process-${idx}`,
                         processName: agent.name,
                         processDescription: agent.purpose || agent.description || `Process for ${agent.name}`,
                         involvedAgents: [agent.name],
@@ -2724,28 +2791,38 @@
         }
         
         function renderInteractions() {
-            const agents = analysisResult?.filteredAgents || analysisResult?.agents || [];
+            // Use full agent list for name lookups (not filtered)
+            const allAgents = analysisResult?.agents || [];
+            const displayAgents = analysisResult?.filteredAgents || allAgents;
             const relationships = analysisResult?.agentRelationships || [];
             const integrations = analysisResult?.integrations || [];
             
             const getAgentName = (id) => {
                 if (!id) return 'Unknown';
-                const agent = agents.find(a => a.id === id);
+                // Look up in ALL agents, not just filtered
+                const agent = allAgents.find(a => a.id === id);
                 return agent ? agent.name : id;
             };
             
             const relContainer = document.getElementById('intRelationships');
-            relContainer.innerHTML = relationships.length ? relationships.map(r => `
-                <div class="rel-item">
+            // Sort: AI-generated first, then limit display to avoid DOM overload
+            const sortedRels = [...relationships].sort((a, b) => (b.aiGenerated ? 1 : 0) - (a.aiGenerated ? 1 : 0));
+            const displayRels = sortedRels.slice(0, 100); // Show max 100 for performance
+            const hiddenCount = relationships.length - displayRels.length;
+            
+            relContainer.innerHTML = (displayRels.length ? displayRels.map(r => `
+                <div class="rel-item" style="${r.aiGenerated ? 'border-left-color: var(--success);' : ''}">
                     <div class="rel-agents">
                         <span class="rel-agent source">${escapeHtml(getAgentName(r.sourceAgentId || r.from))}</span>
                         <span class="rel-arrow">→</span>
                         <span class="rel-agent target">${escapeHtml(getAgentName(r.targetAgentId || r.to))}</span>
+                        ${r.aiGenerated ? '<span style="margin-left: 0.5rem; font-size: 0.7rem; color: var(--success);">🤖 AI</span>' : ''}
                     </div>
                     <div class="rel-type">📨 ${r.messageType || 'message'}</div>
                     <div class="rel-desc">${escapeHtml(r.description || 'No description')}</div>
                 </div>
-            `).join('') : '<p style="color: var(--text-muted);">No relationships defined</p>';
+            `).join('') : '<p style="color: var(--text-muted);">No relationships defined</p>') + 
+                (hiddenCount > 0 ? `<p style="color: var(--text-muted); margin-top: 1rem;">... and ${hiddenCount} more relationships</p>` : '');
             
             const intContainer = document.getElementById('intIntegrations');
             intContainer.innerHTML = integrations.length ? integrations.map(i => `
@@ -2814,10 +2891,22 @@
             try {
                 const agents = analysisResult?.filteredAgents || analysisResult?.agents || [];
                 
-                const response = await fetchWithAuth('/api/design/suggest-interactions', {
+                if (agents.length < 2) {
+                    alert('Need at least 2 agents to suggest interactions');
+                    return;
+                }
+                
+                // Show loading state
+                const btn = document.querySelector('[onclick="regenerateInteractions()"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = '⏳ Generating...';
+                }
+                
+                const response = await fetchWithAuth('/api/wizard/suggest-interactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({ agents: agents.slice(0, 50) }) // Limit to 50 to avoid timeout
                 });
 
                 if (!response.ok) {
@@ -2827,25 +2916,39 @@
                 const data = await parseApiResponse(response);
                 
                 if (data.suggestions && data.suggestions.length > 0) {
+                    // Use ALL agents for lookup, not just the 50 sent to AI
+                    const allAgents = analysisResult?.agents || [];
                     const newRelationships = data.suggestions.map(s => {
-                        const sourceAgent = agents.find(a => a.name === s.sourceAgent);
-                        const targetAgent = agents.find(a => a.name === s.targetAgent);
+                        const sourceAgent = allAgents.find(a => a.name === s.sourceAgent);
+                        const targetAgent = allAgents.find(a => a.name === s.targetAgent);
                         return {
                             sourceAgentId: sourceAgent?.id || s.sourceAgent,
                             targetAgentId: targetAgent?.id || s.targetAgent,
                             messageType: s.messageType,
-                            description: s.description
+                            description: s.description,
+                            aiGenerated: true // Mark as AI-generated
                         };
                     });
                     
-                    analysisResult.agentRelationships = newRelationships;
+                    // Merge with existing relationships from XML
+                    const existingRels = analysisResult.agentRelationships || [];
+                    analysisResult.agentRelationships = [...existingRels, ...newRelationships];
                     renderInteractions();
                     renderInteractionGraph();
                     saveState();
-                    alert(`✅ Generated ${newRelationships.length} new interactions`);
+                    alert(`✅ Generated ${newRelationships.length} AI-suggested interactions (total: ${analysisResult.agentRelationships.length})`);
+                } else {
+                    alert('No additional interactions suggested');
                 }
             } catch (e) {
                 alert('❌ Error: ' + e.message);
+            } finally {
+                // Reset button
+                const btn = document.querySelector('[onclick="regenerateInteractions()"]');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Regenerate';
+                }
             }
         }
         
@@ -2885,6 +2988,7 @@
             }
             
             hideError('step6Error');
+            document.getElementById('step6LoadingText').textContent = 'Creating agents in database...';
             document.getElementById('step6Loading').classList.add('active');
             
             try {

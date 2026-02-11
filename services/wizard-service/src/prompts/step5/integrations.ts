@@ -114,8 +114,9 @@ Describe what data moves through each integration:
 }`;
 
 const buildUserMessage = (input: IntegrationsInput): string => {
+  const patterns = input.patterns || [];
   const agentsList = input.agents.map(a => {
-    const pattern = input.patterns.find(p => p.agentId === a.id);
+    const pattern = patterns.find(p => p.agentId === a.id);
     return `- [${a.id}] ${a.name} (${pattern?.pattern || a.suggestedPattern})
   Purpose: ${a.purpose}
   Triggers: ${pattern?.triggers?.join(', ') || 'not defined'}

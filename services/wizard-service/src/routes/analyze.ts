@@ -250,30 +250,55 @@ router.post('/upload-xml', uploadXml.single('file'), async (req: Request, res: R
 
     console.log(`[${SERVICE_NAME}] Parsed ${parsed.elements.length} elements, ${parsed.relationships.length} relationships`);
 
-    // Convert to analysis format
-    const analysis = convertArchiMateToAnalysis(parsed);
+    // Extract top-level capabilities for AI processing
+    const capabilities = extractTopLevelCapabilities(parsed);
+    console.log(`[${SERVICE_NAME}] Extracted ${capabilities.length} top-level capabilities`);
 
-    // Create wizard session
+    // Create minimal analysis with just capabilities (AI will generate agents)
+    const analysis: AnalysisResult = {
+      summary: {
+        totalCapabilities: capabilities.length,
+        recommendedAgents: 0, // AI will determine this
+        complexity: (capabilities.length > 20 ? 'high' : capabilities.length > 10 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
+        overview: `Extracted ${capabilities.length} top-level capabilities from ArchiMate model "${parsed.modelName || 'Unknown'}"`,
+      },
+      extractedCapabilities: capabilities as any, // Extended capability format from XML
+      agents: [], // Will be populated by AI in step 3
+      agentRelationships: [], // Will be populated by AI in step 6
+      integrations: [], // Will be populated by AI in step 6
+    };
+
+    // Create wizard session with step_data for per-step AI processing
     const sessionName = parsed.modelName || `ArchiMate Import ${new Date().toLocaleDateString()}`;
+    const initialStepData = {
+      step1: {
+        capabilities: capabilities,
+        description: `Extracted from ArchiMate model: ${parsed.modelName || 'Unknown'}`,
+      }
+    };
     const sessionId = await createWizardSession(
       tenantId,
       sessionName,
       'xml',
       { elements: parsed.elements.length, relationships: parsed.relationships.length } as Record<string, unknown>,
       analysis,
-      undefined
+      undefined,
+      initialStepData,
+      1 // Start at step 1 completed
     );
 
-    console.log(`[${SERVICE_NAME}] Created session ${sessionId} with ${analysis.agents?.length || 0} agents`);
+    console.log(`[${SERVICE_NAME}] Created session ${sessionId} with ${capabilities.length} capabilities for AI processing`);
 
     res.json({
       success: true,
       sessionId,
       analysis,
       source: 'xml',
+      usePerStepMode: true, // Signal frontend to use AI per-step flow
       stats: {
-        elements: parsed.elements.length,
-        relationships: parsed.relationships.length,
+        totalElements: parsed.elements.length,
+        totalRelationships: parsed.relationships.length,
+        extractedCapabilities: capabilities.length,
       }
     });
 
@@ -407,15 +432,24 @@ function parseArchiMateXml(xmlContent: string): ParsedArchiMate {
   }
 
   // ===== OpenGroup Relationships =====
-  // <relationship identifier="..." xsi:type="CompositionRelationship" source="..." target="...">
-  const ogRelRegex = /<relationship\s+identifier="([^"]+)"\s+xsi:type="([^"]+)"\s+source="([^"]+)"\s+target="([^"]+)"[^>]*>/gi;
-  while ((match = ogRelRegex.exec(xmlContent)) !== null) {
-    relationships.push({
-      id: match[1],
-      type: normalizeRelationType(match[2]),
-      sourceId: match[3],
-      targetId: match[4],
-    });
+  // Flexible regex - attributes can be in any order
+  // <relationship identifier="..." xsi:type="..." source="..." target="...">
+  const relationshipTagRegex = /<relationship\s+([^>]+)>/gi;
+  while ((match = relationshipTagRegex.exec(xmlContent)) !== null) {
+    const attrs = match[1];
+    const idMatch = attrs.match(/identifier="([^"]+)"/);
+    const typeMatch = attrs.match(/xsi:type="([^"]+)"/);
+    const sourceMatch = attrs.match(/source="([^"]+)"/);
+    const targetMatch = attrs.match(/target="([^"]+)"/);
+    
+    if (idMatch && sourceMatch && targetMatch) {
+      relationships.push({
+        id: idMatch[1],
+        type: normalizeRelationType(typeMatch?.[1] || 'Association'),
+        sourceId: sourceMatch[1],
+        targetId: targetMatch[1],
+      });
+    }
   }
 
   // ===== Archi Tool Relationships =====
@@ -434,6 +468,61 @@ function parseArchiMateXml(xmlContent: string): ParsedArchiMate {
   console.log(`[XML Parser] Found ${relationships.length} relationships`);
 
   return { modelName, elements, relationships };
+}
+
+/**
+ * Extract top-level capabilities from parsed ArchiMate model
+ * Filters to Capability-type elements and identifies hierarchy via composition relationships
+ */
+function extractTopLevelCapabilities(parsed: ParsedArchiMate) {
+  // Capability-related types
+  const capabilityTypes = ['Capability', 'BusinessFunction', 'ApplicationFunction'];
+  
+  // Filter to capability elements
+  const capabilities = parsed.elements.filter(el => 
+    capabilityTypes.includes(el.type)
+  );
+  
+  // Build set of child IDs (elements that are targets of composition relationships)
+  const childIds = new Set<string>();
+  parsed.relationships
+    .filter(r => r.type === 'Composition' || r.type === 'Aggregation')
+    .forEach(r => childIds.add(r.targetId));
+  
+  // Find parent names for capabilities that ARE children
+  const parentMap = new Map<string, string>();
+  parsed.relationships
+    .filter(r => r.type === 'Composition' || r.type === 'Aggregation')
+    .forEach(r => {
+      const parent = parsed.elements.find(e => e.id === r.sourceId);
+      if (parent) {
+        parentMap.set(r.targetId, parent.name);
+      }
+    });
+  
+  // Convert to capability format compatible with AI prompts
+  const result = capabilities.map(cap => ({
+    id: cap.id,
+    name: cap.name,
+    description: cap.documentation || `${cap.type} from ArchiMate model`,
+    level: (childIds.has(cap.id) ? 1 : 0) as 0 | 1 | 2, // 0 = top-level, 1 = child
+    parentId: parentMap.get(cap.id) ? cap.id : undefined, // For hierarchy
+    parentName: parentMap.get(cap.id),
+    domain: cap.type, // Use ArchiMate type as domain
+    keywords: [cap.type, cap.name.split(' ')[0]].filter(Boolean), // Generate keywords from type and first word
+    automationPotential: 'medium' as 'low' | 'medium' | 'high',
+    sourceType: cap.type,
+  }));
+  
+  // Sort: top-level first, then by name
+  result.sort((a, b) => {
+    if (a.level !== b.level) return a.level - b.level;
+    return a.name.localeCompare(b.name);
+  });
+  
+  console.log(`[XML Parser] Found ${result.filter(c => c.level === 0).length} top-level, ${result.filter(c => c.level === 1).length} child capabilities`);
+  
+  return result;
 }
 
 function normalizeArchiMateType(type: string): string {
@@ -695,20 +784,29 @@ router.post('/sessions/:id/step2', async (req: Request, res: Response) => {
     return res.status(400).json({ error: orderError });
   }
 
-  const stepData = session.stepData;
-  if (!stepData?.step1?.rawCapabilities) {
+  const stepData = session.stepData as any;
+  // Support both formats: rawCapabilities (from text flow) or capabilities (from XML)
+  const step1Capabilities = stepData?.step1?.rawCapabilities?.capabilities || stepData?.step1?.capabilities;
+  if (!step1Capabilities) {
     return res.status(400).json({ error: 'Step 1 must be completed first' });
   }
 
-  console.log(`[${SERVICE_NAME}] Step 2: Classifying elements for session ${sessionId}`);
+  console.log(`[${SERVICE_NAME}] Step 2: Classifying ${step1Capabilities.length} elements for session ${sessionId}`);
 
-  const result = await executeStep2({
-    capabilities: stepData.step1.rawCapabilities.capabilities,
-    selectedIds: selectedCapabilityIds,
-  });
+  let result;
+  try {
+    result = await executeStep2({
+      capabilities: step1Capabilities,
+      selectedIds: selectedCapabilityIds,
+    });
 
-  if (!result.success) {
-    return res.status(500).json({ error: result.error });
+    if (!result.success) {
+      console.error(`[${SERVICE_NAME}] Step 2 failed:`, result.error);
+      return res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error(`[${SERVICE_NAME}] Step 2 exception:`, error);
+    return res.status(500).json({ error: error.message || 'Step 2 failed' });
   }
 
   // Save to session
@@ -909,16 +1007,32 @@ router.post('/sessions/:id/step6', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Step 4 must be completed before step 6' });
   }
 
-  const stepData = session.stepData;
-  if (!stepData?.step3?.proposedAgents || !stepData?.step4?.patterns) {
-    return res.status(400).json({ error: 'Steps 3 and 4 must be completed first' });
+  const stepData = session.stepData as any;
+  
+  // Get agents from step3 or step2 (fallback for XML flow)
+  const agents = stepData?.step3?.proposedAgents?.agents || stepData?.step3?.agents || [];
+  const patterns = stepData?.step4?.patterns?.agentPatterns || [];
+  
+  console.log(`[${SERVICE_NAME}] Step 6 debug: agents=${agents.length}, patterns=${patterns.length}`);
+  
+  if (agents.length === 0) {
+    // Return empty result if no agents available
+    console.log(`[${SERVICE_NAME}] Step 6: No agents found, returning empty relationships`);
+    return res.json({
+      success: true,
+      data: {
+        relationships: { relationships: [] },
+        integrations: { integrations: [] },
+      },
+      executionTimeMs: 0,
+    });
   }
 
-  console.log(`[${SERVICE_NAME}] Step 6: Defining relationships for session ${sessionId}`);
+  console.log(`[${SERVICE_NAME}] Step 6: Defining relationships for ${agents.length} agents in session ${sessionId}`);
 
   const result = await executeStep6({
-    agents: stepData.step3.proposedAgents.agents,
-    patterns: stepData.step4.patterns.agentPatterns,
+    agents: agents,
+    patterns: patterns,
     industryContext,
     knownSystems,
   });

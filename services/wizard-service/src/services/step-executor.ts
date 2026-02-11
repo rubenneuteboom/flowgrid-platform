@@ -122,9 +122,17 @@ export async function executeStep2(input: Step2Input): Promise<StepResult<Classi
 
   try {
     // Filter to selected capabilities if provided
-    const capsToClassify = input.selectedIds
+    let capsToClassify = input.selectedIds
       ? input.capabilities.filter(c => input.selectedIds!.includes(c.id))
       : input.capabilities;
+    
+    // Limit to 50 capabilities to avoid timeout (AI can handle ~50 well)
+    if (capsToClassify.length > 50) {
+      console.log(`[step-executor] Limiting from ${capsToClassify.length} to 50 capabilities`);
+      capsToClassify = capsToClassify.slice(0, 50);
+    }
+    
+    console.log(`[step-executor] Classifying ${capsToClassify.length} capabilities...`);
 
     const result = await executePrompt<
       { capabilities: ExtractCapabilitiesOutput['capabilities'] },
@@ -392,10 +400,11 @@ export async function executeStep6(input: Step6Input): Promise<StepResult<Step6O
 
     // Step 6b: Integrations
     const integrationsResult = await executePrompt<
-      { agents: ProposeAgentsOutput['agents']; industry?: string; knownSystems?: string[] },
+      { agents: ProposeAgentsOutput['agents']; patterns: AssignPatternsOutput['agentPatterns']; industry?: string; knownSystems?: string[] },
       IntegrationsOutput
     >('step5.integrations', {
       agents: input.agents,
+      patterns: input.patterns,
       industry: input.industryContext,
       knownSystems: input.knownSystems,
     });

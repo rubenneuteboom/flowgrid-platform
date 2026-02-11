@@ -147,11 +147,34 @@ export async function executePrompt<TInput, TOutput>(
 
     const rawResponse = textContent.text;
 
-    // Extract JSON from response (handle markdown code blocks)
-    let jsonStr = rawResponse;
-    const jsonMatch = rawResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
+    // Extract JSON from response (handle markdown code blocks and various formats)
+    let jsonStr = rawResponse.trim();
+    
+    // Try to extract from markdown code blocks
+    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
       jsonStr = jsonMatch[1].trim();
+    } else if (jsonStr.startsWith('`') && jsonStr.endsWith('`')) {
+      // Single backtick wrapper
+      jsonStr = jsonStr.slice(1, -1).trim();
+    } else if (jsonStr.startsWith('```')) {
+      // Starts with ``` but no closing - take everything after
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/, '').replace(/```$/, '').trim();
+    }
+    
+    // If still starts with backtick, remove leading backticks
+    while (jsonStr.startsWith('`')) {
+      jsonStr = jsonStr.slice(1);
+    }
+    while (jsonStr.endsWith('`')) {
+      jsonStr = jsonStr.slice(0, -1);
+    }
+    jsonStr = jsonStr.trim();
+    
+    // Find JSON object/array boundaries
+    const jsonStart = jsonStr.search(/[\[{]/);
+    if (jsonStart > 0) {
+      jsonStr = jsonStr.slice(jsonStart);
     }
 
     // Parse and validate
@@ -159,6 +182,10 @@ export async function executePrompt<TInput, TOutput>(
     try {
       parsed = JSON.parse(jsonStr);
     } catch (parseError) {
+      console.error(`[executePrompt] JSON parse failed for ${promptId}`);
+      console.error(`[executePrompt] Raw response (first 500 chars):`, rawResponse.slice(0, 500));
+      console.error(`[executePrompt] Cleaned JSON (first 500 chars):`, jsonStr.slice(0, 500));
+      console.error(`[executePrompt] Cleaned JSON (last 200 chars):`, jsonStr.slice(-200));
       return {
         success: false,
         error: `Failed to parse JSON: ${parseError}`,

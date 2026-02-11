@@ -97,8 +97,9 @@ Your task is to define relationships between agents - how they communicate and c
 }`;
 
 const buildUserMessage = (input: RelationshipsInput): string => {
+  const patterns = input.patterns || [];
   const agentsList = input.agents.map(a => {
-    const pattern = input.patterns.find(p => p.agentId === a.id);
+    const pattern = patterns.find(p => p.agentId === a.id);
     const boundaries = a.boundaries;
     return `- [${a.id}] ${a.name} (${pattern?.pattern || a.suggestedPattern})
   Delegates to: ${boundaries.delegates.join(', ') || 'none'}

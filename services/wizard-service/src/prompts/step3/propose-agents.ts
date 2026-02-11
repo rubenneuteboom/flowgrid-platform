@@ -101,6 +101,7 @@ const buildUserMessage = (input: ProposeAgentsInput): string => {
 3. Each agent needs a clear purpose (max 250 chars)
 4. List 3-6 responsibilities per agent
 5. Suggest an agentic pattern for each
+6. IMPORTANT: Use the EXACT IDs from brackets [id] in ownedElements - do NOT generate new IDs
 6. Define boundaries (internal/delegates/escalates)
 7. List any orphaned elements that don't fit any agent
 8. Return ONLY the JSON object`;

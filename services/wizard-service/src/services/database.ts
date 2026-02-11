@@ -51,15 +51,17 @@ export async function createWizardSession(
   sourceType: 'image' | 'text' | 'template' | 'xml',
   sourceData: Record<string, unknown>,
   analysisResult: AnalysisResult,
-  customPrompt?: string
+  customPrompt?: string,
+  stepData?: Record<string, unknown>,
+  currentStep?: number
 ): Promise<string> {
   const sessionId = uuidv4();
   
   await pool.query(
     `INSERT INTO wizard_sessions 
-     (id, tenant_id, session_name, source_type, source_data, analysis_result, custom_prompt, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [sessionId, tenantId, sessionName, sourceType, sourceData, analysisResult, customPrompt, 'analyzed']
+     (id, tenant_id, session_name, source_type, source_data, analysis_result, custom_prompt, status, step_data, current_step)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [sessionId, tenantId, sessionName, sourceType, sourceData, analysisResult, customPrompt, 'analyzed', stepData || null, currentStep || 0]
   );
 
   return sessionId;
@@ -110,6 +112,8 @@ export async function getWizardSessionByTenant(
     analysisResult: row.analysis_result,
     customPrompt: row.custom_prompt,
     status: row.status,
+    step_data: row.step_data, // Per-step wizard data
+    current_step: row.current_step,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     appliedAt: row.applied_at,

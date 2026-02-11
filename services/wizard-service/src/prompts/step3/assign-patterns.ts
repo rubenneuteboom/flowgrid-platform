@@ -148,7 +148,7 @@ registerPrompt<AssignPatternsInput, AssignPatternsOutput>({
   modelPreferences: {
     preferredModel: 'claude-sonnet-4-20250514',
     temperature: 0.3,
-    maxTokens: 4096,
+    maxTokens: 16000,
   },
 });
 

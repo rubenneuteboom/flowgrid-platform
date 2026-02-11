@@ -753,27 +753,6 @@
     <!-- Left Sidebar -->
     <aside class="sidebar">
       <div class="resize-handle" id="sidebar-resize"></div>
-      <div class="sidebar-section">
-        <h3>🔍 Search</h3>
-        <input type="text" id="search-input" placeholder="Search elements...">
-        <select id="type-filter">
-          <option value="">All Types</option>
-          <optgroup label="ArchiMate">
-            <option value="ApplicationFunction">⚙️ ApplicationFunction</option>
-            <option value="ApplicationService">🔌 ApplicationService</option>
-            <option value="BusinessService">💼 BusinessService</option>
-            <option value="DataObject">📄 DataObject</option>
-            <option value="Grouping">📁 Grouping</option>
-            <option value="Requirement">📋 Requirement</option>
-            <option value="Resource">🔧 Resource</option>
-          </optgroup>
-          <optgroup label="FlowGrid">
-            <option value="Agent">🤖 Agent</option>
-            <option value="Capability">📦 Capability</option>
-            <option value="Process">🔄 Process</option>
-          </optgroup>
-        </select>
-      </div>
       <div class="sidebar-section elements-section">
         <h3>📋 Elements</h3>
         <div class="element-list" id="element-list">
@@ -831,11 +810,10 @@
       <div class="detail-tabs" style="margin-bottom:0.75rem;">
         <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
         <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
+        <button class="detail-tab workspace-tab" data-tab="capabilities" onclick="showWorkspaceTab('capabilities')">📦 Capabilities</button>
         <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
-        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🪄 Integrations</button>
-        <button class="detail-tab workspace-tab" data-tab="interactions" onclick="showWorkspaceTab('interactions')">🔄 Interactions</button>
-        <button class="detail-tab workspace-tab" data-tab="agents" onclick="showWorkspaceTab('agents')">Agents</button>
-        <button class="detail-tab workspace-tab" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">📊 BPMN</button>
+        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🔌 Integrations</button>
+        <button class="detail-tab workspace-tab" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">🔄 BPMN</button>
         <button class="detail-tab workspace-tab" data-tab="a2a-card" onclick="showWorkspaceTab('a2a-card')">🤖 A2A Card</button>
       </div>
 
@@ -880,6 +858,24 @@
               <div class="graph-state-title" id="graph-overlay-title">Loading graph</div>
               <div class="graph-state-message" id="graph-overlay-message">Preparing network data...</div>
               <button class="btn btn-secondary" id="graph-overlay-action" style="display:none;" onclick="refreshData()">Retry</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Capabilities Tab -->
+      <section class="workspace-panel" id="workspace-capabilities">
+        <div style="padding: 1rem;">
+          <h3 style="color: #22d3ee; margin-bottom: 0.5rem;">📦 Capabilities</h3>
+          <p style="color: #94a3b8; margin-bottom: 1rem;">Capabilities owned by the selected agent.</p>
+          
+          <div id="capabilities-empty" style="color: #64748b; padding: 2rem; text-align: center;">
+            Select an agent to view its capabilities.
+          </div>
+          
+          <div id="capabilities-list" style="display: none;">
+            <div id="capabilities-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
+              <!-- Capabilities populated by JS -->
             </div>
           </div>
         </div>
@@ -956,8 +952,11 @@
                 <p style="color: #64748b; font-size: 0.85rem;" id="bpmn-process-desc">Choose a process from the list to view its workflow</p>
               </div>
               <div style="display: flex; gap: 0.5rem;" id="bpmn-actions" style="display: none;">
+                <button class="btn btn-success" onclick="saveCurrentBPMN()" style="font-size: 0.85rem;" id="bpmn-save-btn">💾 Save</button>
                 <button class="btn btn-primary" onclick="regenerateProcessBPMN()" style="font-size: 0.85rem;">🔄 Regenerate</button>
-                <button class="btn btn-success" onclick="exportProcessBPMN()" style="font-size: 0.85rem;">📥 Export</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('bpmn-import-input').click()" style="font-size: 0.85rem;">📤 Import</button>
+                <button class="btn btn-secondary" onclick="exportProcessBPMN()" style="font-size: 0.85rem;">📥 Export</button>
+                <input type="file" id="bpmn-import-input" accept=".bpmn,.xml" style="display: none;" onchange="importBPMNFile(event)">
               </div>
             </div>
             
@@ -1060,6 +1059,14 @@
             <textarea id="agent-success-criteria" placeholder="How do we measure if this agent is successful?" rows="2"></textarea>
           </div>
           <button class="btn btn-success" style="width: 100%; margin-top: 0.5rem;" onclick="saveAgent()">💾 Save Description</button>
+          
+          <!-- Capabilities Section -->
+          <div id="agent-capabilities-section" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
+            <h3 style="color: #22d3ee; font-size: 1rem; margin-bottom: 0.75rem;">📦 Capabilities</h3>
+            <div id="agent-capabilities-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <span style="color: #64748b; font-size: 0.85rem;">No capabilities loaded</span>
+            </div>
+          </div>
           
           <!-- Process Info Section (shown for Process elements) -->
           <div id="process-info-section" style="display: none; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
@@ -1422,14 +1429,9 @@
     
     function renderElementList() {
       const container = document.getElementById('element-list');
-      const searchTerm = document.getElementById('search-input').value.toLowerCase();
-      const typeFilter = document.getElementById('type-filter').value;
       
-      const filtered = agents.filter(a => {
-        const matchesSearch = a.name.toLowerCase().includes(searchTerm);
-        const matchesType = !typeFilter || a.elementType === typeFilter || (a.elementType === undefined && typeFilter === 'Agent');
-        return matchesSearch && matchesType;
-      });
+      // Show all agents (filter dropdown removed)
+      const filtered = agents;
       
       if (filtered.length === 0) {
         container.innerHTML = `
@@ -1716,10 +1718,32 @@
     // Agent Selection & Detail View
     // ============================================================================
     
-    function selectAgent(id) {
+    async function selectAgent(id) {
       selectedAgentId = id;
-      const agent = agents.find(a => a.id === id);
+      let agent = agents.find(a => a.id === id);
       const detailPanel = document.getElementById('detail-panel');
+      
+      // Fetch full agent details (includes integrations, capabilities)
+      if (agent && !agent._detailsLoaded) {
+        try {
+          const response = await fetch(`${API_BASE}/${id}`, { headers: getAuthHeaders() });
+          if (response.ok) {
+            const details = await response.json();
+            console.log('[selectAgent] Loaded details:', { id, capabilities: details.capabilities?.length, integrations: details.integrations?.length });
+            // Explicitly copy key fields
+            agent.capabilities = details.capabilities || [];
+            agent.integrations = details.integrations || [];
+            agent.interactions = details.interactions || [];
+            agent.config = details.config || agent.config;
+            agent.description = details.description || agent.description;
+            agent._detailsLoaded = true;
+          } else {
+            console.warn('[selectAgent] Failed to load details:', response.status);
+          }
+        } catch (err) {
+          console.warn('Failed to load agent details:', err);
+        }
+      }
       
       if (!agent) {
         document.getElementById('detail-empty').style.display = 'block';
@@ -1760,6 +1784,14 @@
       
       // Update Description tab
       document.getElementById('agent-purpose').value = agent.purpose || agent.description || '';
+      
+      // Update Capabilities section
+      const capsContainer = document.getElementById('agent-capabilities-list');
+      const caps = agent.capabilities || [];
+      console.log('[selectAgent] Rendering capabilities for', agent.id, ':', caps.length, agent._detailsLoaded);
+      capsContainer.innerHTML = caps.length 
+        ? caps.map(c => `<span class="capability-tag" style="background: #164e63; color: #22d3ee; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(c.capability_name || c.name || c)}</span>`).join('')
+        : '<span style="color: #64748b; font-size: 0.85rem;">No capabilities</span>';
       const valuestreamEl = document.getElementById('agent-valuestream');
       if (valuestreamEl) valuestreamEl.value = agent.valueStream || '';
       
@@ -1831,16 +1863,46 @@
             <div class="integration-item">
               <div class="integration-name">
                 <span>${i.icon || '🔌'}</span>
-                <span>${escapeHtml(i.name || 'Integration')}</span>
-                <span class="integration-badge">${escapeHtml(i.type || 'external')}</span>
+                <span>${escapeHtml(i.name || i.integration_type || 'Integration')}</span>
+                <span class="integration-badge">${escapeHtml(i.type || i.status || 'external')}</span>
               </div>
             </div>
           `).join('') : '<p style="color:#64748b;font-size:0.85rem;">No integrations configured.</p>'}
         `;
       }
       
+      // Update workspace capabilities
+      const capsEmpty = document.getElementById('capabilities-empty');
+      const capsList = document.getElementById('capabilities-list');
+      const capsGrid = document.getElementById('capabilities-grid');
+      if (capsEmpty && capsList && capsGrid) {
+        const capabilities = agent.capabilities || [];
+        if (capabilities.length > 0) {
+          capsEmpty.style.display = 'none';
+          capsList.style.display = 'block';
+          capsGrid.innerHTML = capabilities.map(c => `
+            <div class="capability-card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.25rem;">📦</span>
+                <span style="color: #22d3ee; font-weight: 500;">${escapeHtml(c.capability_name || c.name || c)}</span>
+              </div>
+              <div style="font-size: 0.75rem; color: #64748b;">
+                Type: ${escapeHtml(c.capability_type || 'action')}
+                ${c.is_enabled === false ? ' • <span style="color: #f87171;">Disabled</span>' : ''}
+              </div>
+            </div>
+          `).join('');
+        } else {
+          capsEmpty.style.display = 'block';
+          capsList.style.display = 'none';
+        }
+      }
+      
       // Update A2A Card panel
       loadA2ACard(agent.id);
+      
+      // Update BPMN process list
+      renderBpmnProcessList();
     }
     
     // ============================================================================
@@ -2505,8 +2567,8 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
     // Event Listeners
     // ============================================================================
     
-    document.getElementById('search-input').addEventListener('input', renderElementList);
-    document.getElementById('type-filter').addEventListener('change', renderElementList);
+    // Search input removed
+    // Filter dropdown removed
     document.getElementById('design-import-input').addEventListener('change', (event) => {
       const file = event?.target?.files?.[0];
       if (file) importDesignBundle(file);
@@ -2553,14 +2615,32 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       const listEl = document.getElementById('bpmn-process-list');
       if (!listEl) return;
       
+      // Show both Process elements AND agents with process steps
       const processes = agents.filter(a => a.elementType === 'Process');
+      const agentsWithProcesses = agents.filter(a => 
+        a.elementType !== 'Process' && 
+        (a.config?.processSteps || a.config?.decisionPoints)
+      );
+      const allProcessItems = [...processes, ...agentsWithProcesses];
       
-      if (processes.length === 0) {
-        listEl.innerHTML = '<p style="color: #64748b; font-size: 0.85rem;">No processes found. Import processes via the Wizard.</p>';
+      if (allProcessItems.length === 0) {
+        // Show the selected agent if it has no process steps
+        const selectedAgent = agents.find(a => a.id === selectedAgentId);
+        if (selectedAgent) {
+          listEl.innerHTML = `
+            <div style="padding: 0.75rem; background: #0f172a; border-radius: 6px;">
+              <div style="color: #e2e8f0; font-weight: 500; margin-bottom: 0.25rem;">${escapeHtml(selectedAgent.name)}</div>
+              <div style="color: #64748b; font-size: 0.75rem;">No process flow defined</div>
+              <button class="btn btn-primary" onclick="generateBpmnForAgent('${selectedAgent.id}')" style="margin-top: 0.5rem; font-size: 0.75rem;">🔄 Generate Process Flow</button>
+            </div>
+          `;
+        } else {
+          listEl.innerHTML = '<p style="color: #64748b; font-size: 0.85rem;">Select an agent to view or generate its process flow.</p>';
+        }
         return;
       }
       
-      listEl.innerHTML = processes.map(p => `
+      listEl.innerHTML = allProcessItems.map(p => `
         <div class="bpmn-process-item" 
              data-id="${p.id}" 
              onclick="selectBpmnProcess('${p.id}')"
@@ -2568,9 +2648,225 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
              onmouseover="if(selectedProcessId !== '${p.id}') this.style.background='#1e293b'"
              onmouseout="if(selectedProcessId !== '${p.id}') this.style.background='#0f172a'">
           <div style="color: #e2e8f0; font-weight: 500; margin-bottom: 0.25rem;">${escapeHtml(p.name)}</div>
-          <div style="color: #64748b; font-size: 0.75rem;">${p.config?.processSteps ? '✅ Has flow' : '⚠️ No flow defined'}</div>
+          <div style="color: #64748b; font-size: 0.75rem;">
+            ${p.elementType === 'Process' ? '🔄 Process' : '🤖 Agent'}
+            ${p.config?.processSteps ? ' • ✅ Has flow' : ' • ⚠️ No flow'}
+          </div>
         </div>
       `).join('');
+    }
+    
+    // Store generated BPMN XML per agent
+    const agentBpmnCache = {};
+    
+    // Generate BPMN for an agent that doesn't have process steps
+    async function generateBpmnForAgent(agentId) {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+      
+      // Set as selected process so Save works
+      selectedProcessId = agentId;
+      
+      // Show loading state
+      const btn = event?.target;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Generating...';
+      }
+      
+      try {
+        const response = await fetch('/api/wizard/generate-bpmn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({
+            processId: agent.id,
+            processName: agent.name,
+            processDescription: agent.purpose || agent.description || '',
+            capabilities: agent.capabilities?.map(c => c.capability_name || c.name || c) || [],
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          const bpmnXml = result.data?.bpmnXml;
+          
+          if (bpmnXml) {
+            // Cache the BPMN XML
+            agentBpmnCache[agentId] = bpmnXml;
+            agent.config = agent.config || {};
+            agent.config.bpmnXml = bpmnXml;
+            agent.config.processSteps = result.data?.summary || 'Generated';
+            
+            // Save to database
+            await saveBpmnToAgent(agentId, bpmnXml, result.data?.summary);
+            
+            // Display in canvas
+            renderBpmnProcessList();
+            await displayBpmnXml(bpmnXml, agent.name);
+            
+            if (btn) {
+              btn.innerHTML = '✅ Saved!';
+              setTimeout(() => { btn.innerHTML = '🔄 Regenerate'; btn.disabled = false; }, 2000);
+            }
+          } else {
+            throw new Error('No BPMN XML in response');
+          }
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (err) {
+        console.error('Failed to generate BPMN:', err);
+        if (btn) {
+          btn.innerHTML = '❌ Failed';
+          setTimeout(() => { btn.innerHTML = '🔄 Generate Process Flow'; btn.disabled = false; }, 2000);
+        }
+      }
+    }
+    
+    // Import BPMN file
+    async function importBPMNFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      
+      if (!selectedProcessId) {
+        alert('Please select an agent first');
+        event.target.value = '';
+        return;
+      }
+      
+      try {
+        const bpmnXml = await file.text();
+        
+        // Validate it's valid XML
+        if (!bpmnXml.includes('bpmn:definitions') && !bpmnXml.includes('definitions')) {
+          alert('Invalid BPMN file. Please select a valid .bpmn or .xml file.');
+          event.target.value = '';
+          return;
+        }
+        
+        // Display in canvas
+        await displayBpmnXml(bpmnXml, agents.find(a => a.id === selectedProcessId)?.name || 'Imported');
+        
+        // Cache it (not auto-saved - user can click Save)
+        agentBpmnCache[selectedProcessId] = bpmnXml;
+        
+        // Flash the save button to indicate unsaved changes
+        const saveBtn = document.getElementById('bpmn-save-btn');
+        if (saveBtn) {
+          saveBtn.style.animation = 'pulse 1s ease-in-out 3';
+          saveBtn.innerHTML = '💾 Save*';
+        }
+        
+        console.log('[BPMN] Imported from file:', file.name);
+      } catch (err) {
+        console.error('Failed to import BPMN:', err);
+        alert('Failed to import BPMN file: ' + err.message);
+      }
+      
+      // Reset file input
+      event.target.value = '';
+    }
+    
+    // Save current BPMN from editor to database
+    async function saveCurrentBPMN() {
+      const processId = selectedProcessId || selectedAgentId;
+      if (!processId || !window.bpmnViewer) {
+        alert('No BPMN to save');
+        return;
+      }
+      
+      const btn = document.getElementById('bpmn-save-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Saving...';
+      }
+      
+      try {
+        // Export current BPMN XML from the editor
+        const { xml } = await window.bpmnViewer.saveXML({ format: true });
+        
+        if (xml) {
+          await saveBpmnToAgent(processId, xml, 'User edited');
+          agentBpmnCache[processId] = xml;
+          
+          const agent = agents.find(a => a.id === processId);
+          if (agent) {
+            agent.config = agent.config || {};
+            agent.config.bpmnXml = xml;
+          }
+          
+          if (btn) {
+            btn.innerHTML = '✅ Saved!';
+            setTimeout(() => { btn.innerHTML = '💾 Save'; btn.disabled = false; }, 2000);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to save BPMN:', err);
+        if (btn) {
+          btn.innerHTML = '❌ Failed';
+          setTimeout(() => { btn.innerHTML = '💾 Save'; btn.disabled = false; }, 2000);
+        }
+      }
+    }
+    
+    // Save BPMN to agent in database
+    async function saveBpmnToAgent(agentId, bpmnXml, summary) {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+      
+      try {
+        // Merge BPMN into existing config
+        const updatedConfig = {
+          ...(agent.config || {}),
+          bpmnXml: bpmnXml,
+          processSteps: summary || 'Generated',
+          bpmnGeneratedAt: new Date().toISOString(),
+        };
+        
+        const response = await fetch(`${API_BASE}/${agentId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ config: updatedConfig })
+        });
+        
+        if (!response.ok) {
+          console.warn('Failed to save BPMN to database:', response.status);
+        } else {
+          console.log('[BPMN] Saved to database for agent:', agentId);
+        }
+      } catch (err) {
+        console.error('Failed to save BPMN:', err);
+      }
+    }
+    
+    // Display BPMN XML in the canvas using bpmn-js
+    async function displayBpmnXml(bpmnXml, processName) {
+      const canvas = document.getElementById('bpmn-canvas-main');
+      const emptyState = document.getElementById('bpmn-empty-state');
+      
+      if (!canvas) return;
+      
+      emptyState.style.display = 'none';
+      canvas.style.display = 'block';
+      document.getElementById('bpmn-process-title').textContent = `📊 ${processName}`;
+      document.getElementById('bpmn-actions').style.display = 'flex';
+      
+      // Initialize or reuse bpmn-js viewer
+      if (!window.bpmnViewer) {
+        if (typeof BpmnJS === 'undefined') {
+          canvas.innerHTML = '<pre style="padding:1rem;color:#94a3b8;font-size:0.75rem;overflow:auto;max-height:400px;">' + escapeHtml(bpmnXml) + '</pre>';
+          return;
+        }
+        window.bpmnViewer = new BpmnJS({ container: canvas });
+      }
+      
+      try {
+        await window.bpmnViewer.importXML(bpmnXml);
+        window.bpmnViewer.get('canvas').zoom('fit-viewport');
+      } catch (err) {
+        console.error('BPMN render error:', err);
+        canvas.innerHTML = '<div style="padding:1rem;color:#f87171;">Failed to render BPMN: ' + escapeHtml(err.message) + '</div>';
+      }
     }
 
     // Select a process to show in BPMN canvas
@@ -2582,14 +2878,29 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       
       // Update UI
       renderBpmnProcessList();
-      document.getElementById('bpmn-empty-state').style.display = 'none';
-      document.getElementById('bpmn-canvas-main').style.display = 'block';
-      document.getElementById('bpmn-actions').style.display = 'flex';
-      document.getElementById('bpmn-process-title').textContent = `📊 ${process.name}`;
-      document.getElementById('bpmn-process-desc').textContent = process.description || 'Process workflow diagram';
+      document.getElementById('bpmn-process-desc').textContent = process.description || process.purpose || 'Process workflow diagram';
       
-      // Generate and display BPMN
-      await generateProcessBPMN(process);
+      // Check if we have cached BPMN XML
+      const cachedBpmn = agentBpmnCache[processId] || process.config?.bpmnXml;
+      
+      if (cachedBpmn) {
+        await displayBpmnXml(cachedBpmn, process.name);
+      } else if (process.config?.processSteps && process.config.processSteps !== 'Generated') {
+        // Generate from existing process steps
+        await generateProcessBPMN(process);
+      } else {
+        // No BPMN - show generate button
+        document.getElementById('bpmn-empty-state').style.display = 'flex';
+        document.getElementById('bpmn-canvas-main').style.display = 'none';
+        document.getElementById('bpmn-process-title').textContent = `📊 ${process.name}`;
+        document.getElementById('bpmn-empty-state').innerHTML = `
+          <div style="text-align: center; color: #64748b;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+            <p style="margin-bottom: 1rem;">No process flow defined for this agent</p>
+            <button class="btn btn-primary" onclick="generateBpmnForAgent('${processId}')">🔄 Generate Process Flow</button>
+          </div>
+        `;
+      }
     }
 
     // Convert a single process to BPMN based on its processSteps/decisionPoints

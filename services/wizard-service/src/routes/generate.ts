@@ -183,13 +183,58 @@ router.post('/apply', async (req: Request, res: Response) => {
     }
 
     const analysis = session.analysisResult as AnalysisResult;
-    if (!analysis) {
-      return res.status(400).json({ error: 'Session has no analysis result' });
+    const stepData = (session as any).step_data || {};
+    
+    // Get agents from step_data (per-step flow) or analysisResult (legacy flow)
+    const step3Agents = stepData?.step3?.proposedAgents?.agents || stepData?.step3?.agents || [];
+    const analysisAgents = analysis?.agents || [];
+    let agents = step3Agents.length > 0 ? step3Agents : analysisAgents;
+    
+    // Build capability ID → name map from multiple sources
+    const step1Caps = stepData?.step1?.capabilities || [];
+    const step2Elements = stepData?.step2?.classifiedElements?.elements || 
+                          stepData?.step2?.elements || 
+                          analysis?.extractedCapabilities || [];
+    const capabilityMap: Record<string, string> = {};
+    // First, add step1 capabilities (from XML - have original ArchiMate IDs)
+    for (const cap of step1Caps) {
+      if (cap.id && cap.name) {
+        capabilityMap[cap.id] = cap.name;
+      }
     }
-
-    const agents = analysis.agents || [];
-    const relationships = analysis.agentRelationships || [];
-    const integrations = analysis.integrations || [];
+    // Then add step2 elements (may have different IDs)
+    for (const el of step2Elements) {
+      if (el.id && el.name) {
+        capabilityMap[el.id] = el.name;
+      }
+    }
+    console.log(`[${SERVICE_NAME}] Capability map has ${Object.keys(capabilityMap).length} entries`);
+    
+    // Enrich agents: resolve ownedElements IDs to capability names
+    agents = agents.map((agent: any) => {
+      if (agent.ownedElements && Array.isArray(agent.ownedElements) && !agent.capabilities) {
+        const capabilityNames = agent.ownedElements
+          .map((id: string) => capabilityMap[id])
+          .filter(Boolean);
+        console.log(`[${SERVICE_NAME}] Agent ${agent.name}: ${agent.ownedElements.length} ownedElements → ${capabilityNames.length} capabilities`);
+        return { ...agent, capabilities: capabilityNames };
+      }
+      return agent;
+    });
+    
+    // Get relationships from step_data or analysisResult
+    const step6Rels = stepData?.step6?.relationships?.relationships || [];
+    const analysisRels = analysis?.agentRelationships || [];
+    const relationships = step6Rels.length > 0 ? step6Rels : analysisRels;
+    
+    // Get integrations from step_data or analysisResult
+    const step6Ints = stepData?.step6?.integrations?.integrations || [];
+    const analysisInts = analysis?.integrations || [];
+    const integrations = step6Ints.length > 0 ? step6Ints : analysisInts;
+    
+    if (agents.length === 0) {
+      return res.status(400).json({ error: 'No agents to import. Complete the wizard steps first.' });
+    }
 
     console.log(`[${SERVICE_NAME}] Applying session ${sessionId}: ${agents.length} agents`);
 
@@ -226,6 +271,49 @@ router.post('/apply', async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error(`[${SERVICE_NAME}] Apply wizard error:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// POST /api/wizard/generate-bpmn
+// Standalone BPMN generation (no step dependencies - for legacy flows)
+// ============================================================================
+
+import { executeStep5 } from '../services/step-executor';
+
+router.post('/generate-bpmn', async (req: Request, res: Response) => {
+  try {
+    const { processId, processName, processDescription, involvedAgents, capabilities, triggers, outputs } = req.body;
+
+    if (!processName || !processDescription) {
+      return res.status(400).json({ error: 'processName and processDescription are required' });
+    }
+
+    console.log(`[${SERVICE_NAME}] Generating BPMN for: ${processName}`);
+
+    const result = await executeStep5({
+      processId: processId || `process-${Date.now()}`,
+      processName,
+      processDescription,
+      involvedAgents: involvedAgents || [],
+      capabilities: capabilities || [],
+      triggers,
+      outputs,
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'BPMN generation failed' });
+    }
+
+    res.json({
+      success: true,
+      data: result.data,
+      executionTimeMs: result.executionTimeMs,
+    });
+
+  } catch (error: any) {
+    console.error(`[${SERVICE_NAME}] Generate BPMN error:`, error);
     res.status(500).json({ error: error.message });
   }
 });

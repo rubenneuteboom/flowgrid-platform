@@ -19,6 +19,8 @@ export interface WizardSession {
   analysisResult: AnalysisResult | null;
   customPrompt?: string;
   status: 'created' | 'analyzing' | 'analyzed' | 'applied' | 'failed';
+  step_data?: Record<string, unknown>; // Per-step wizard data
+  current_step?: number;
   createdAt: Date;
   updatedAt: Date;
   appliedAt?: Date;
