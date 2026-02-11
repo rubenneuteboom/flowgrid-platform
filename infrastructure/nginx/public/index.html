@@ -280,6 +280,14 @@
 
       async function bootstrap() {
         console.log('[shell] bootstrap starting');
+        
+        // Check auth BEFORE any API calls - initPage redirects but doesn't stop execution
+        if (!window.FlowgridAuthUI.isAuthenticated()) {
+          console.log('[shell] not authenticated, redirecting to login');
+          window.FlowgridAuthUI.initPage({ requireAuth: true });
+          return; // Stop here - redirect is happening
+        }
+        
         window.FlowgridAuthUI.initPage({ requireAuth: true });
 
         try {

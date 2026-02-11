@@ -287,7 +287,8 @@ jobs:
           
           # Apply service-specific secrets
           case "${{ matrix.service.name }}" in
-            auth-service)
+            auth-service|agent-service)
+              # JWT secret for token validation
               JWT_SECRET=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name jwt-secret --query value -o tsv 2>/dev/null || echo "")
               if [ -n "$JWT_SECRET" ]; then
                 az containerapp secret set \
@@ -301,7 +302,57 @@ jobs:
                   --set-env-vars JWT_SECRET=secretref:jwt-secret
               fi
               ;;
-            design-service|wizard-service)
+            wizard-service)
+              # JWT secret for token validation
+              JWT_SECRET=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name jwt-secret --query value -o tsv 2>/dev/null || echo "")
+              if [ -n "$JWT_SECRET" ]; then
+                az containerapp secret set \
+                  --name ${{ matrix.service.name }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --secrets jwt-secret="$JWT_SECRET"
+                  
+                az containerapp update \
+                  --name ${{ matrix.service.name }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --set-env-vars JWT_SECRET=secretref:jwt-secret
+              fi
+              
+              # AI provider keys (Anthropic + OpenAI for vision)
+              ANTHROPIC_KEY=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name anthropic-api-key --query value -o tsv 2>/dev/null || echo "")
+              OPENAI_KEY=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name openai-api-key --query value -o tsv 2>/dev/null || echo "")
+              
+              SECRETS_TO_SET=""
+              ENV_VARS_TO_SET=""
+              
+              if [ -n "$ANTHROPIC_KEY" ]; then
+                SECRETS_TO_SET="anthropic-api-key=$ANTHROPIC_KEY"
+                ENV_VARS_TO_SET="ANTHROPIC_API_KEY=secretref:anthropic-api-key AI_PROVIDER=anthropic"
+              fi
+              
+              if [ -n "$OPENAI_KEY" ]; then
+                if [ -n "$SECRETS_TO_SET" ]; then
+                  SECRETS_TO_SET="$SECRETS_TO_SET openai-api-key=$OPENAI_KEY"
+                  ENV_VARS_TO_SET="$ENV_VARS_TO_SET OPENAI_API_KEY=secretref:openai-api-key"
+                else
+                  SECRETS_TO_SET="openai-api-key=$OPENAI_KEY"
+                  ENV_VARS_TO_SET="OPENAI_API_KEY=secretref:openai-api-key"
+                fi
+              fi
+              
+              if [ -n "$SECRETS_TO_SET" ]; then
+                az containerapp secret set \
+                  --name ${{ matrix.service.name }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --secrets $SECRETS_TO_SET
+                  
+                az containerapp update \
+                  --name ${{ matrix.service.name }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --set-env-vars $ENV_VARS_TO_SET
+              fi
+              ;;
+            design-service)
+              # Anthropic key for AI features
               ANTHROPIC_KEY=$(az keyvault secret show --vault-name $KEYVAULT_NAME --name anthropic-api-key --query value -o tsv 2>/dev/null || echo "")
               if [ -n "$ANTHROPIC_KEY" ]; then
                 az containerapp secret set \
