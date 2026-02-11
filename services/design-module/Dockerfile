@@ -28,6 +28,9 @@ RUN npm ci --omit=dev
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy public folder (not included in TypeScript build)
+COPY --from=builder /app/src/public ./dist/public
+
 # Expose port
 EXPOSE 3006
 
