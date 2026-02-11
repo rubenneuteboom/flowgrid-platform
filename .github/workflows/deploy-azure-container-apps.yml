@@ -443,6 +443,13 @@ jobs:
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --query name -o tsv 2>/dev/null || echo "")
           
+          # Get Container Apps environment domain for internal DNS
+          ENV_DOMAIN=$(az containerapp env show \
+            --name ${{ env.CONTAINER_APP_ENV }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query "properties.defaultDomain" -o tsv)
+          echo "Container Apps environment domain: $ENV_DOMAIN"
+          
           if [ -z "$EXISTS" ]; then
             # Get ACR credentials
             ACR_USERNAME=$(az acr credential show -n ${{ env.ACR_NAME }} --query username -o tsv)
@@ -463,6 +470,7 @@ jobs:
               --registry-username "$ACR_USERNAME" \
               --registry-password "$ACR_PASSWORD" \
               --env-vars \
+                CONTAINER_APP_ENV_DNS_SUFFIX="$ENV_DOMAIN" \
                 AGENT_SERVICE_PORT=80 \
                 AUTH_SERVICE_PORT=80 \
                 DESIGN_SERVICE_PORT=80 \
@@ -487,6 +495,7 @@ jobs:
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --image ${{ env.ACR_NAME }}.azurecr.io/gateway:${{ needs.setup.outputs.image_tag }} \
               --set-env-vars \
+                CONTAINER_APP_ENV_DNS_SUFFIX="$ENV_DOMAIN" \
                 AGENT_SERVICE_PORT=80 \
                 AUTH_SERVICE_PORT=80 \
                 DESIGN_SERVICE_PORT=80 \
