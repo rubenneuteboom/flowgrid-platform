@@ -2331,7 +2331,10 @@
                 <div class="process-card">
                     <div class="process-header">
                         <span class="process-title">${escapeHtml(agent.name)}</span>
-                        <button class="btn btn-warning btn-sm" onclick="generateProcess(${idx})">🤖 Generate</button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-warning btn-sm" onclick="generateProcess(${idx})">🤖 Steps</button>
+                            <button class="btn btn-primary btn-sm" onclick="generateBPMN(${idx})" id="bpmn-btn-${idx}">📊 BPMN</button>
+                        </div>
                     </div>
                     <div class="process-field">
                         <label>📋 Process Steps</label>
@@ -2344,6 +2347,15 @@
                     <div class="process-field">
                         <label>⚠️ Error Handling</label>
                         <textarea id="process-errors-${idx}" rows="2" placeholder="ON error THEN action">${agent.errorHandling || ''}</textarea>
+                    </div>
+                    <div class="process-field" id="bpmn-result-${idx}" style="display: none;">
+                        <label>📊 BPMN Generated</label>
+                        <div style="padding: 0.5rem; background: rgba(96, 165, 250, 0.1); border-radius: 4px; font-size: 0.8rem;">
+                            <span id="bpmn-status-${idx}"></span>
+                            <button class="btn btn-sm" style="margin-left: 0.5rem;" onclick="copyBPMN(${idx})">📋 Copy XML</button>
+                            <button class="btn btn-sm" style="margin-left: 0.25rem;" onclick="downloadBPMN(${idx})">💾 Download</button>
+                        </div>
+                        <textarea id="bpmn-xml-${idx}" rows="4" style="font-family: monospace; font-size: 0.75rem; margin-top: 0.5rem; display: none;"></textarea>
                     </div>
                 </div>
             `).join('');
@@ -2410,6 +2422,95 @@
             document.getElementById('step4Loading').classList.remove('active');
             document.getElementById('step4Results').classList.add('active');
             renderProcessCards();
+        }
+        
+        // BPMN Generation for Process Design
+        const bpmnCache = {}; // Cache generated BPMN XML
+        
+        async function generateBPMN(idx) {
+            const agents = analysisResult?.filteredAgents || analysisResult?.agents || [];
+            const agent = agents[idx];
+            if (!agent) return;
+            
+            const btn = document.getElementById(`bpmn-btn-${idx}`);
+            const resultDiv = document.getElementById(`bpmn-result-${idx}`);
+            const statusSpan = document.getElementById(`bpmn-status-${idx}`);
+            const xmlTextarea = document.getElementById(`bpmn-xml-${idx}`);
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+            resultDiv.style.display = 'block';
+            statusSpan.textContent = '⏳ AI is generating BPMN flow...';
+            
+            try {
+                // Build context from agent data
+                const capabilities = agent.capabilities || agent.ownedElements || [];
+                const triggers = agent.triggers || [];
+                const outputs = agent.outputs || [];
+                
+                const response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step5`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        processName: agent.name,
+                        processDescription: agent.purpose || agent.description || `Process for ${agent.name}`,
+                        involvedAgents: [agent.name],
+                        capabilities: capabilities,
+                        triggers: triggers,
+                        outputs: outputs,
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorMessage = await extractErrorMessage(response, 'BPMN generation failed');
+                    throw new Error(errorMessage);
+                }
+                
+                const data = await parseApiResponse(response);
+                
+                // Store in cache and agent
+                bpmnCache[idx] = data.data.bpmnXml;
+                agent.processBpmn = data.data.bpmnXml;
+                
+                // Update UI
+                const summary = data.data.summary || {};
+                statusSpan.textContent = `✅ Generated: ${summary.taskCount || '?'} tasks, ${summary.gatewayCount || '?'} gateways`;
+                xmlTextarea.value = data.data.bpmnXml;
+                
+                btn.textContent = '✅ BPMN';
+                btn.disabled = false;
+                saveState();
+                
+            } catch (e) {
+                statusSpan.textContent = '❌ Error: ' + e.message;
+                btn.textContent = '📊 BPMN';
+                btn.disabled = false;
+            }
+        }
+        
+        function copyBPMN(idx) {
+            const xml = bpmnCache[idx] || document.getElementById(`bpmn-xml-${idx}`)?.value;
+            if (xml) {
+                navigator.clipboard.writeText(xml).then(() => {
+                    alert('BPMN XML copied to clipboard!');
+                });
+            }
+        }
+        
+        function downloadBPMN(idx) {
+            const agents = analysisResult?.filteredAgents || analysisResult?.agents || [];
+            const agent = agents[idx];
+            const xml = bpmnCache[idx] || document.getElementById(`bpmn-xml-${idx}`)?.value;
+            
+            if (xml) {
+                const blob = new Blob([xml], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${(agent?.name || 'process').replace(/\s+/g, '-').toLowerCase()}.bpmn`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
         }
         
         // ==========================================
