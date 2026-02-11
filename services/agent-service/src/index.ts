@@ -316,6 +316,151 @@ app.get('/api/agents/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Get A2A Card for agent
+app.get('/api/agents/:id/a2a-card', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    const baseUrl = req.query.baseUrl as string || `https://agents.example.com`;
+
+    const agentResult = await pool.query(
+      'SELECT * FROM agents WHERE id = $1 AND tenant_id = $2',
+      [id, tenantId]
+    );
+
+    if (agentResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Agent ${id} not found`,
+      });
+    }
+
+    const agent = agentResult.rows[0];
+    const config = agent.config || {};
+
+    // Get capabilities to build skills
+    const capsResult = await pool.query(
+      'SELECT capability_name, capability_type, config FROM agent_capabilities WHERE agent_id = $1',
+      [id]
+    );
+
+    // Get relationships for defaultInputModes
+    const relResult = await pool.query(
+      `SELECT i.message_type, i.config
+       FROM agent_interactions i
+       WHERE i.target_agent_id = $1`,
+      [id]
+    );
+
+    // Build A2A-compliant Agent Card
+    const agentCard = {
+      name: agent.name,
+      description: agent.description || config.purpose || `${agent.name} agent`,
+      url: `${baseUrl}/${agent.id}`,
+      version: `${agent.version || 1}.0.0`,
+      provider: {
+        organization: "FlowGrid Platform",
+        url: "https://flowgrid.io"
+      },
+      capabilities: {
+        streaming: config.a2aCapabilities?.streaming || false,
+        pushNotifications: config.a2aCapabilities?.pushNotifications || false,
+        stateTransitionHistory: true
+      },
+      authentication: {
+        schemes: ["bearer"]
+      },
+      defaultInputModes: ["text"],
+      defaultOutputModes: ["text"],
+      skills: buildSkillsFromAgent(agent, capsResult.rows),
+      // FlowGrid extensions (not part of A2A spec but useful)
+      _flowgrid: {
+        id: agent.id,
+        elementType: agent.element_type || 'Agent',
+        pattern: config.pattern || agent.type,
+        autonomyLevel: config.autonomyLevel || 'supervised',
+        riskAppetite: config.riskAppetite || 'medium',
+        triggers: config.triggers || [],
+        outputs: config.outputs || [],
+        relationships: relResult.rows.map((r: any) => ({
+          messageType: r.message_type,
+          config: r.config
+        }))
+      }
+    };
+
+    res.json(agentCard);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Get A2A card error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to generate A2A card',
+    });
+  }
+});
+
+// Helper function to build skills from agent data
+function buildSkillsFromAgent(agent: any, capabilities: any[]): any[] {
+  const config = agent.config || {};
+  const skills: any[] = [];
+
+  // If agent has explicit a2aSkills in config, use those
+  if (config.a2aSkills && Array.isArray(config.a2aSkills)) {
+    return config.a2aSkills.map((skill: any) => ({
+      id: skill.skillId || skill.id,
+      name: skill.name,
+      description: skill.description,
+      inputModes: ["text"],
+      outputModes: ["text"],
+      inputSchema: skill.inputSchema || { type: "object", properties: {} },
+      outputSchema: skill.outputSchema || { type: "object", properties: {} }
+    }));
+  }
+
+  // Otherwise, generate skills from capabilities and pattern
+  const pattern = config.pattern || agent.type || 'specialist';
+  
+  // Create a primary skill based on agent purpose
+  skills.push({
+    id: `${agent.name.toLowerCase().replace(/\s+/g, '-')}-primary`,
+    name: `${agent.name} - Primary Action`,
+    description: agent.description || config.purpose || `Primary capability of ${agent.name}`,
+    inputModes: ["text"],
+    outputModes: ["text"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        request: { type: "string", description: "The request or query" },
+        context: { type: "object", description: "Additional context" }
+      },
+      required: ["request"]
+    },
+    outputSchema: {
+      type: "object", 
+      properties: {
+        result: { type: "string", description: "The result or response" },
+        confidence: { type: "number", description: "Confidence score 0-1" },
+        metadata: { type: "object", description: "Additional metadata" }
+      }
+    }
+  });
+
+  // Add skills from capabilities
+  capabilities.forEach((cap: any) => {
+    skills.push({
+      id: `cap-${cap.capability_name.toLowerCase().replace(/\s+/g, '-')}`,
+      name: cap.capability_name,
+      description: cap.config?.description || `${cap.capability_name} capability`,
+      inputModes: ["text"],
+      outputModes: ["text"],
+      inputSchema: cap.config?.inputSchema || { type: "object", properties: {} },
+      outputSchema: cap.config?.outputSchema || { type: "object", properties: {} }
+    });
+  });
+
+  return skills;
+}
+
 // Create agent
 app.post('/api/agents', async (req: Request, res: Response) => {
   try {

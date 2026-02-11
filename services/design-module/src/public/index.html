@@ -836,6 +836,7 @@
         <button class="detail-tab workspace-tab" data-tab="interactions" onclick="showWorkspaceTab('interactions')">🔄 Interactions</button>
         <button class="detail-tab workspace-tab" data-tab="agents" onclick="showWorkspaceTab('agents')">Agents</button>
         <button class="detail-tab workspace-tab" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">📊 BPMN</button>
+        <button class="detail-tab workspace-tab" data-tab="a2a-card" onclick="showWorkspaceTab('a2a-card')">🤖 A2A Card</button>
       </div>
 
       <!-- Overview Tab - Legacy Style with Donut Chart -->
@@ -974,6 +975,36 @@
             <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
               <small style="color: #64748b;">Powered by <a href="https://bpmn.io" target="_blank" style="color: #60a5fa;">bpmn.io</a></small>
               <small style="color: #64748b;" id="bpmn-stats"></small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- A2A Card Tab -->
+      <section class="workspace-panel" id="workspace-a2a-card">
+        <div class="a2a-card-container" style="padding: 1rem;">
+          <div id="a2a-no-selection" style="text-align: center; color: #64748b; padding: 3rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
+            <h3 style="color: #94a3b8; margin-bottom: 0.5rem;">No Agent Selected</h3>
+            <p>Select an agent from the sidebar to view its A2A Card</p>
+          </div>
+          <div id="a2a-card-content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h3 style="color: #f59e0b; margin: 0;">🤖 A2A Agent Card</h3>
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-sm" onclick="copyA2ACard()" title="Copy to clipboard">📋 Copy</button>
+                <button class="btn btn-sm btn-primary" onclick="downloadA2ACard()" title="Download JSON">⬇️ Download</button>
+              </div>
+            </div>
+            <div id="a2a-card-json" style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 1rem; overflow: auto; max-height: calc(100vh - 300px);">
+              <pre style="margin: 0; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.8rem; color: #e2e8f0; white-space: pre-wrap;"><code id="a2a-card-code"></code></pre>
+            </div>
+            <div style="margin-top: 1rem; padding: 0.75rem; background: #1e3a5f; border: 1px solid #3b82f6; border-radius: 6px;">
+              <div style="font-size: 0.85rem; color: #93c5fd;">
+                <strong>💡 A2A Protocol</strong><br>
+                This card follows the <a href="https://google.github.io/A2A/" target="_blank" style="color: #60a5fa;">Agent-to-Agent Protocol</a> specification.
+                Use it to register this agent with A2A-compatible orchestrators.
+              </div>
             </div>
           </div>
         </div>
@@ -1693,6 +1724,7 @@
       if (!agent) {
         document.getElementById('detail-empty').style.display = 'block';
         document.getElementById('detail-content').style.display = 'none';
+        loadA2ACard(null); // Clear A2A card
         return;
       }
       
@@ -1806,6 +1838,98 @@
           `).join('') : '<p style="color:#64748b;font-size:0.85rem;">No integrations configured.</p>'}
         `;
       }
+      
+      // Update A2A Card panel
+      loadA2ACard(agent.id);
+    }
+    
+    // ============================================================================
+    // A2A Card Functions
+    // ============================================================================
+    
+    let currentA2ACard = null;
+    
+    async function loadA2ACard(agentId) {
+      const noSelection = document.getElementById('a2a-no-selection');
+      const content = document.getElementById('a2a-card-content');
+      const codeEl = document.getElementById('a2a-card-code');
+      
+      if (!agentId) {
+        noSelection.style.display = 'block';
+        content.style.display = 'none';
+        currentA2ACard = null;
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE}/${agentId}/a2a-card`, { headers: getAuthHeaders() });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        currentA2ACard = await response.json();
+        
+        // Pretty print with syntax highlighting
+        const formatted = JSON.stringify(currentA2ACard, null, 2);
+        codeEl.innerHTML = syntaxHighlightJSON(formatted);
+        
+        noSelection.style.display = 'none';
+        content.style.display = 'block';
+      } catch (error) {
+        console.error('[A2A Card] Load error:', error);
+        codeEl.textContent = `Error loading A2A card: ${error.message}`;
+        noSelection.style.display = 'none';
+        content.style.display = 'block';
+        currentA2ACard = null;
+      }
+    }
+    
+    function syntaxHighlightJSON(json) {
+      return json
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (match) => {
+          let cls = 'color: #a5d6ff;'; // string
+          if (/:$/.test(match)) {
+            cls = 'color: #7ee787;'; // key
+          }
+          return `<span style="${cls}">${match}</span>`;
+        })
+        .replace(/\b(true|false)\b/g, '<span style="color: #ff7b72;">$1</span>')
+        .replace(/\b(null)\b/g, '<span style="color: #ff7b72;">$1</span>')
+        .replace(/\b(\d+)\b/g, '<span style="color: #79c0ff;">$1</span>');
+    }
+    
+    function copyA2ACard() {
+      if (!currentA2ACard) {
+        alert('No A2A card loaded');
+        return;
+      }
+      
+      const json = JSON.stringify(currentA2ACard, null, 2);
+      navigator.clipboard.writeText(json).then(() => {
+        alert('✅ A2A Card copied to clipboard!');
+      }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('❌ Failed to copy to clipboard');
+      });
+    }
+    
+    function downloadA2ACard() {
+      if (!currentA2ACard) {
+        alert('No A2A card loaded');
+        return;
+      }
+      
+      const json = JSON.stringify(currentA2ACard, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentA2ACard.name?.toLowerCase().replace(/\s+/g, '-') || 'agent'}-a2a-card.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
     
     function renderRelationships(agentId) {
