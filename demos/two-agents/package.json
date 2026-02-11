@@ -1,0 +1,25 @@
+{
+  "name": "flowgrid-two-agents-demo",
+  "version": "1.0.0",
+  "description": "FlowGrid demo: Two Azure Functions agents communicating via Service Bus",
+  "main": "dist/coordinator/index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "func start",
+    "deploy:infra": "az deployment group create -g rg-flowgrid-demo -f infra/main.bicep",
+    "deploy:coordinator": "cd coordinator && func azure functionapp publish flowgrid-coordinator",
+    "deploy:specialist": "cd specialist && func azure functionapp publish flowgrid-specialist",
+    "test": "curl -X POST http://localhost:7071/api/agent/request -H 'Content-Type: application/json' -d '{\"task\":\"analyze-data\"}'",
+    "test:greeting": "curl -X POST http://localhost:7071/api/agent/request -H 'Content-Type: application/json' -d '{\"task\":\"simple-greeting\"}'"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0",
+    "@azure/service-bus": "^7.9.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "azure-functions-core-tools": "^4.0.0"
+  }
+}

@@ -114,6 +114,20 @@ export interface ProposedAgent {
   // A2A extensions
   a2aSkills?: A2ASkill[];
   boundaries?: AgentBoundaries;
+  // Extended description fields (from wizard prompts)
+  shortDescription?: string;
+  detailedPurpose?: string;
+  businessValue?: string;
+  keyResponsibilities?: string[];
+  responsibilities?: string[];
+  successCriteria?: string[];
+  suggestedPattern?: string;
+  suggestedAutonomy?: string;
+  decisionAuthority?: string;
+  capabilityGroup?: string;
+  kpis?: string[];
+  interactionPattern?: string;
+  escalationPath?: string;
 }
 
 // A2A Skill definition

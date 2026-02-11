@@ -30,13 +30,14 @@ Your task is to define skills for each agent. Skills are the "verbs" - the actio
 
 A skill represents a single capability that other agents (or humans) can invoke.
 
-### Skill Structure
+### Skill Structure (A2A Protocol v0.2)
 - **skillId**: Unique identifier (kebab-case, e.g., "route-ticket")
 - **name**: Human-readable name (e.g., "Route Ticket")
 - **description**: What the skill does (max 200 chars)
+- **tags**: Array of category tags for discoverability (e.g., ["itsm", "routing", "triage"])
 - **inputSchema**: JSON Schema for required input
 - **outputSchema**: JSON Schema for expected output
-- **examples**: Optional input/output examples
+- **examples**: Input/output examples (REQUIRED for A2A compliance)
 
 ### Skill Design Principles
 
@@ -83,6 +84,7 @@ Example:
           "skillId": "route-ticket",
           "name": "Route Ticket",
           "description": "Routes an incoming ticket to the appropriate handler based on category and priority",
+          "tags": ["itsm", "routing", "triage", "ticket-management"],
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -96,13 +98,20 @@ Example:
             "type": "object",
             "properties": {
               "assignedTo": { "type": "string", "description": "Agent or team assigned" },
-              "estimatedTime": { "type": "number", "description": "Estimated handling time in minutes" }
+              "estimatedTime": { "type": "number", "description": "Estimated handling time in minutes" },
+              "confidence": { "type": "number", "description": "Confidence score 0-1" }
             }
           },
           "examples": [
             {
+              "name": "High Priority Hardware Issue",
               "input": { "ticketId": "TKT-123", "category": "hardware", "priority": "high" },
-              "output": { "assignedTo": "hardware-specialist", "estimatedTime": 30 }
+              "output": { "assignedTo": "hardware-specialist", "estimatedTime": 30, "confidence": 0.92 }
+            },
+            {
+              "name": "Standard Software Request",
+              "input": { "ticketId": "TKT-456", "category": "software", "priority": "medium" },
+              "output": { "assignedTo": "software-team", "estimatedTime": 60, "confidence": 0.88 }
             }
           ]
         }
@@ -130,9 +139,11 @@ const buildUserMessage = (input: DefineSkillsInput): string => {
 2. Each skill should map to a key responsibility
 3. Use kebab-case for skillId (e.g., "analyze-trend")
 4. Keep descriptions under 200 characters
-5. Define clear input/output schemas with descriptions
-6. Include 1-2 examples for complex skills
-7. Return ONLY the JSON object`;
+5. Include 3-5 relevant tags per skill for discoverability (lowercase, hyphenated)
+6. Define clear input/output schemas with descriptions
+7. Include 2 examples per skill with descriptive names
+8. Examples must have: name, input object, output object
+9. Return ONLY the JSON object`;
 
   return message;
 };

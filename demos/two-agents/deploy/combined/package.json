@@ -1,0 +1,9 @@
+{
+  "name": "flowgrid-specialist",
+  "version": "2.0.0",
+  "main": "specialist/index.js",
+  "dependencies": {
+    "@azure/functions": "^4.5.0",
+    "@azure/service-bus": "^7.9.5"
+  }
+}

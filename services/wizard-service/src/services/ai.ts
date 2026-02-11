@@ -49,6 +49,59 @@ export function getCurrentModels(): AIModelVersion[] {
 }
 
 // ============================================================================
+// Generic AI Completion
+// ============================================================================
+
+export interface CompletionOptions {
+  systemPrompt: string;
+  userPrompt: string;
+  maxTokens?: number;
+}
+
+export interface CompletionResult {
+  content: string;
+  model: string;
+  usage?: { inputTokens: number; outputTokens: number };
+}
+
+/**
+ * Generic completion using Claude (primary AI provider)
+ */
+export async function complete(options: CompletionOptions): Promise<CompletionResult> {
+  if (!isAnthropicConfigured()) {
+    throw new Error('Anthropic API key not configured');
+  }
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: options.maxTokens || 4096,
+    system: options.systemPrompt,
+    messages: [{ role: 'user', content: options.userPrompt }],
+  });
+
+  const content = response.content[0].type === 'text' ? response.content[0].text : '';
+
+  return {
+    content,
+    model: 'claude-sonnet-4-20250514',
+    usage: {
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+    },
+  };
+}
+
+// Convenience object for dynamic imports
+export const aiService = {
+  complete,
+  analyzeImageWithVision,
+  designAgentsFromCapabilities,
+  analyzeTextDescription,
+  generateProcessFlow,
+  suggestInteractions,
+};
+
+// ============================================================================
 // Image Analysis (GPT-4 Vision)
 // ============================================================================
 

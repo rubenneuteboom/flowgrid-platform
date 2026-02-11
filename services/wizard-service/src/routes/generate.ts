@@ -318,4 +318,113 @@ router.post('/generate-bpmn', async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================================
+// POST /api/wizard/generate-code
+// Generate Azure Functions code for an agent
+// ============================================================================
+
+router.post('/generate-code', async (req: Request, res: Response) => {
+  try {
+    const { agentId, agent } = req.body;
+
+    if (!agent) {
+      return res.status(400).json({ error: 'agent object is required' });
+    }
+
+    console.log(`[${SERVICE_NAME}] Generating code for: ${agent.name}`);
+
+    const config = agent.config || {};
+    const capabilities = (agent.capabilities || []).map((c: any) => c.capability_name || c.name || c);
+    const integrations = (agent.integrations || []).map((i: any) => i.integration_name || i.integration_type);
+
+    const systemPrompt = `You are an expert Azure Functions and IT4IT architect. Generate production-ready TypeScript code for Azure Functions agents.
+
+Include:
+- All necessary imports
+- TypeScript interfaces and types
+- Azure Functions v4 programming model
+- Service Bus message handling
+- Proper error handling and logging
+- Application Insights integration
+
+Output ONLY the code, no explanations or markdown.`;
+
+    const userPrompt = `Generate a complete Azure Functions (Node.js/TypeScript) implementation for this AI agent.
+
+## Agent Specification
+- **Name:** ${agent.name}
+- **Purpose:** ${config.detailedPurpose || agent.description || 'Not specified'}
+- **Value Stream:** ${config.valueStream || 'Not specified'}
+- **Pattern:** ${config.pattern || 'Specialist'}
+- **Decision Authority:** ${config.decisionAuthority || 'propose-and-execute'}
+- **Autonomy Level:** ${config.autonomyLevel || 'supervised'}
+
+## Business Context
+- **Business Value:** ${config.businessValue || 'Not specified'}
+- **Success Criteria:** ${config.successCriteria || 'Not specified'}
+- **KPIs:** ${(config.kpis || []).join(', ') || 'Not specified'}
+
+## Capabilities
+${capabilities.length > 0 ? capabilities.map((c: string) => `- ${c}`).join('\n') : '- None specified'}
+
+## Interactions
+- **Pattern:** ${config.interactionPattern || 'request-response'}
+- **Triggers:** ${(config.triggers || []).join(', ') || 'Message-triggered'}
+- **Outputs:** ${(config.outputs || []).join(', ') || 'Agent messages'}
+- **Escalation:** ${config.escalationPath || 'To human operator'}
+
+## Integrations
+${integrations.length > 0 ? integrations.map((i: string) => `- ${i}`).join('\n') : '- None configured'}
+
+## Requirements
+1. Use Azure Functions v4 programming model (Node.js 18+, TypeScript)
+2. Use Azure Service Bus for agent-to-agent messaging
+3. Include proper error handling and structured logging
+4. Implement the ${config.pattern || 'Specialist'} agent pattern
+5. Include integration stubs for configured systems
+6. Add Azure OpenAI integration for AI reasoning
+7. Include TypeScript interfaces for all message types
+8. Add health check endpoint
+
+Generate a single, complete index.ts file that can be deployed as an Azure Function App.`;
+
+    // Use AI service to generate code
+    const aiService = (await import('../services/ai')).aiService;
+    const result = await aiService.complete({
+      systemPrompt,
+      userPrompt,
+      maxTokens: 8000,
+    });
+
+    if (!result.content) {
+      return res.status(500).json({ error: 'Failed to generate code' });
+    }
+
+    // Clean up the response (remove markdown code blocks if present)
+    let code = result.content;
+    if (code.startsWith('```typescript')) {
+      code = code.slice(13);
+    } else if (code.startsWith('```ts')) {
+      code = code.slice(5);
+    } else if (code.startsWith('```')) {
+      code = code.slice(3);
+    }
+    if (code.endsWith('```')) {
+      code = code.slice(0, -3);
+    }
+    code = code.trim();
+
+    res.json({
+      success: true,
+      code,
+      agent: agent.name,
+      generatedAt: new Date().toISOString(),
+    });
+
+  } catch (error: any) {
+    console.error(`[${SERVICE_NAME}] Generate code error:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

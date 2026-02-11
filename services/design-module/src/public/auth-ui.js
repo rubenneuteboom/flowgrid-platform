@@ -4,8 +4,9 @@
   const COOKIE_KEYS_TO_CLEAR = ['accessToken', 'flowgrid_access_token', 'refreshToken', 'session', 'sessionId'];
 
   function getAuthToken() {
+    // Check localStorage first, then sessionStorage (Safari timing fallback)
     for (const key of ACCESS_KEYS) {
-      const value = localStorage.getItem(key);
+      const value = localStorage.getItem(key) || sessionStorage.getItem(key);
       if (value) return value;
     }
     return null;
@@ -35,9 +36,12 @@
         credentials: 'include',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-    } catch (_) {}
+    } catch (_) {
+      // Best effort; clear local auth state regardless.
+    }
 
     clearAuthState();
+
     const redirectTo = options.redirectTo || '/login.html';
     window.location.href = `${redirectTo}?signedOut=true`;
   }
@@ -54,20 +58,34 @@
     button.id = 'flowgrid-signout-btn';
     button.type = 'button';
     button.textContent = options.buttonText || 'Sign out';
+    button.setAttribute('aria-label', 'Sign out');
+
     button.style.cssText = [
-      'position: fixed','top: 16px','right: 16px','z-index: 2000','padding: 0.5rem 0.9rem',
-      'border-radius: 8px','border: 1px solid rgba(96,165,250,0.55)','background: rgba(30,41,59,0.95)',
-      'color: #e2e8f0','font-size: 0.85rem','font-weight: 600','cursor: pointer',
-      'box-shadow: 0 4px 16px rgba(0,0,0,0.3)','backdrop-filter: blur(2px)'
+      'position: fixed',
+      'top: 16px',
+      'right: 16px',
+      'z-index: 2000',
+      'padding: 0.5rem 0.9rem',
+      'border-radius: 8px',
+      'border: 1px solid rgba(93, 213, 192, 0.45)',
+      'background: rgba(21, 43, 43, 0.95)',
+      'color: #e8f5f3',
+      'font-size: 0.85rem',
+      'font-weight: 600',
+      'cursor: pointer',
+      'box-shadow: 0 4px 16px rgba(0,0,0,0.25)',
+      'backdrop-filter: blur(2px)',
     ].join(';');
+
     button.addEventListener('mouseover', () => {
-      button.style.borderColor = '#60a5fa';
-      button.style.color = '#60a5fa';
+      button.style.borderColor = '#5dd5c0';
+      button.style.color = '#5dd5c0';
     });
     button.addEventListener('mouseout', () => {
-      button.style.borderColor = 'rgba(96,165,250,0.55)';
-      button.style.color = '#e2e8f0';
+      button.style.borderColor = 'rgba(93, 213, 192, 0.45)';
+      button.style.color = '#e8f5f3';
     });
+
     button.addEventListener('click', () => signOut(options));
     document.body.appendChild(button);
   }
@@ -86,5 +104,11 @@
     }
   }
 
-  window.FlowgridAuthUI = { initPage, signOut, isAuthenticated, getAuthToken, clearAuthState };
+  window.FlowgridAuthUI = {
+    initPage,
+    signOut,
+    isAuthenticated,
+    getAuthToken,
+    clearAuthState,
+  };
 })();

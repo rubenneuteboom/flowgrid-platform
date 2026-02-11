@@ -83,10 +83,28 @@ export const ProposeAgentsOutputSchema = z.object({
     id: z.string(),
     name: z.string().max(80),
     purpose: z.string().max(250),
-    responsibilities: z.array(z.string()).min(2).max(6),
-    ownedElements: z.array(z.string()),
+    // Description fields
+    shortDescription: z.string().max(100).optional(),
+    detailedPurpose: z.string().max(500).optional(),
+    businessValue: z.string().max(300).optional(),
+    keyResponsibilities: z.array(z.string()).max(6).optional(),
+    successCriteria: z.string().max(300).optional(),
+    // Design fields
     suggestedPattern: AgenticPattern,
     suggestedAutonomy: AutonomyLevel,
+    decisionAuthority: z.enum(['propose-only', 'propose-and-execute', 'autonomous-low-risk', 'fully-autonomous']).optional(),
+    valueStream: z.string().max(100).optional(),
+    capabilityGroup: z.string().max(100).optional(),
+    objectives: z.array(z.string()).max(5).optional(),
+    kpis: z.array(z.string()).max(5).optional(),
+    // Interaction fields
+    interactionPattern: z.enum(['request-response', 'event-driven', 'publish-subscribe', 'orchestrated', 'collaborative']).optional(),
+    triggers: z.array(z.string()).max(5).optional(),
+    outputs: z.array(z.string()).max(5).optional(),
+    escalationPath: z.string().max(150).optional(),
+    // Original fields
+    responsibilities: z.array(z.string()).min(2).max(6),
+    ownedElements: z.array(z.string()),
     boundaries: z.object({
       internal: z.array(z.string()),
       delegates: z.array(z.string()),
@@ -115,7 +133,7 @@ export const AssignPatternsOutputSchema = z.object({
 });
 export type AssignPatternsOutput = z.infer<typeof AssignPatternsOutputSchema>;
 
-/** 3c: Define A2A skills for each agent */
+/** 3c: Define A2A skills for each agent (A2A Protocol v0.2 compliant) */
 export const DefineSkillsOutputSchema = z.object({
   agentSkills: z.array(z.object({
     agentId: z.string(),
@@ -123,6 +141,7 @@ export const DefineSkillsOutputSchema = z.object({
       skillId: z.string(),
       name: z.string().max(60),
       description: z.string().max(200),
+      tags: z.array(z.string()).min(2).max(6), // Required for A2A compliance
       inputSchema: z.object({
         type: z.literal('object'),
         properties: z.record(z.object({
@@ -139,9 +158,10 @@ export const DefineSkillsOutputSchema = z.object({
         })),
       }),
       examples: z.array(z.object({
+        name: z.string(), // Required for A2A compliance
         input: z.record(z.unknown()),
         output: z.record(z.unknown()),
-      })).max(2).optional(),
+      })).min(1).max(3), // At least 1 example required
     })),
   })),
 });

@@ -352,36 +352,51 @@ app.get('/api/agents/:id/a2a-card', async (req: Request, res: Response) => {
       [id]
     );
 
-    // Build A2A-compliant Agent Card
+    // Build A2A Protocol v0.2 compliant Agent Card
     const agentCard = {
+      // Required fields
       name: agent.name,
-      description: agent.description || config.purpose || `${agent.name} agent`,
       url: `${baseUrl}/${agent.id}`,
       version: `${agent.version || 1}.0.0`,
+      
+      // Recommended fields
+      description: config.shortDescription || agent.description || config.purpose || `${agent.name} agent`,
+      protocolVersion: "0.2",
+      documentationUrl: config.documentationUrl || `${baseUrl}/docs/${agent.id}`,
+      
       provider: {
-        organization: "FlowGrid Platform",
-        url: "https://flowgrid.io"
+        organization: config.provider?.organization || "FlowGrid Platform",
+        url: config.provider?.url || "https://flowgrid.io"
       },
+      
       capabilities: {
         streaming: config.a2aCapabilities?.streaming || false,
         pushNotifications: config.a2aCapabilities?.pushNotifications || false,
         stateTransitionHistory: true
       },
+      
       authentication: {
-        schemes: ["bearer"]
+        schemes: config.authentication?.schemes || ["bearer"]
       },
-      defaultInputModes: ["text"],
-      defaultOutputModes: ["text"],
+      
+      defaultInputModes: config.defaultInputModes || ["text"],
+      defaultOutputModes: config.defaultOutputModes || ["text"],
+      
+      // Skills with full compliance (tags, examples)
       skills: buildSkillsFromAgent(agent, capsResult.rows),
-      // FlowGrid extensions (not part of A2A spec but useful)
+      
+      // FlowGrid extensions (prefixed with underscore per spec recommendation)
       _flowgrid: {
         id: agent.id,
         elementType: agent.element_type || 'Agent',
         pattern: config.pattern || agent.type,
+        valueStream: config.valueStream,
         autonomyLevel: config.autonomyLevel || 'supervised',
+        decisionAuthority: config.decisionAuthority || 'propose-and-execute',
         riskAppetite: config.riskAppetite || 'medium',
         triggers: config.triggers || [],
         outputs: config.outputs || [],
+        escalationPath: config.escalationPath,
         relationships: relResult.rows.map((r: any) => ({
           messageType: r.message_type,
           config: r.config
@@ -403,58 +418,58 @@ app.get('/api/agents/:id/a2a-card', async (req: Request, res: Response) => {
 function buildSkillsFromAgent(agent: any, capabilities: any[]): any[] {
   const config = agent.config || {};
   const skills: any[] = [];
+  const agentSlug = agent.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-  // If agent has explicit a2aSkills in config, use those
+  // If agent has explicit a2aSkills in config, use those (fully compliant)
   if (config.a2aSkills && Array.isArray(config.a2aSkills)) {
     return config.a2aSkills.map((skill: any) => ({
-      id: skill.skillId || skill.id,
+      id: skill.skillId || skill.id || `${agentSlug}-${skill.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
       name: skill.name,
       description: skill.description,
-      inputModes: ["text"],
-      outputModes: ["text"],
-      inputSchema: skill.inputSchema || { type: "object", properties: {} },
-      outputSchema: skill.outputSchema || { type: "object", properties: {} }
+      tags: skill.tags || [config.pattern || 'agent', config.valueStream || 'general'].filter(Boolean),
+      examples: skill.examples || [],
+      inputModes: skill.inputModes || ["text"],
+      outputModes: skill.outputModes || ["text"],
     }));
   }
 
-  // Otherwise, generate skills from capabilities and pattern
-  const pattern = config.pattern || agent.type || 'specialist';
-  
+  // Generate pattern-based tags
+  const baseTags = [
+    config.pattern?.toLowerCase() || 'agent',
+    config.valueStream?.toLowerCase().replace(/\s+/g, '-'),
+    config.capabilityGroup?.toLowerCase().replace(/\s+/g, '-'),
+  ].filter(Boolean);
+
   // Create a primary skill based on agent purpose
+  const primarySkillId = `${agentSlug}-primary`;
   skills.push({
-    id: `${agent.name.toLowerCase().replace(/\s+/g, '-')}-primary`,
+    id: primarySkillId,
     name: `${agent.name} - Primary Action`,
-    description: agent.description || config.purpose || `Primary capability of ${agent.name}`,
+    description: config.detailedPurpose || agent.description || config.purpose || `Primary capability of ${agent.name}`,
+    tags: [...baseTags, 'primary'],
+    examples: config.skillExamples?.[primarySkillId] || [
+      {
+        name: "Basic Request",
+        input: { request: `Perform ${agent.name} primary function`, context: {} },
+        output: { result: "Task completed successfully", confidence: 0.95 }
+      }
+    ],
     inputModes: ["text"],
     outputModes: ["text"],
-    inputSchema: {
-      type: "object",
-      properties: {
-        request: { type: "string", description: "The request or query" },
-        context: { type: "object", description: "Additional context" }
-      },
-      required: ["request"]
-    },
-    outputSchema: {
-      type: "object", 
-      properties: {
-        result: { type: "string", description: "The result or response" },
-        confidence: { type: "number", description: "Confidence score 0-1" },
-        metadata: { type: "object", description: "Additional metadata" }
-      }
-    }
   });
 
   // Add skills from capabilities
   capabilities.forEach((cap: any) => {
+    const capSlug = cap.capability_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const skillId = `${agentSlug}-${capSlug}`;
     skills.push({
-      id: `cap-${cap.capability_name.toLowerCase().replace(/\s+/g, '-')}`,
+      id: skillId,
       name: cap.capability_name,
       description: cap.config?.description || `${cap.capability_name} capability`,
-      inputModes: ["text"],
-      outputModes: ["text"],
-      inputSchema: cap.config?.inputSchema || { type: "object", properties: {} },
-      outputSchema: cap.config?.outputSchema || { type: "object", properties: {} }
+      tags: [...baseTags, cap.capability_type?.toLowerCase() || 'capability', capSlug],
+      examples: cap.config?.examples || config.skillExamples?.[skillId] || [],
+      inputModes: cap.config?.inputModes || ["text"],
+      outputModes: cap.config?.outputModes || ["text"],
     });
   });
 
@@ -643,6 +658,192 @@ app.delete('/api/agents/:id', async (req: Request, res: Response) => {
       error: 'Internal Server Error',
       message: 'Failed to delete agent',
     });
+  }
+});
+
+// ============================================================================
+// Integration Catalog Endpoints
+// ============================================================================
+
+// GET /api/integrations/catalog - List all available integrations
+app.get('/api/integrations/catalog', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query('SELECT * FROM integration_catalog ORDER BY type, name');
+    res.json(result.rows);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Get catalog error:`, error);
+    res.status(500).json({ error: 'Failed to get integration catalog' });
+  }
+});
+
+// GET /api/agents/:id/integrations/suggest - Suggest integrations based on agent
+app.get('/api/agents/:id/integrations/suggest', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    
+    const agent = await pool.query(
+      'SELECT * FROM agents WHERE id = $1 AND tenant_id = $2',
+      [id, tenantId]
+    );
+    
+    if (agent.rows.length === 0) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+    
+    const a = agent.rows[0];
+    const text = `${a.name} ${a.description || ''} ${a.type || ''}`.toLowerCase();
+    
+    const rules = [
+      { keywords: ['incident', 'problem', 'change', 'ticket', 'itsm', 'service'], types: ['ITSM', 'Communication'] },
+      { keywords: ['build', 'deploy', 'release', 'pipeline', 'ci', 'cd'], types: ['DevOps'] },
+      { keywords: ['monitor', 'alert', 'metric', 'log', 'observ'], types: ['Monitoring'] },
+      { keywords: ['knowledge', 'document', 'content', 'curator'], types: ['Knowledge'] },
+      { keywords: ['security', 'compliance', 'audit', 'legal'], types: ['Security'] },
+      { keywords: ['infrastructure', 'cloud', 'provision'], types: ['Cloud'] },
+      { keywords: ['marketing', 'sales', 'product'], types: ['Communication'] },
+    ];
+    
+    const suggestedTypes = new Set<string>(['AI']); // Always suggest AI
+    for (const rule of rules) {
+      if (rule.keywords.some(kw => text.includes(kw))) {
+        rule.types.forEach(t => suggestedTypes.add(t));
+      }
+    }
+    
+    const catalog = await pool.query(
+      'SELECT * FROM integration_catalog WHERE type = ANY($1) ORDER BY type, name',
+      [Array.from(suggestedTypes)]
+    );
+    
+    // Get already added integrations
+    const existing = await pool.query(
+      'SELECT integration_name FROM agent_integrations WHERE agent_id = $1',
+      [id]
+    );
+    const existingNames = existing.rows.map(r => r.integration_name);
+    
+    res.json({
+      suggestions: catalog.rows,
+      existing: existingNames
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Suggest integrations error:`, error);
+    res.status(500).json({ error: 'Failed to suggest integrations' });
+  }
+});
+
+// POST /api/agents/:id/integrations - Add integration to agent
+app.post('/api/agents/:id/integrations', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    const { integration_name, config_endpoint, config_auth_type, config_api_key, config, is_configured } = req.body;
+    
+    // Verify agent belongs to tenant
+    const agent = await pool.query(
+      'SELECT id FROM agents WHERE id = $1 AND tenant_id = $2',
+      [id, tenantId]
+    );
+    if (agent.rows.length === 0) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+    
+    // Get integration type from catalog
+    const catalog = await pool.query(
+      'SELECT type, icon FROM integration_catalog WHERE name = $1',
+      [integration_name]
+    );
+    
+    const result = await pool.query(`
+      INSERT INTO agent_integrations (
+        agent_id, integration_name, integration_type, 
+        config_endpoint, config_auth_type, config_api_key, 
+        config, is_configured
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [
+      id, 
+      integration_name, 
+      catalog.rows[0]?.type || 'Custom',
+      config_endpoint || null,
+      config_auth_type || 'API Key',
+      config_api_key || null,
+      JSON.stringify(config || {}),
+      is_configured || false
+    ]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Add integration error:`, error);
+    res.status(500).json({ error: 'Failed to add integration' });
+  }
+});
+
+// PUT /api/agents/:id/integrations/:integrationId - Update integration config
+app.put('/api/agents/:id/integrations/:integrationId', async (req: Request, res: Response) => {
+  try {
+    const { id, integrationId } = req.params;
+    const tenantId = req.tenantId;
+    const { config_endpoint, config_auth_type, config_api_key, config, is_configured } = req.body;
+    
+    // Verify agent belongs to tenant
+    const agent = await pool.query(
+      'SELECT id FROM agents WHERE id = $1 AND tenant_id = $2',
+      [id, tenantId]
+    );
+    if (agent.rows.length === 0) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+    
+    const result = await pool.query(`
+      UPDATE agent_integrations 
+      SET config_endpoint = COALESCE($1, config_endpoint),
+          config_auth_type = COALESCE($2, config_auth_type),
+          config_api_key = COALESCE($3, config_api_key),
+          config = COALESCE($4, config),
+          is_configured = COALESCE($5, is_configured),
+          updated_at = NOW()
+      WHERE id = $6 AND agent_id = $7
+      RETURNING *
+    `, [config_endpoint, config_auth_type, config_api_key, JSON.stringify(config || {}), is_configured, integrationId, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Integration not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Update integration error:`, error);
+    res.status(500).json({ error: 'Failed to update integration' });
+  }
+});
+
+// DELETE /api/agents/:id/integrations/:integrationId - Remove integration
+app.delete('/api/agents/:id/integrations/:integrationId', async (req: Request, res: Response) => {
+  try {
+    const { id, integrationId } = req.params;
+    const tenantId = req.tenantId;
+    
+    // Verify agent belongs to tenant
+    const agent = await pool.query(
+      'SELECT id FROM agents WHERE id = $1 AND tenant_id = $2',
+      [id, tenantId]
+    );
+    if (agent.rows.length === 0) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+    
+    await pool.query(
+      'DELETE FROM agent_integrations WHERE id = $1 AND agent_id = $2',
+      [integrationId, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Remove integration error:`, error);
+    res.status(500).json({ error: 'Failed to remove integration' });
   }
 });
 
