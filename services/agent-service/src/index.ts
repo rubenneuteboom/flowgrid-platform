@@ -571,8 +571,9 @@ app.delete('/api/agents/reset', async (req: Request, res: Response) => {
       [tenantId]
     );
 
+    // agent_interactions doesn't have tenant_id, delete via agent join
     const relationships = await client.query(
-      'DELETE FROM agent_interactions WHERE tenant_id = $1 RETURNING id',
+      'DELETE FROM agent_interactions WHERE source_agent_id IN (SELECT id FROM agents WHERE tenant_id = $1) RETURNING id',
       [tenantId]
     );
 
