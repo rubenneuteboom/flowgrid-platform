@@ -8,8 +8,8 @@ FROM nginx:1.25-alpine
 # Install curl for health checks
 RUN apk add --no-cache curl
 
-# Copy configuration (azure.conf is self-contained, no routes.conf include)
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy Azure-specific configuration
+COPY nginx-azure.conf /etc/nginx/nginx.conf
 COPY conf.d/azure.conf /etc/nginx/conf.d/default.conf
 
 # Create public directory
