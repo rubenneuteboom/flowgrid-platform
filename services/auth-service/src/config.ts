@@ -27,12 +27,12 @@ export const config = {
   inviteTokenExpiresHours: 72, // 3 days
   passwordResetExpiresMinutes: 60, // 1 hour
   
-  // Rate limiting
+  // Rate limiting (relaxed for staging/dev)
   rateLimits: {
-    login: { windowMs: 15 * 60 * 1000, max: 5 }, // 5 per 15 min
-    password: { windowMs: 15 * 60 * 1000, max: 3 }, // 3 per 15 min
-    mfa: { windowMs: 15 * 60 * 1000, max: 10 }, // 10 per 15 min
-    general: { windowMs: 15 * 60 * 1000, max: 100 }, // 100 per 15 min
+    login: { windowMs: 5 * 60 * 1000, max: 20 }, // 20 per 5 min
+    password: { windowMs: 15 * 60 * 1000, max: 10 }, // 10 per 15 min
+    mfa: { windowMs: 15 * 60 * 1000, max: 20 }, // 20 per 15 min
+    general: { windowMs: 15 * 60 * 1000, max: 200 }, // 200 per 15 min
   },
   
   // Email (Resend)
