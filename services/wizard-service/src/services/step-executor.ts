@@ -5,7 +5,7 @@
  * Each step can be executed independently with proper state management.
  */
 
-import { executePrompt } from '../prompts';
+import { executePrompt, GenerateBPMNInput, GenerateBPMNOutput } from '../prompts';
 import {
   ExtractCapabilitiesOutput,
   ClassifyElementsOutput,
@@ -15,7 +15,6 @@ import {
   RelationshipsOutput,
   IntegrationsOutput,
 } from '../prompts/schemas';
-import Anthropic from '@anthropic-ai/sdk';
 
 // =============================================================================
 // Types
@@ -288,6 +287,7 @@ export async function executeStep4(input: Step4Input): Promise<StepResult<Step4O
 // =============================================================================
 
 export interface Step5Input {
+  processId: string;  // Element ID for tracking
   processName: string;
   processDescription: string;
   involvedAgents: string[];
@@ -313,78 +313,32 @@ export async function executeStep5(input: Step5Input): Promise<StepResult<BPMNOu
   console.log('[step-executor] Step 5: Generating BPMN for', input.processName);
 
   try {
-    // Use Anthropic directly for BPMN generation with custom prompt
-    const anthropic = new Anthropic();
-    
-    const systemPrompt = `You are a Business Process Consultant, specialized in creating BPMN flows and process documentation. You have deep expertise in:
+    const result = await executePrompt<GenerateBPMNInput, GenerateBPMNOutput>(
+      'step4.generate-bpmn',
+      {
+        processName: input.processName,
+        processDescription: input.processDescription,
+        involvedAgents: input.involvedAgents,
+        capabilities: input.capabilities,
+        triggers: input.triggers,
+        outputs: input.outputs,
+      }
+    );
 
-- BPMN 2.0 specification and best practices
-- Process modeling patterns (sequential, parallel, conditional)
-- Error handling and compensation flows
-- Integration with agent-based systems
-
-Generate valid BPMN 2.0 XML that can be rendered by bpmn-js. Include the bpmndi:BPMNDiagram section with proper coordinates.
-
-Return a JSON object with: processId, processName, bpmnXml, summary (taskCount, gatewayCount, laneCount, estimatedDuration).`;
-
-    const userPrompt = `Create a BPMN 2.0 process flow for:
-
-**Process Name:** ${input.processName}
-**Description:** ${input.processDescription}
-
-**Involved Agents:** 
-${input.involvedAgents.map(a => `- ${a}`).join('\n')}
-
-**Capabilities:**
-${input.capabilities.map(c => `- ${c}`).join('\n')}
-
-${input.triggers?.length ? `**Triggers:**\n${input.triggers.map(t => `- ${t}`).join('\n')}\n` : ''}
-${input.outputs?.length ? `**Outputs:**\n${input.outputs.map(o => `- ${o}`).join('\n')}\n` : ''}
-
-Requirements:
-1. Valid BPMN 2.0 XML with namespaces
-2. Include start and end events
-3. Use service tasks for agent interactions
-4. Add gateways for decision points
-5. Include BPMNDiagram with coordinates (horizontal layout, 100px spacing)
-
-Return ONLY the JSON object.`;
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 8000,
-      temperature: 0.3,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
-
-    const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!result.success || !result.data) {
       return {
         success: false,
-        error: 'Unexpected response type from AI',
+        error: result.error || 'Failed to generate BPMN',
         executionTimeMs: Date.now() - startTime,
       };
     }
-
-    // Parse JSON from response
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return {
-        success: false,
-        error: 'Failed to parse BPMN response',
-        executionTimeMs: Date.now() - startTime,
-      };
-    }
-
-    const data = JSON.parse(jsonMatch[0]) as BPMNOutput;
 
     return {
       success: true,
-      data,
+      data: result.data,
       usage: {
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
+        inputTokens: result.usage?.inputTokens || 0,
+        outputTokens: result.usage?.outputTokens || 0,
       },
       executionTimeMs: Date.now() - startTime,
     };

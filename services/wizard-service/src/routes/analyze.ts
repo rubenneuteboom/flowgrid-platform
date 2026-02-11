@@ -563,14 +563,43 @@ import {
 import { pool } from '../services/database';
 
 /**
- * Helper: Get session step data
+ * Helper: Get session step data with current step
  */
+interface SessionState {
+  stepData: WizardStepData | null;
+  currentStep: number;
+  status: string;
+}
+
 async function getSessionStepData(sessionId: string, tenantId: string): Promise<WizardStepData | null> {
   const result = await pool.query(
     'SELECT step_data FROM wizard_sessions WHERE id = $1 AND tenant_id = $2',
     [sessionId, tenantId]
   );
   return result.rows[0]?.step_data || null;
+}
+
+async function getSessionState(sessionId: string, tenantId: string): Promise<SessionState | null> {
+  const result = await pool.query(
+    'SELECT step_data, current_step, status FROM wizard_sessions WHERE id = $1 AND tenant_id = $2',
+    [sessionId, tenantId]
+  );
+  if (!result.rows[0]) return null;
+  return {
+    stepData: result.rows[0].step_data || null,
+    currentStep: result.rows[0].current_step || 0,
+    status: result.rows[0].status || 'created',
+  };
+}
+
+/**
+ * Helper: Validate step order
+ */
+function validateStepOrder(currentStep: number, requiredStep: number, stepName: string): string | null {
+  if (currentStep < requiredStep - 1) {
+    return `Step ${requiredStep - 1} must be completed before ${stepName}`;
+  }
+  return null;
 }
 
 /**
@@ -643,8 +672,17 @@ router.post('/sessions/:id/step2', async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Get step 1 data
-  const stepData = await getSessionStepData(sessionId, tenantId);
+  // Validate step order and get data
+  const session = await getSessionState(sessionId, tenantId);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  const orderError = validateStepOrder(session.currentStep, 2, 'step2');
+  if (orderError) {
+    return res.status(400).json({ error: orderError });
+  }
+
+  const stepData = session.stepData;
   if (!stepData?.step1?.rawCapabilities) {
     return res.status(400).json({ error: 'Step 1 must be completed first' });
   }
@@ -686,8 +724,17 @@ router.post('/sessions/:id/step3', async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Get step 2 data
-  const stepData = await getSessionStepData(sessionId, tenantId);
+  // Validate step order and get data
+  const session = await getSessionState(sessionId, tenantId);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  const orderError = validateStepOrder(session.currentStep, 3, 'step3');
+  if (orderError) {
+    return res.status(400).json({ error: orderError });
+  }
+
+  const stepData = session.stepData;
   if (!stepData?.step2?.classifiedElements) {
     return res.status(400).json({ error: 'Step 2 must be completed first' });
   }
@@ -728,8 +775,17 @@ router.post('/sessions/:id/step4', async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Get step 3 data
-  const stepData = await getSessionStepData(sessionId, tenantId);
+  // Validate step order and get data
+  const session = await getSessionState(sessionId, tenantId);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  const orderError = validateStepOrder(session.currentStep, 4, 'step4');
+  if (orderError) {
+    return res.status(400).json({ error: orderError });
+  }
+
+  const stepData = session.stepData;
   if (!stepData?.step3?.proposedAgents) {
     return res.status(400).json({ error: 'Step 3 must be completed first' });
   }
@@ -760,19 +816,35 @@ router.post('/sessions/:id/step4', async (req: Request, res: Response) => {
 // ----------------------------------------------------------------------------
 router.post('/sessions/:id/step5', async (req: Request, res: Response) => {
   const { id: sessionId } = req.params;
-  const { processName, processDescription, involvedAgents, capabilities, triggers, outputs } = req.body;
+  const { processId, processName, processDescription, involvedAgents, capabilities, triggers, outputs } = req.body;
   const tenantId = req.tenantId;
 
   if (!tenantId) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  if (!processName || !processDescription) {
-    return res.status(400).json({ error: 'Process name and description required' });
+  if (!processId || !processName || !processDescription) {
+    return res.status(400).json({ error: 'Process ID, name and description required' });
   }
 
-  console.log(`[${SERVICE_NAME}] Step 5: Generating BPMN for "${processName}" in session ${sessionId}`);
+  // Validate step order and get data
+  const session = await getSessionState(sessionId, tenantId);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  const orderError = validateStepOrder(session.currentStep, 5, 'step5');
+  if (orderError) {
+    return res.status(400).json({ error: orderError });
+  }
+
+  const stepData = session.stepData;
+  if (!stepData?.step4?.patterns) {
+    return res.status(400).json({ error: 'Step 4 must be completed first' });
+  }
+
+  console.log(`[${SERVICE_NAME}] Step 5: Generating BPMN for "${processName}" (${processId}) in session ${sessionId}`);
 
   const result = await executeStep5({
+    processId,
     processName,
     processDescription,
     involvedAgents: involvedAgents || [],
@@ -785,10 +857,11 @@ router.post('/sessions/:id/step5', async (req: Request, res: Response) => {
     return res.status(500).json({ error: result.error });
   }
 
-  // Append to session's process flows
-  const stepData = await getSessionStepData(sessionId, tenantId);
+  // Append to session's process flows (keyed by element ID)
   const existingFlows = stepData?.step5?.processFlows || [];
-  const newFlows = [...existingFlows, { elementId: processName, bpmnXml: result.data!.bpmnXml }];
+  // Replace existing flow for same element, or append new
+  const filteredFlows = existingFlows.filter(f => f.elementId !== processId);
+  const newFlows = [...filteredFlows, { elementId: processId, bpmnXml: result.data!.bpmnXml }];
 
   await updateSessionStepData(sessionId, tenantId, 'step5', { processFlows: newFlows }, 5);
 
@@ -812,8 +885,18 @@ router.post('/sessions/:id/step6', async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Get required step data
-  const stepData = await getSessionStepData(sessionId, tenantId);
+  // Validate step order and get data
+  const session = await getSessionState(sessionId, tenantId);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  // Step 6 requires at least step 4 to be complete (step 5 is optional for BPMN)
+  const orderError = validateStepOrder(session.currentStep, 5, 'step6');
+  if (orderError && session.currentStep < 4) {
+    return res.status(400).json({ error: 'Step 4 must be completed before step 6' });
+  }
+
+  const stepData = session.stepData;
   if (!stepData?.step3?.proposedAgents || !stepData?.step4?.patterns) {
     return res.status(400).json({ error: 'Steps 3 and 4 must be completed first' });
   }
@@ -865,11 +948,19 @@ router.post('/sessions/:id/apply', async (req: Request, res: Response) => {
     await client.query('BEGIN');
 
     const agents = stepData.step3.proposedAgents.agents;
+    const classifiedElements = stepData.step2?.classifiedElements?.elements || [];
     const patterns = stepData.step4?.patterns?.agentPatterns || [];
     const skills = stepData.step4?.skills?.agentSkills || [];
     const relationships = stepData.step6?.relationships?.relationships || [];
     const integrations = stepData.step6?.integrations?.integrations || [];
     const processFlows = stepData.step5?.processFlows || [];
+
+    // Build element type lookup from step 2 classification
+    const elementTypeMap = new Map<string, string>();
+    for (const el of classifiedElements) {
+      elementTypeMap.set(el.id, el.elementType);
+      elementTypeMap.set(el.name, el.elementType); // Also map by name for fallback
+    }
 
     const agentIdMap = new Map<string, string>(); // Maps temp IDs to real UUIDs
 
@@ -877,7 +968,24 @@ router.post('/sessions/:id/apply', async (req: Request, res: Response) => {
     for (const agent of agents) {
       const pattern = patterns.find(p => p.agentId === agent.id);
       const agentSkillsEntry = skills.find(s => s.agentId === agent.id);
-      const bpmn = processFlows.find(p => p.elementId === agent.name)?.bpmnXml;
+      const bpmn = processFlows.find(p => p.elementId === agent.id)?.bpmnXml;
+
+      // Determine element type: from owned elements classification, or default to Agent
+      let elementType = 'Agent';
+      if (agent.ownedElements?.length) {
+        // Check if any owned element has a classified type
+        const ownedType = agent.ownedElements
+          .map(oe => elementTypeMap.get(oe))
+          .find(t => t);
+        if (ownedType) elementType = ownedType;
+      }
+      // Also check if the agent itself was classified
+      const directType = elementTypeMap.get(agent.id) || elementTypeMap.get(agent.name);
+      if (directType) elementType = directType;
+
+      // Normalize pattern to lowercase for consistency
+      const rawPattern = pattern?.pattern || agent.suggestedPattern || 'specialist';
+      const normalizedPattern = rawPattern.toLowerCase();
 
       const result = await client.query(
         `INSERT INTO agents (tenant_id, name, description, status, element_type, pattern, pattern_rationale, 
@@ -888,11 +996,11 @@ router.post('/sessions/:id/apply', async (req: Request, res: Response) => {
           tenantId,
           agent.name,
           agent.purpose, // Use 'purpose' from schema
-          'Agent', // Default element type
-          pattern?.pattern || agent.suggestedPattern || 'specialist',
+          elementType, // Use actual element type from classification
+          normalizedPattern, // Normalized to lowercase
           pattern?.patternRationale || '', // Use 'patternRationale' from schema
-          pattern?.autonomyLevel || agent.suggestedAutonomy || 'supervised',
-          pattern?.riskAppetite || 'medium',
+          (pattern?.autonomyLevel || agent.suggestedAutonomy || 'supervised').toLowerCase(),
+          (pattern?.riskAppetite || 'medium').toLowerCase(),
           pattern?.triggers || [],
           pattern?.outputs || [],
           bpmn || null,

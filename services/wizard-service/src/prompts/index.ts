@@ -262,6 +262,10 @@ import './step3/propose-agents';
 import './step3/assign-patterns';
 import './step3/define-skills';
 
+// Step 4: BPMN Generation
+import './step4/generate-bpmn';
+export { GenerateBPMNInput, GenerateBPMNOutput } from './step4/generate-bpmn';
+
 // Step 5: Relationships & Integrations
 import './step5/relationships';
 import './step5/integrations';
