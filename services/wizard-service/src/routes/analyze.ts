@@ -13,6 +13,7 @@ import {
   analyzeTextDescription,
   isOpenAIConfigured,
 } from '../services/ai';
+import { executeA2AChain, executeQuickAnalysis } from '../services/ai-chain';
 import { createWizardSession } from '../services/database';
 import { AnalyzeTextRequest, AnalyzeTextResponse, UploadImageResponse, AnalysisResult, ElementType, AgenticPattern } from '../types/wizard';
 
@@ -58,8 +59,12 @@ const uploadXml = multer({
 
 router.post('/analyze-text', async (req: Request, res: Response) => {
   try {
-    const { description, requirements } = req.body as AnalyzeTextRequest;
+    const { description, requirements, industryContext, knownSystems } = req.body as AnalyzeTextRequest & { 
+      industryContext?: string; 
+      knownSystems?: string[];
+    };
     const tid = req.tenantId;
+    const useA2A = req.query.a2a === 'true' || req.body.a2a === true;
 
     if (!description) {
       return res.status(400).json({ error: 'Description is required' });
@@ -68,10 +73,36 @@ router.post('/analyze-text', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
     }
 
-    console.log(`[${SERVICE_NAME}] Analyzing text description (${description.length} chars)`);
+    console.log(`[${SERVICE_NAME}] Analyzing text description (${description.length} chars, a2a=${useA2A})`);
 
-    // Call AI service
-    const analysis = await analyzeTextDescription(description, requirements);
+    let analysis;
+    let model;
+
+    if (useA2A) {
+      // New A2A-compliant prompt chain
+      const chainResult = await executeA2AChain({
+        rawContent: description,
+        customPrompt: requirements?.join('\n'),
+        sourceType: 'text',
+        industryContext,
+        knownSystems,
+      });
+
+      if (!chainResult.success || !chainResult.analysis) {
+        return res.status(500).json({
+          error: chainResult.error || 'A2A chain failed',
+          details: 'Failed to execute A2A prompt chain',
+        });
+      }
+
+      analysis = chainResult.analysis;
+      model = 'claude-sonnet-4-20250514 (A2A chain)';
+      console.log(`[${SERVICE_NAME}] A2A chain completed in ${chainResult.executionTimeMs}ms`);
+    } else {
+      // Legacy single-prompt analysis
+      analysis = await analyzeTextDescription(description, requirements);
+      model = 'claude-sonnet-4-20250514';
+    }
 
     // Create wizard session
     const sessionName = `Text Analysis ${new Date().toLocaleDateString()}`;
@@ -88,7 +119,7 @@ router.post('/analyze-text', async (req: Request, res: Response) => {
       sessionId,
       analysis,
       source: 'text',
-      model: 'claude-sonnet-4-20250514',
+      model,
     };
 
     console.log(`[${SERVICE_NAME}] Created session ${sessionId} with ${analysis.agents?.length || 0} agents`);

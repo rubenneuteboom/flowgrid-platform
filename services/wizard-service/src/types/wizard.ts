@@ -109,6 +109,25 @@ export interface ProposedAgent {
   processSteps?: string;
   decisionPoints?: string;
   errorHandling?: string;
+  // A2A extensions
+  a2aSkills?: A2ASkill[];
+  boundaries?: AgentBoundaries;
+}
+
+// A2A Skill definition
+export interface A2ASkill {
+  skillId: string;
+  name: string;
+  description: string;
+  inputSchema: object;
+  outputSchema: object;
+  examples?: Array<{ input: object; output: object }>;
+}
+
+// Agent boundaries (who they delegate to / escalate to)
+export interface AgentBoundaries {
+  delegates: string[];
+  escalates: string[];
 }
 
 export interface AgentRelationship {
@@ -128,6 +147,18 @@ export interface ProposedIntegration {
   system: string;
   type: 'API' | 'Webhook' | 'EventBus' | 'Database';
   direction: 'inbound' | 'outbound' | 'bidirectional';
+}
+
+// A2A-compliant extended integration (with dataFlows)
+export interface Integration extends ProposedIntegration {
+  dataFlows?: string[];
+}
+
+// A2A-compliant extended relationship (with messageSchema)
+export interface AgentRelationshipExtended extends AgentRelationship {
+  messageSchema?: object;
+  isAsync?: boolean;
+  priority?: 'low' | 'normal' | 'high';
 }
 
 // ============================================================================
