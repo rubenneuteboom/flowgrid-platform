@@ -1856,9 +1856,11 @@
             }
         }
         
-        function goToStep(step) {
+        async function goToStep(step) {
+            const previousStep = currentStep;
             currentStep = step;
             
+            // Update progress bar UI
             document.querySelectorAll('.step').forEach(s => {
                 const stepNum = parseInt(s.dataset.step);
                 const circle = s.querySelector('.step-circle');
@@ -1879,9 +1881,20 @@
             const stepEl = document.getElementById(`step${step}`);
             if (stepEl) stepEl.classList.remove('hidden');
             
-            if (step === 2 && analysisResult) {
+            // Per-step mode: Execute AI calls when moving forward
+            if (perStepMode && step > previousStep && sessionId) {
+                try {
+                    await executeStepIfNeeded(step);
+                } catch (error) {
+                    console.error(`Step ${step} execution failed:`, error);
+                    showError(`step${step}Error`, error.message);
+                }
+            }
+            
+            // Show results for the step
+            if (step === 2 && (analysisResult || stepData.step1)) {
                 showStep2Results();
-            } else if (step === 3 && analysisResult) {
+            } else if (step === 3 && (analysisResult?.agents?.length || stepData.step2)) {
                 showStep3Results();
             } else if (step === 4 && analysisResult) {
                 showStep4Results();
@@ -1892,6 +1905,119 @@
             }
             
             saveState();
+        }
+        
+        // Execute the appropriate AI call for a step (per-step mode)
+        async function executeStepIfNeeded(step) {
+            // Skip if already have data for this step
+            if (stepData[`step${step}`]) return;
+            
+            const loadingEl = document.getElementById(`step${step}Loading`);
+            const resultsEl = document.getElementById(`step${step}Results`);
+            
+            if (loadingEl) loadingEl.classList.add('active');
+            if (resultsEl) resultsEl.classList.remove('active');
+            
+            try {
+                switch (step) {
+                    case 2: await executeStep2(); break;
+                    case 3: await executeStep3(); break;
+                    case 4: await executeStep4(); break;
+                    case 5: /* Step 5 uses manual BPMN generation */ break;
+                    case 6: await executeStep6(); break;
+                }
+            } finally {
+                if (loadingEl) loadingEl.classList.remove('active');
+                if (resultsEl) resultsEl.classList.add('active');
+            }
+        }
+        
+        async function executeStep2() {
+            if (!stepData.step1?.capabilities) return;
+            
+            updateProgress('step2', 30, 'Classifying elements (~10s)...');
+            
+            // Get selected capability IDs (or use all if none selected)
+            const selectedIds = selectedCapabilities.size > 0 
+                ? Array.from(selectedCapabilities)
+                : stepData.step1.capabilities.map(c => c.id);
+            
+            const response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step2`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ selectedCapabilityIds: selectedIds })
+            });
+            
+            if (!response.ok) throw new Error(await extractErrorMessage(response, 'Classification failed'));
+            
+            const data = await parseApiResponse(response);
+            stepData.step2 = data.data;
+            
+            updateProgress('step2', 100, 'Elements classified!');
+        }
+        
+        async function executeStep3() {
+            if (!stepData.step2?.elements) return;
+            
+            updateProgress('step3', 30, 'Proposing agents (~20s)...');
+            
+            const response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step3`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            
+            if (!response.ok) throw new Error(await extractErrorMessage(response, 'Agent proposal failed'));
+            
+            const data = await parseApiResponse(response);
+            stepData.step3 = data.data;
+            
+            // Update analysisResult for compatibility
+            analysisResult.agents = data.data.agents;
+            
+            updateProgress('step3', 100, 'Agents proposed!');
+        }
+        
+        async function executeStep4() {
+            if (!stepData.step3?.agents) return;
+            
+            updateProgress('step4', 30, 'Configuring patterns & skills (~25s)...');
+            
+            const response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step4`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            
+            if (!response.ok) throw new Error(await extractErrorMessage(response, 'Configuration failed'));
+            
+            const data = await parseApiResponse(response);
+            stepData.step4 = data.data;
+            
+            updateProgress('step4', 100, 'Agents configured!');
+        }
+        
+        async function executeStep6() {
+            if (!stepData.step3?.agents || !stepData.step4?.patterns) return;
+            
+            updateProgress('step6', 30, 'Defining relationships (~30s)...');
+            
+            const response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step6`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            
+            if (!response.ok) throw new Error(await extractErrorMessage(response, 'Relationship definition failed'));
+            
+            const data = await parseApiResponse(response);
+            stepData.step6 = data.data;
+            
+            // Update analysisResult for compatibility
+            analysisResult.agentRelationships = data.data.relationships?.relationships || [];
+            analysisResult.integrations = data.data.integrations?.integrations || [];
+            
+            updateProgress('step6', 100, 'Relationships defined!');
         }
         
         // ==========================================
@@ -1906,6 +2032,10 @@
             });
             document.getElementById(`input-${method}`).classList.add('active');
         }
+        
+        // Per-step mode: Each step triggers its own AI call
+        const perStepMode = true; // Toggle for per-step execution
+        const stepData = {}; // Stores intermediate step results
         
         async function analyzeText() {
             const description = document.getElementById('descriptionInput').value.trim();
@@ -1925,33 +2055,79 @@
             
             hideError('step1Error');
             showLoading('step1', true);
-            updateProgress('step1', 30, 'Sending to AI...');
             
             try {
                 recordAICall('AnalyzeText');
-                const websiteUrl = document.getElementById('websiteUrl').value.trim();
                 
-                // Use A2A-compliant prompt chain for richer agent design
-                const response = await fetchWithAuth('/api/wizard/analyze-text?a2a=true', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ description, requirements: [] })
-                    // Note: tenantId is now extracted from JWT, not sent by client
-                });
-                
-                updateProgress('step1', 70, 'Processing response...');
-                
-                if (!response.ok) {
-                    const errorMessage = await extractErrorMessage(response, 'Analysis failed');
-                    throw new Error(errorMessage);
+                if (perStepMode) {
+                    // Per-step mode: Only extract capabilities in step 1
+                    updateProgress('step1', 20, 'Creating session...');
+                    
+                    // Create session first
+                    const sessionResponse = await fetchWithAuth('/api/wizard/analyze-text', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description, requirements: [] })
+                    });
+                    
+                    if (!sessionResponse.ok) {
+                        throw new Error(await extractErrorMessage(sessionResponse, 'Failed to create session'));
+                    }
+                    
+                    const sessionData = await parseApiResponse(sessionResponse);
+                    sessionId = sessionData.sessionId;
+                    
+                    updateProgress('step1', 40, 'Extracting capabilities (~15s)...');
+                    
+                    // Call step 1 endpoint
+                    const step1Response = await fetchWithAuth(`/api/wizard/sessions/${sessionId}/step1`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description })
+                    });
+                    
+                    if (!step1Response.ok) {
+                        throw new Error(await extractErrorMessage(step1Response, 'Step 1 failed'));
+                    }
+                    
+                    const step1Data = await parseApiResponse(step1Response);
+                    stepData.step1 = step1Data.data;
+                    
+                    // Build minimal analysisResult for compatibility
+                    analysisResult = {
+                        extractedCapabilities: step1Data.data.capabilities,
+                        summary: step1Data.data.metadata,
+                        agents: [], // Will be populated in step 3
+                        agentRelationships: [],
+                        integrations: [],
+                    };
+                    
+                    updateProgress('step1', 100, 'Capabilities extracted!');
+                    await delay(500);
+                    
+                } else {
+                    // Legacy batch mode: All prompts at once
+                    updateProgress('step1', 30, 'Analyzing with AI (~2 min)...');
+                    
+                    const response = await fetchWithAuth('/api/wizard/analyze-text?a2a=true', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description, requirements: [] })
+                    });
+                    
+                    updateProgress('step1', 70, 'Processing response...');
+                    
+                    if (!response.ok) {
+                        throw new Error(await extractErrorMessage(response, 'Analysis failed'));
+                    }
+                    
+                    const data = await parseApiResponse(response);
+                    sessionId = data.sessionId;
+                    analysisResult = data.analysis;
+                    
+                    updateProgress('step1', 100, 'Complete!');
+                    await delay(500);
                 }
-                
-                const data = await parseApiResponse(response);
-                sessionId = data.sessionId;
-                analysisResult = data.analysis;
-                
-                updateProgress('step1', 100, 'Complete!');
-                await delay(500);
                 
                 showLoading('step1', false);
                 goToStep(2);
