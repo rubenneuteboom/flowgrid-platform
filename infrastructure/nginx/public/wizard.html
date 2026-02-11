@@ -1892,15 +1892,16 @@
             }
             
             // Show results for the step
-            if (step === 2 && (analysisResult || stepData.step1)) {
+            // In perStepMode, check stepData; otherwise check analysisResult
+            if (step === 2 && (stepData.step1 || analysisResult?.extractedCapabilities?.length)) {
                 showStep2Results();
-            } else if (step === 3 && (analysisResult?.agents?.length || stepData.step2)) {
+            } else if (step === 3 && (stepData.step3 || stepData.step2 || analysisResult?.agents?.length)) {
                 showStep3Results();
-            } else if (step === 4 && analysisResult) {
+            } else if (step === 4 && (stepData.step4 || stepData.step3 || analysisResult?.agents?.length)) {
                 showStep4Results();
-            } else if (step === 5 && analysisResult) {
+            } else if (step === 5 && (stepData.step4 || analysisResult?.agents?.length)) {
                 showStep5Results();
-            } else if (step === 6 && analysisResult) {
+            } else if (step === 6 && (stepData.step6 || stepData.step4 || analysisResult?.agents?.length)) {
                 showStep6Summary();
             }
             
@@ -2063,8 +2064,8 @@
                     // Per-step mode: Only extract capabilities in step 1
                     updateProgress('step1', 20, 'Creating session...');
                     
-                    // Create session first
-                    const sessionResponse = await fetchWithAuth('/api/wizard/analyze-text', {
+                    // Create session first (perStep=true skips analysis)
+                    const sessionResponse = await fetchWithAuth('/api/wizard/analyze-text?perStep=true', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ description, requirements: [] })
@@ -2276,8 +2277,11 @@
             document.getElementById('step2Loading').classList.remove('active');
             document.getElementById('step2Results').classList.add('active');
             
-            const capabilities = analysisResult?.extractedCapabilities || [];
-            selectedCapabilities = new Set(capabilities.map(c => c.name));
+            // In perStepMode, use stepData; otherwise use analysisResult
+            const capabilities = perStepMode 
+                ? (stepData.step1?.capabilities || [])
+                : (analysisResult?.extractedCapabilities || []);
+            selectedCapabilities = new Set(capabilities.map(c => c.name || c.id));
             
             renderCapabilityTree(capabilities);
             document.getElementById('capCount').textContent = capabilities.length;
@@ -2372,19 +2376,26 @@
             document.getElementById('step3Results').classList.add('active');
             
             const selected = Array.from(selectedCapabilities);
-            let agents = analysisResult?.agents || [];
+            // In perStepMode, use stepData.step3.agents; otherwise use analysisResult
+            let agents = perStepMode 
+                ? (stepData.step3?.agents || [])
+                : (analysisResult?.agents || []);
             
-            agents = agents.filter(agent => {
-                const agentCaps = agent.capabilities || [];
-                return agentCaps.some(cap => selected.includes(typeof cap === 'string' ? cap : cap.name));
-            }).map(agent => ({
-                ...agent,
-                capabilities: (agent.capabilities || []).filter(cap => 
-                    selected.includes(typeof cap === 'string' ? cap : cap.name)
-                )
-            }));
+            // Filter by selected capabilities (only if we have capability names to filter by)
+            if (selected.length > 0 && !perStepMode) {
+                agents = agents.filter(agent => {
+                    const agentCaps = agent.capabilities || agent.ownedElements || [];
+                    return agentCaps.some(cap => selected.includes(typeof cap === 'string' ? cap : cap.name));
+                }).map(agent => ({
+                    ...agent,
+                    capabilities: (agent.capabilities || agent.ownedElements || []).filter(cap => 
+                        selected.includes(typeof cap === 'string' ? cap : cap.name)
+                    )
+                }));
+            }
             
-            analysisResult.filteredAgents = agents;
+            // Store for later use
+            if (analysisResult) analysisResult.filteredAgents = agents;
             renderAgentCards(agents);
             
             const countEl = document.getElementById('agentCount');

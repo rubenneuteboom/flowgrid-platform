@@ -65,6 +65,7 @@ router.post('/analyze-text', async (req: Request, res: Response) => {
     };
     const tid = req.tenantId;
     const useA2A = req.query.a2a === 'true' || req.body.a2a === true;
+    const perStep = req.query.perStep === 'true' || req.body.perStep === true;
 
     if (!description) {
       return res.status(400).json({ error: 'Description is required' });
@@ -73,12 +74,24 @@ router.post('/analyze-text', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
     }
 
-    console.log(`[${SERVICE_NAME}] Analyzing text description (${description.length} chars, a2a=${useA2A})`);
+    console.log(`[${SERVICE_NAME}] Analyzing text description (${description.length} chars, a2a=${useA2A}, perStep=${perStep})`);
 
     let analysis;
     let model;
 
-    if (useA2A) {
+    if (perStep) {
+      // Per-step mode: Just create session, don't run analysis
+      // Analysis will happen via individual /step1, /step2, etc. endpoints
+      analysis = {
+        summary: { totalCapabilities: 0, recommendedAgents: 0, complexity: 'low' as const, overview: 'Pending per-step analysis' },
+        extractedCapabilities: [],
+        agents: [],
+        agentRelationships: [],
+        integrations: [],
+      };
+      model = 'pending (per-step mode)';
+      console.log(`[${SERVICE_NAME}] Per-step mode: Created empty session, analysis deferred to step endpoints`);
+    } else if (useA2A) {
       // New A2A-compliant prompt chain
       const chainResult = await executeA2AChain({
         rawContent: description,
