@@ -296,6 +296,11 @@ export async function executeA2AChain(input: ChainInput): Promise<ChainResult> {
 // Result Assembly
 // ============================================================================
 
+// Helper to capitalize pattern (schemas use lowercase, ProposedAgent uses capitalized)
+function capitalizePattern(pattern: string): string {
+  return pattern.charAt(0).toUpperCase() + pattern.slice(1);
+}
+
 function assembleAnalysisResult(steps: ChainResult['steps']): AnalysisResult {
   const { extract, classify, agents, patterns, skills, relationships, integrations } = steps!;
 
@@ -307,12 +312,12 @@ function assembleAnalysisResult(steps: ChainResult['steps']): AnalysisResult {
     return {
       id: agent.id,
       name: agent.name,
-      elementType: 'Agent',
+      elementType: 'Agent' as const,
       purpose: agent.purpose,
       description: agent.purpose,
       capabilities: agent.responsibilities,
-      pattern: pattern?.pattern || agent.suggestedPattern,
-      patternRationale: pattern?.rationale || '',
+      pattern: capitalizePattern(pattern?.pattern || agent.suggestedPattern) as any,
+      patternRationale: pattern?.patternRationale || '',
       autonomyLevel: pattern?.autonomyLevel || 'supervised',
       riskAppetite: pattern?.riskAppetite || 'medium',
       triggers: pattern?.triggers || [],
@@ -349,7 +354,7 @@ function assembleAnalysisResult(steps: ChainResult['steps']): AnalysisResult {
     name: cap.name,
     level: (cap.level || 1) as 0 | 1 | 2,
     description: cap.description || '',
-    automationPotential: (cap.automationPotential || 'medium') as 'low' | 'medium' | 'high',
+    automationPotential: 'medium' as 'low' | 'medium' | 'high', // Default, not in schema
   }));
 
   return {
@@ -357,7 +362,7 @@ function assembleAnalysisResult(steps: ChainResult['steps']): AnalysisResult {
       totalCapabilities: extractedCapabilities.length,
       recommendedAgents: proposedAgents.length,
       complexity: proposedAgents.length > 15 ? 'high' : proposedAgents.length > 8 ? 'medium' : 'low',
-      overview: extract?.summary || `Designed ${proposedAgents.length} A2A-compliant agents`,
+      overview: `Designed ${proposedAgents.length} A2A-compliant agents from ${extract?.metadata?.totalExtracted || extractedCapabilities.length} capabilities`,
     },
     extractedCapabilities,
     agents: proposedAgents,
@@ -424,7 +429,7 @@ export async function executeQuickAnalysis(input: ChainInput): Promise<ChainResu
         totalCapabilities: extractResult.data.capabilities.length,
         recommendedAgents: proposeResult.data.agents.length,
         complexity: 'low',
-        overview: extractResult.data.summary || 'Quick analysis complete',
+        overview: `Quick analysis: ${proposeResult.data.agents.length} agents from ${extractResult.data.capabilities.length} capabilities`,
       },
       extractedCapabilities: extractResult.data.capabilities.map(c => ({
         name: c.name,
@@ -435,11 +440,11 @@ export async function executeQuickAnalysis(input: ChainInput): Promise<ChainResu
       agents: proposeResult.data.agents.map(a => ({
         id: a.id,
         name: a.name,
-        elementType: 'Agent',
+        elementType: 'Agent' as const,
         purpose: a.purpose,
         description: a.purpose,
         capabilities: a.responsibilities,
-        pattern: a.suggestedPattern,
+        pattern: capitalizePattern(a.suggestedPattern) as any,
         patternRationale: '',
         autonomyLevel: 'supervised' as const,
         riskAppetite: 'medium' as const,
