@@ -429,11 +429,13 @@
           return;
         }
 
-        // Store token and redirect
+        // Store token and redirect (delay for Safari localStorage timing)
         if (data.accessToken) {
           localStorage.setItem('flowgrid_access_token', data.accessToken);
+          sessionStorage.setItem('flowgrid_access_token', data.accessToken);
         }
 
+        await new Promise(r => setTimeout(r, 50));
         window.location.href = getRedirectUrl();
 
       } catch (error) {
@@ -465,11 +467,13 @@
           throw new Error(data.message || data.error || 'Verification failed');
         }
 
-        // Store token and redirect
+        // Store token and redirect (delay for Safari localStorage timing)
         if (data.accessToken) {
           localStorage.setItem('flowgrid_access_token', data.accessToken);
+          sessionStorage.setItem('flowgrid_access_token', data.accessToken);
         }
 
+        await new Promise(r => setTimeout(r, 50));
         window.location.href = getRedirectUrl();
 
       } catch (error) {

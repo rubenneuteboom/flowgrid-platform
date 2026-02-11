@@ -4,8 +4,9 @@
   const COOKIE_KEYS_TO_CLEAR = ['accessToken', 'flowgrid_access_token', 'refreshToken', 'session', 'sessionId'];
 
   function getAuthToken() {
+    // Check localStorage first, then sessionStorage (Safari timing fallback)
     for (const key of ACCESS_KEYS) {
-      const value = localStorage.getItem(key);
+      const value = localStorage.getItem(key) || sessionStorage.getItem(key);
       if (value) return value;
     }
     return null;
