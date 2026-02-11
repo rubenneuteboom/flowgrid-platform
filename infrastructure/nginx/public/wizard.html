@@ -957,7 +957,10 @@
                     <p class="subtitle">Choose how to define your capabilities — describe them, upload XML, or use AI image analysis.</p>
                     <div id="existingDataCta" class="existing-data-cta">
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.6rem;">✅ Existing organization data detected.</p>
-                        <a href="/design" target="_top" class="btn btn-primary" style="display: inline-flex; text-decoration: none;">➡️ Go to Design Module</a>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+                            <a href="/design/" target="_top" class="btn btn-primary" style="display: inline-flex; text-decoration: none;">➡️ Go to Design Module</a>
+                            <button class="btn btn-secondary" onclick="resetTenantData()" style="background: var(--error); border-color: var(--error);">🗑️ Reset & Start Fresh</button>
+                        </div>
                     </div>
                 </div>
 
@@ -2712,6 +2715,52 @@
                 }
             } catch (e) {
                 console.warn('Could not check existing org data:', e);
+            }
+        }
+
+        async function resetTenantData() {
+            const confirmed = confirm(
+                '⚠️ Reset Tenant Data?\n\n' +
+                'This will permanently delete ALL agents, relationships, and integrations for your organization.\n\n' +
+                'This action cannot be undone.\n\n' +
+                'Continue?'
+            );
+            
+            if (!confirmed) return;
+            
+            // Double confirmation for safety
+            const doubleConfirm = confirm(
+                '🔴 FINAL WARNING\n\n' +
+                'You are about to delete all data. Type "RESET" in the next prompt to confirm.'
+            );
+            
+            if (!doubleConfirm) return;
+            
+            const typed = prompt('Type RESET to confirm:');
+            if (typed !== 'RESET') {
+                alert('Reset cancelled. You must type exactly "RESET" to proceed.');
+                return;
+            }
+            
+            try {
+                const response = await fetchWithAuth('/api/agents/reset', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    const error = await extractErrorMessage(response, 'Reset failed');
+                    throw new Error(error);
+                }
+                
+                const result = await parseApiResponse(response);
+                alert(`✅ Reset complete!\n\nDeleted:\n- ${result.deleted?.agents || 0} agents\n- ${result.deleted?.relationships || 0} relationships\n- ${result.deleted?.integrations || 0} integrations`);
+                
+                // Hide the CTA and refresh the page
+                document.getElementById('existingDataCta').style.display = 'none';
+                
+            } catch (error) {
+                alert('❌ Reset failed: ' + error.message);
             }
         }
         

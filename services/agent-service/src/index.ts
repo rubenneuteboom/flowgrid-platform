@@ -411,6 +411,67 @@ app.put('/api/agents/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Reset all tenant data (for demos)
+app.delete('/api/agents/reset', async (req: Request, res: Response) => {
+  const client = await pool.connect();
+  try {
+    const tenantId = req.tenantId;
+    console.log(`[${SERVICE_NAME}] Resetting all data for tenant ${tenantId}`);
+
+    await client.query('BEGIN');
+
+    // Delete in order respecting foreign keys
+    const integrations = await client.query(
+      'DELETE FROM agent_integrations WHERE agent_id IN (SELECT id FROM agents WHERE tenant_id = $1) RETURNING id',
+      [tenantId]
+    );
+
+    const relationships = await client.query(
+      'DELETE FROM agent_interactions WHERE tenant_id = $1 RETURNING id',
+      [tenantId]
+    );
+
+    const capabilities = await client.query(
+      'DELETE FROM agent_capabilities WHERE agent_id IN (SELECT id FROM agents WHERE tenant_id = $1) RETURNING id',
+      [tenantId]
+    );
+
+    const agents = await client.query(
+      'DELETE FROM agents WHERE tenant_id = $1 RETURNING id',
+      [tenantId]
+    );
+
+    // Also clear wizard sessions
+    await client.query(
+      'DELETE FROM wizard_sessions WHERE tenant_id = $1',
+      [tenantId]
+    );
+
+    await client.query('COMMIT');
+
+    console.log(`[${SERVICE_NAME}] Reset complete: ${agents.rowCount} agents, ${relationships.rowCount} relationships, ${integrations.rowCount} integrations`);
+
+    res.json({
+      success: true,
+      deleted: {
+        agents: agents.rowCount,
+        relationships: relationships.rowCount,
+        integrations: integrations.rowCount,
+        capabilities: capabilities.rowCount,
+      },
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`[${SERVICE_NAME}] Reset error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to reset tenant data',
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // Delete agent
 app.delete('/api/agents/:id', async (req: Request, res: Response) => {
   try {
