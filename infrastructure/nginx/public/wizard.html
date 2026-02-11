@@ -910,7 +910,10 @@
                 <h1>💬 Welcome to Flowgrid</h1>
                 <span class="header-subtitle">Configure your Agent Network in 6 steps</span>
             </div>
-            <a href="/" target="_top" class="back-btn">← Dashboard</a>
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <button onclick="resetTenantData()" class="back-btn" style="background: rgba(239, 68, 68, 0.15); border-color: var(--error); color: var(--error);" title="Clear all data for testing">🗑️ Clear Database</button>
+                <a href="/" target="_top" class="back-btn">← Dashboard</a>
+            </div>
         </header>
 
         <!-- Progress Bar - 6 Steps -->
