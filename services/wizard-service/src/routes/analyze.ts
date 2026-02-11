@@ -876,7 +876,7 @@ router.post('/sessions/:id/apply', async (req: Request, res: Response) => {
     // Create agents
     for (const agent of agents) {
       const pattern = patterns.find(p => p.agentId === agent.id);
-      const agentSkills = skills.filter(s => s.agentId === agent.id);
+      const agentSkillsEntry = skills.find(s => s.agentId === agent.id);
       const bpmn = processFlows.find(p => p.elementId === agent.name)?.bpmnXml;
 
       const result = await client.query(
@@ -887,36 +887,38 @@ router.post('/sessions/:id/apply', async (req: Request, res: Response) => {
         [
           tenantId,
           agent.name,
-          agent.description,
-          agent.elementType || 'Agent',
-          pattern?.pattern || 'Specialist',
-          pattern?.rationale || '',
-          pattern?.autonomyLevel || 'supervised',
+          agent.purpose, // Use 'purpose' from schema
+          'Agent', // Default element type
+          pattern?.pattern || agent.suggestedPattern || 'specialist',
+          pattern?.patternRationale || '', // Use 'patternRationale' from schema
+          pattern?.autonomyLevel || agent.suggestedAutonomy || 'supervised',
           pattern?.riskAppetite || 'medium',
-          agent.triggers || [],
-          agent.outputs || [],
+          pattern?.triggers || [],
+          pattern?.outputs || [],
           bpmn || null,
-          agent.capabilities || [],
+          agent.ownedElements || [], // Use 'ownedElements' as capabilities
         ]
       );
 
       const realId = result.rows[0].id;
       agentIdMap.set(agent.id, realId);
 
-      // Create skills for this agent
-      for (const skill of agentSkills) {
-        await client.query(
-          `INSERT INTO agent_skills (agent_id, skill_id, name, description, input_schema, output_schema)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            realId,
-            skill.skillId,
-            skill.name,
-            skill.description,
-            JSON.stringify(skill.inputSchema || {}),
-            JSON.stringify(skill.outputSchema || {}),
-          ]
-        );
+      // Create skills for this agent (skills are nested in agentSkills[].skills[])
+      if (agentSkillsEntry?.skills) {
+        for (const skill of agentSkillsEntry.skills) {
+          await client.query(
+            `INSERT INTO agent_skills (agent_id, skill_id, name, description, input_schema, output_schema)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [
+              realId,
+              skill.skillId,
+              skill.name,
+              skill.description,
+              JSON.stringify(skill.inputSchema || {}),
+              JSON.stringify(skill.outputSchema || {}),
+            ]
+          );
+        }
       }
     }
 
@@ -949,7 +951,12 @@ router.post('/sessions/:id/apply', async (req: Request, res: Response) => {
         await client.query(
           `INSERT INTO agent_integrations (agent_id, integration_type, config, status)
            VALUES ($1, $2, $3, 'pending')`,
-          [agentId, integration.type, JSON.stringify(integration.config || {})]
+          [agentId, integration.type, JSON.stringify({
+            name: integration.name,
+            system: integration.system,
+            direction: integration.direction,
+            dataFlows: integration.dataFlows || [],
+          })]
         );
       }
     }

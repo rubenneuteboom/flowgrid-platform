@@ -153,18 +153,17 @@ export const BPMN_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 // =============================================================================
 
 registerPrompt<GenerateBPMNInput, GenerateBPMNOutput>({
-  id: 'step4a-generate-bpmn',
-  name: 'Generate BPMN Flow',
-  description: 'Generates valid BPMN 2.0 XML for a process using Business Process Consultant AI',
+  id: 'step4.generate-bpmn',
   version: '1.0.0',
-  step: 4,
+  description: 'Generates valid BPMN 2.0 XML for a process using Business Process Consultant AI',
   systemPrompt: SYSTEM_PROMPT,
-  buildUserPrompt,
-  inputSchema: GenerateBPMNInputSchema,
+  buildUserMessage: buildUserPrompt,
   outputSchema: GenerateBPMNOutputSchema,
-  model: 'claude-sonnet-4-20250514',
-  temperature: 0.3,
-  maxTokens: 8000, // BPMN XML can be large
+  modelPreferences: {
+    preferredModel: 'claude-sonnet-4-20250514',
+    temperature: 0.3,
+    maxTokens: 8000, // BPMN XML can be large
+  },
 });
 
 export default {
