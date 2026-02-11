@@ -547,4 +547,466 @@ function mapTypeToPattern(type: string): string {
   return patternMap[type] || 'Specialist';
 }
 
+// ============================================================================
+// PER-STEP WIZARD ENDPOINTS
+// ============================================================================
+
+import {
+  executeStep1,
+  executeStep2,
+  executeStep3,
+  executeStep4,
+  executeStep5,
+  executeStep6,
+  WizardStepData,
+} from '../services/step-executor';
+import { pool } from '../services/database';
+
+/**
+ * Helper: Get session step data
+ */
+async function getSessionStepData(sessionId: string, tenantId: string): Promise<WizardStepData | null> {
+  const result = await pool.query(
+    'SELECT step_data FROM wizard_sessions WHERE id = $1 AND tenant_id = $2',
+    [sessionId, tenantId]
+  );
+  return result.rows[0]?.step_data || null;
+}
+
+/**
+ * Helper: Update session step data
+ */
+async function updateSessionStepData(
+  sessionId: string,
+  tenantId: string,
+  stepKey: string,
+  data: any,
+  currentStep: number
+): Promise<void> {
+  await pool.query(
+    `UPDATE wizard_sessions 
+     SET step_data = jsonb_set(COALESCE(step_data, '{}'), $3, $4::jsonb),
+         current_step = $5,
+         updated_at = NOW()
+     WHERE id = $1 AND tenant_id = $2`,
+    [sessionId, tenantId, `{${stepKey}}`, JSON.stringify(data), currentStep]
+  );
+}
+
+// ----------------------------------------------------------------------------
+// POST /api/wizard/sessions/:id/step1
+// Extract capabilities from description
+// ----------------------------------------------------------------------------
+router.post('/sessions/:id/step1', async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+  const { description, customContext, industry } = req.body;
+  const tenantId = req.tenantId;
+
+  if (!tenantId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  if (!description) {
+    return res.status(400).json({ error: 'Description is required' });
+  }
+
+  console.log(`[${SERVICE_NAME}] Step 1: Extracting capabilities for session ${sessionId}`);
+
+  const result = await executeStep1({ description, customContext, industry });
+
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
+  }
+
+  // Save to session
+  await updateSessionStepData(sessionId, tenantId, 'step1', {
+    rawCapabilities: result.data,
+    description,
+  }, 1);
+
+  res.json({
+    success: true,
+    data: result.data,
+    executionTimeMs: result.executionTimeMs,
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/wizard/sessions/:id/step2
+// Classify selected capabilities
+// ----------------------------------------------------------------------------
+router.post('/sessions/:id/step2', async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+  const { selectedCapabilityIds } = req.body;
+  const tenantId = req.tenantId;
+
+  if (!tenantId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Get step 1 data
+  const stepData = await getSessionStepData(sessionId, tenantId);
+  if (!stepData?.step1?.rawCapabilities) {
+    return res.status(400).json({ error: 'Step 1 must be completed first' });
+  }
+
+  console.log(`[${SERVICE_NAME}] Step 2: Classifying elements for session ${sessionId}`);
+
+  const result = await executeStep2({
+    capabilities: stepData.step1.rawCapabilities.capabilities,
+    selectedIds: selectedCapabilityIds,
+  });
+
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
+  }
+
+  // Save to session
+  await updateSessionStepData(sessionId, tenantId, 'step2', {
+    selectedCapabilityIds,
+    classifiedElements: result.data,
+  }, 2);
+
+  res.json({
+    success: true,
+    data: result.data,
+    executionTimeMs: result.executionTimeMs,
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/wizard/sessions/:id/step3
+// Propose agent groupings
+// ----------------------------------------------------------------------------
+router.post('/sessions/:id/step3', async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+  const { targetAgentCount, userAdjustments } = req.body;
+  const tenantId = req.tenantId;
+
+  if (!tenantId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Get step 2 data
+  const stepData = await getSessionStepData(sessionId, tenantId);
+  if (!stepData?.step2?.classifiedElements) {
+    return res.status(400).json({ error: 'Step 2 must be completed first' });
+  }
+
+  console.log(`[${SERVICE_NAME}] Step 3: Proposing agents for session ${sessionId}`);
+
+  const result = await executeStep3({
+    elements: stepData.step2.classifiedElements.elements,
+    targetAgentCount,
+  });
+
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
+  }
+
+  // Save to session
+  await updateSessionStepData(sessionId, tenantId, 'step3', {
+    proposedAgents: result.data,
+    userAdjustments,
+  }, 3);
+
+  res.json({
+    success: true,
+    data: result.data,
+    executionTimeMs: result.executionTimeMs,
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/wizard/sessions/:id/step4
+// Configure agents (patterns + skills)
+// ----------------------------------------------------------------------------
+router.post('/sessions/:id/step4', async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+  const tenantId = req.tenantId;
+
+  if (!tenantId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Get step 3 data
+  const stepData = await getSessionStepData(sessionId, tenantId);
+  if (!stepData?.step3?.proposedAgents) {
+    return res.status(400).json({ error: 'Step 3 must be completed first' });
+  }
+
+  console.log(`[${SERVICE_NAME}] Step 4: Configuring agents for session ${sessionId}`);
+
+  const result = await executeStep4({
+    agents: stepData.step3.proposedAgents.agents,
+  });
+
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
+  }
+
+  // Save to session
+  await updateSessionStepData(sessionId, tenantId, 'step4', result.data, 4);
+
+  res.json({
+    success: true,
+    data: result.data,
+    executionTimeMs: result.executionTimeMs,
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/wizard/sessions/:id/step5
+// Generate BPMN for a process element
+// ----------------------------------------------------------------------------
+router.post('/sessions/:id/step5', async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+  const { processName, processDescription, involvedAgents, capabilities, triggers, outputs } = req.body;
+  const tenantId = req.tenantId;
+
+  if (!tenantId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  if (!processName || !processDescription) {
+    return res.status(400).json({ error: 'Process name and description required' });
+  }
+
+  console.log(`[${SERVICE_NAME}] Step 5: Generating BPMN for "${processName}" in session ${sessionId}`);
+
+  const result = await executeStep5({
+    processName,
+    processDescription,
+    involvedAgents: involvedAgents || [],
+    capabilities: capabilities || [],
+    triggers,
+    outputs,
+  });
+
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
+  }
+
+  // Append to session's process flows
+  const stepData = await getSessionStepData(sessionId, tenantId);
+  const existingFlows = stepData?.step5?.processFlows || [];
+  const newFlows = [...existingFlows, { elementId: processName, bpmnXml: result.data!.bpmnXml }];
+
+  await updateSessionStepData(sessionId, tenantId, 'step5', { processFlows: newFlows }, 5);
+
+  res.json({
+    success: true,
+    data: result.data,
+    executionTimeMs: result.executionTimeMs,
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/wizard/sessions/:id/step6
+// Define relationships and integrations
+// ----------------------------------------------------------------------------
+router.post('/sessions/:id/step6', async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+  const { industryContext, knownSystems } = req.body;
+  const tenantId = req.tenantId;
+
+  if (!tenantId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Get required step data
+  const stepData = await getSessionStepData(sessionId, tenantId);
+  if (!stepData?.step3?.proposedAgents || !stepData?.step4?.patterns) {
+    return res.status(400).json({ error: 'Steps 3 and 4 must be completed first' });
+  }
+
+  console.log(`[${SERVICE_NAME}] Step 6: Defining relationships for session ${sessionId}`);
+
+  const result = await executeStep6({
+    agents: stepData.step3.proposedAgents.agents,
+    patterns: stepData.step4.patterns.agentPatterns,
+    industryContext,
+    knownSystems,
+  });
+
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
+  }
+
+  // Save to session
+  await updateSessionStepData(sessionId, tenantId, 'step6', result.data, 6);
+
+  res.json({
+    success: true,
+    data: result.data,
+    executionTimeMs: result.executionTimeMs,
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/wizard/sessions/:id/apply
+// Save all wizard data to the database
+// ----------------------------------------------------------------------------
+router.post('/sessions/:id/apply', async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+  const tenantId = req.tenantId;
+
+  if (!tenantId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const stepData = await getSessionStepData(sessionId, tenantId);
+  if (!stepData?.step3?.proposedAgents) {
+    return res.status(400).json({ error: 'Wizard not completed - missing agent data' });
+  }
+
+  console.log(`[${SERVICE_NAME}] Applying wizard session ${sessionId} to database`);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const agents = stepData.step3.proposedAgents.agents;
+    const patterns = stepData.step4?.patterns?.agentPatterns || [];
+    const skills = stepData.step4?.skills?.agentSkills || [];
+    const relationships = stepData.step6?.relationships?.relationships || [];
+    const integrations = stepData.step6?.integrations?.integrations || [];
+    const processFlows = stepData.step5?.processFlows || [];
+
+    const agentIdMap = new Map<string, string>(); // Maps temp IDs to real UUIDs
+
+    // Create agents
+    for (const agent of agents) {
+      const pattern = patterns.find(p => p.agentId === agent.id);
+      const agentSkills = skills.filter(s => s.agentId === agent.id);
+      const bpmn = processFlows.find(p => p.elementId === agent.name)?.bpmnXml;
+
+      const result = await client.query(
+        `INSERT INTO agents (tenant_id, name, description, status, element_type, pattern, pattern_rationale, 
+         autonomy_level, risk_appetite, triggers, outputs, process_bpmn, capabilities)
+         VALUES ($1, $2, $3, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING id`,
+        [
+          tenantId,
+          agent.name,
+          agent.description,
+          agent.elementType || 'Agent',
+          pattern?.pattern || 'Specialist',
+          pattern?.rationale || '',
+          pattern?.autonomyLevel || 'supervised',
+          pattern?.riskAppetite || 'medium',
+          agent.triggers || [],
+          agent.outputs || [],
+          bpmn || null,
+          agent.capabilities || [],
+        ]
+      );
+
+      const realId = result.rows[0].id;
+      agentIdMap.set(agent.id, realId);
+
+      // Create skills for this agent
+      for (const skill of agentSkills) {
+        await client.query(
+          `INSERT INTO agent_skills (agent_id, skill_id, name, description, input_schema, output_schema)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            realId,
+            skill.skillId,
+            skill.name,
+            skill.description,
+            JSON.stringify(skill.inputSchema || {}),
+            JSON.stringify(skill.outputSchema || {}),
+          ]
+        );
+      }
+    }
+
+    // Create relationships
+    for (const rel of relationships) {
+      const sourceId = agentIdMap.get(rel.sourceAgentId);
+      const targetId = agentIdMap.get(rel.targetAgentId);
+      if (sourceId && targetId) {
+        await client.query(
+          `INSERT INTO agent_interactions (source_agent_id, target_agent_id, message_type, description,
+           relationship_type, is_async, priority)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            sourceId,
+            targetId,
+            rel.messageType,
+            rel.description,
+            rel.relationshipType || 'triggers',
+            rel.isAsync || false,
+            rel.priority || 'normal',
+          ]
+        );
+      }
+    }
+
+    // Create integrations
+    for (const integration of integrations) {
+      const agentId = agentIdMap.get(integration.agentId);
+      if (agentId) {
+        await client.query(
+          `INSERT INTO agent_integrations (agent_id, integration_type, config, status)
+           VALUES ($1, $2, $3, 'pending')`,
+          [agentId, integration.type, JSON.stringify(integration.config || {})]
+        );
+      }
+    }
+
+    // Update session status
+    await client.query(
+      `UPDATE wizard_sessions SET status = 'applied', updated_at = NOW() WHERE id = $1`,
+      [sessionId]
+    );
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      created: {
+        agents: agents.length,
+        skills: skills.length,
+        relationships: relationships.length,
+        integrations: integrations.length,
+      },
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`[${SERVICE_NAME}] Apply error:`, error);
+    res.status(500).json({ error: 'Failed to apply wizard data' });
+  } finally {
+    client.release();
+  }
+});
+
+// ----------------------------------------------------------------------------
+// GET /api/wizard/sessions/:id/state
+// Get current wizard session state
+// ----------------------------------------------------------------------------
+router.get('/sessions/:id/state', async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+  const tenantId = req.tenantId;
+
+  if (!tenantId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const result = await pool.query(
+    'SELECT current_step, step_data, status FROM wizard_sessions WHERE id = $1 AND tenant_id = $2',
+    [sessionId, tenantId]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  res.json({
+    sessionId,
+    currentStep: result.rows[0].current_step,
+    stepData: result.rows[0].step_data,
+    status: result.rows[0].status,
+  });
+});
+
 export default router;
