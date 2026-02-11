@@ -61,9 +61,16 @@ function createRateLimiter(options: {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    // Disable IPv6 validation - we handle IP extraction manually
+    validate: { xForwardedForHeader: false },
     keyGenerator: (req: Request) => {
       // Use IP address + endpoint for rate limiting
-      const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+      // Handle both IPv4 and IPv6 addresses
+      let ip = req.ip || 'unknown';
+      const forwarded = req.headers['x-forwarded-for'];
+      if (forwarded) {
+        ip = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0].trim();
+      }
       return `${options.keyPrefix}:${ip}`;
     },
     handler: (req: Request, res: Response) => {
