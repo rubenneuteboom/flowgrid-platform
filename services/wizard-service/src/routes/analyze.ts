@@ -277,6 +277,28 @@ router.post('/upload-xml', uploadXml.single('file'), async (req: Request, res: R
 // ArchiMate XML Parser
 // ============================================================================
 
+/**
+ * Sanitize string for safe JSON serialization
+ * Removes/escapes control characters that could break JSON
+ */
+function sanitizeForJson(str: string): string {
+  if (!str) return str;
+  return str
+    // Remove null bytes
+    .replace(/\0/g, '')
+    // Escape backslashes first
+    .replace(/\\/g, '\\\\')
+    // Remove control characters except common whitespace
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Normalize newlines
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    // Limit consecutive newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim excessive whitespace
+    .trim();
+}
+
 interface ArchiMateElement {
   id: string;
   name: string;
@@ -332,11 +354,11 @@ function parseArchiMateXml(xmlContent: string): ParsedArchiMate {
     
     // Extract name from <name> child element
     const nameMatch = innerContent.match(/<name[^>]*>([^<]+)<\/name>/i);
-    const name = nameMatch ? nameMatch[1].trim() : `Unnamed ${type}`;
+    const name = nameMatch ? sanitizeForJson(nameMatch[1].trim()) : `Unnamed ${type}`;
     
-    // Extract documentation
-    const docMatch = innerContent.match(/<documentation[^>]*>([^<]+)<\/documentation>/i);
-    const documentation = docMatch ? docMatch[1].trim() : undefined;
+    // Extract documentation (handle multi-line and special chars)
+    const docMatch = innerContent.match(/<documentation[^>]*>([\s\S]*?)<\/documentation>/i);
+    const documentation = docMatch ? sanitizeForJson(docMatch[1].trim()) : undefined;
 
     // Skip junction/connector elements
     if (type.toLowerCase().includes('junction')) continue;
@@ -358,7 +380,7 @@ function parseArchiMateXml(xmlContent: string): ParsedArchiMate {
     while ((match = archiRegex.exec(xmlContent)) !== null) {
       const type = match[1];
       const id = match[2];
-      const name = match[3] || `Unnamed ${type}`;
+      const name = sanitizeForJson(match[3]) || `Unnamed ${type}`;
 
       if (type.toLowerCase().includes('junction')) continue;
 
