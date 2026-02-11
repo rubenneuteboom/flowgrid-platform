@@ -253,10 +253,15 @@ export async function executePromptChain<TInitial, TFinal>(
 // ============================================================================
 
 // Import and register all prompts
+// Step 1: Extract & Classify
 import './step1/extract';
 import './step1/classify';
-// Future: import './step3/propose-agents';
-// Future: import './step3/assign-patterns';
-// Future: import './step3/define-skills';
-// Future: import './step5/relationships';
-// Future: import './step5/integrations';
+
+// Step 3: Agent Design
+import './step3/propose-agents';
+import './step3/assign-patterns';
+import './step3/define-skills';
+
+// Step 5: Relationships & Integrations
+import './step5/relationships';
+import './step5/integrations';

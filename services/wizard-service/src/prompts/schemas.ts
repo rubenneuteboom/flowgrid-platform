@@ -174,8 +174,8 @@ export const RelationshipsOutputSchema = z.object({
         description: z.string().optional(),
       })),
     }).optional(),
-    isAsync: z.boolean().default(false),
-    priority: z.enum(['low', 'normal', 'high']).default('normal'),
+    isAsync: z.boolean(),
+    priority: z.enum(['low', 'normal', 'high']),
   })),
 });
 export type RelationshipsOutput = z.infer<typeof RelationshipsOutputSchema>;
