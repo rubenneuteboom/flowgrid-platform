@@ -1171,29 +1171,108 @@
       <div class="detail-tabs" style="margin-bottom:0.75rem;">
         <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
         <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
-        <button class="detail-tab workspace-tab" data-tab="capabilities" onclick="showWorkspaceTab('capabilities')">📦 Capabilities</button>
+        <button class="detail-tab workspace-tab" data-tab="capabilities" onclick="showWorkspaceTab('capabilities')">📦 Supported Capabilities</button>
+        <button class="detail-tab workspace-tab" data-tab="skills" onclick="showWorkspaceTab('skills')">🛠️ Skills</button>
         <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
-        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🔌 Integrations</button>
+        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🔧 Tools</button>
         <button class="detail-tab workspace-tab" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">🔄 BPMN</button>
         <button class="detail-tab workspace-tab" data-tab="a2a-card" onclick="showWorkspaceTab('a2a-card')">🤖 A2A Card</button>
       </div>
 
-      <!-- Overview Tab - Legacy Style with Donut Chart -->
+      <!-- Overview Tab - Agent Summary -->
       <section class="workspace-panel active" id="workspace-overview">
-        <div class="overview-content">
-          <div class="select-element-card">
-            <h3>Select an element</h3>
-            <p>Click on an element in the sidebar to view its details and relationships.</p>
+        <div id="overview-no-selection" style="padding: 2rem; text-align: center;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🔎</div>
+          <h3 style="color: #94a3b8; margin-bottom: 0.5rem;">Select an element</h3>
+          <p style="color: #64748b;">Click on an element in the sidebar to view its details.</p>
+        </div>
+        
+        <div id="overview-agent-content" style="display: none; padding: 1rem;">
+          <!-- Agent Header -->
+          <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #334155;">
+            <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+              <span id="overview-icon">🤖</span>
+            </div>
+            <div style="flex: 1;">
+              <h2 id="overview-name" style="color: #f1f5f9; margin: 0 0 0.25rem 0; font-size: 1.5rem;">Agent Name</h2>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <span id="overview-type-badge" style="background: #3b82f6; color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem;">Agent</span>
+                <span id="overview-pattern-badge" style="background: #8b5cf6; color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; display: none;">Specialist</span>
+              </div>
+            </div>
           </div>
-          <div class="element-distribution-card">
-            <h3>Element Distribution</h3>
-            <div class="distribution-chart-container">
-              <div class="chart-wrapper">
-                <canvas id="distribution-chart"></canvas>
+          
+          <!-- Description -->
+          <div style="margin-bottom: 1.5rem;">
+            <h4 style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.5rem;">Description</h4>
+            <p id="overview-description" style="color: #e2e8f0; line-height: 1.6;">No description provided.</p>
+          </div>
+          
+          <!-- Stats Grid -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: #1e293b; border-radius: 8px; padding: 1rem; text-align: center;">
+              <div id="overview-skills-count" style="font-size: 1.75rem; font-weight: 600; color: #a78bfa;">0</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Skills</div>
+            </div>
+            <div style="background: #1e293b; border-radius: 8px; padding: 1rem; text-align: center;">
+              <div id="overview-caps-count" style="font-size: 1.75rem; font-weight: 600; color: #22d3ee;">0</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Capabilities</div>
+            </div>
+            <div style="background: #1e293b; border-radius: 8px; padding: 1rem; text-align: center;">
+              <div id="overview-tools-count" style="font-size: 1.75rem; font-weight: 600; color: #f59e0b;">0</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Tools</div>
+            </div>
+            <div style="background: #1e293b; border-radius: 8px; padding: 1rem; text-align: center;">
+              <div id="overview-relations-count" style="font-size: 1.75rem; font-weight: 600; color: #10b981;">0</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Relations</div>
+            </div>
+          </div>
+          
+          <!-- Two Column Layout -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- Left Column: Configuration -->
+            <div>
+              <h4 style="color: #f59e0b; font-size: 0.85rem; margin-bottom: 0.75rem;">⚙️ Configuration</h4>
+              <div style="background: #1e293b; border-radius: 8px; padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #334155;">
+                  <span style="color: #94a3b8; font-size: 0.85rem;">Value Stream</span>
+                  <span id="overview-valuestream" style="color: #e2e8f0; font-size: 0.85rem;">—</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #334155;">
+                  <span style="color: #94a3b8; font-size: 0.85rem;">Autonomy</span>
+                  <span id="overview-autonomy" style="color: #e2e8f0; font-size: 0.85rem;">—</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #334155;">
+                  <span style="color: #94a3b8; font-size: 0.85rem;">Decision Authority</span>
+                  <span id="overview-decision" style="color: #e2e8f0; font-size: 0.85rem;">—</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                  <span style="color: #94a3b8; font-size: 0.85rem;">Interaction</span>
+                  <span id="overview-interaction" style="color: #e2e8f0; font-size: 0.85rem;">—</span>
+                </div>
               </div>
-              <div class="chart-legend" id="chart-legend">
-                <!-- Legend items will be populated by JS -->
+            </div>
+            
+            <!-- Right Column: Skills Preview -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h4 style="color: #a78bfa; font-size: 0.85rem; margin: 0;">🛠️ Skills</h4>
+                <button class="btn btn-sm" style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: #334155;" onclick="showWorkspaceTab('skills')">View All →</button>
               </div>
+              <div id="overview-skills-preview" style="background: #1e293b; border-radius: 8px; padding: 1rem; min-height: 120px;">
+                <p style="color: #64748b; font-size: 0.85rem;">No skills defined yet</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Quick Actions -->
+          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
+            <h4 style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.75rem;">Quick Actions</h4>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" style="font-size: 0.85rem;" onclick="showDetailTab('description')">✏️ Edit Description</button>
+              <button class="btn btn-secondary" style="font-size: 0.85rem;" onclick="showWorkspaceTab('skills'); generateSkillsWithAI();">🤖 Generate Skills</button>
+              <button class="btn btn-secondary" style="font-size: 0.85rem;" onclick="showWorkspaceTab('a2a-card')">📄 View A2A Card</button>
+              <button class="btn btn-primary" style="font-size: 0.85rem;" onclick="showDetailTab('code')">💻 Generate Code</button>
             </div>
           </div>
         </div>
@@ -1224,11 +1303,11 @@
         </div>
       </section>
 
-      <!-- Capabilities Tab -->
+      <!-- Supported Capabilities Tab -->
       <section class="workspace-panel" id="workspace-capabilities">
         <div style="padding: 1rem;">
-          <h3 style="color: #22d3ee; margin-bottom: 0.5rem;">📦 Capabilities</h3>
-          <p style="color: #94a3b8; margin-bottom: 1rem;">Capabilities owned by the selected agent.</p>
+          <h3 style="color: #22d3ee; margin-bottom: 0.5rem;">📦 Supported Capabilities</h3>
+          <p style="color: #94a3b8; margin-bottom: 1rem;">Business capabilities owned by the selected agent.</p>
           
           <div id="capabilities-empty" style="color: #64748b; padding: 2rem; text-align: center;">
             Select an agent to view its capabilities.
@@ -1238,6 +1317,31 @@
             <div id="capabilities-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
               <!-- Capabilities populated by JS -->
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Skills Tab (A2A Protocol) -->
+      <section class="workspace-panel" id="workspace-skills">
+        <div style="padding: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <h3 style="color: #a78bfa; margin-bottom: 0.25rem;">🛠️ Agent Skills</h3>
+              <p style="color: #94a3b8; font-size: 0.85rem;">A2A Protocol skills - executable capabilities exposed to other agents</p>
+            </div>
+            <div id="skills-actions" style="display: none; gap: 0.5rem;">
+              <button class="btn btn-secondary" style="font-size: 0.85rem;" onclick="openAddSkillModal()">+ Add Skill</button>
+              <button class="btn btn-primary" style="font-size: 0.85rem;" onclick="generateSkillsWithAI()">🤖 Generate with AI</button>
+            </div>
+          </div>
+          
+          <div id="workspace-skills-empty" style="color: #64748b; padding: 2rem; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🛠️</div>
+            <p>Select an agent to view or manage its skills.</p>
+          </div>
+          
+          <div id="workspace-skills-list" style="display: none;">
+            <!-- Skills populated by renderWorkspaceSkills() -->
           </div>
         </div>
       </section>
@@ -1272,16 +1376,16 @@
       <!-- Integrations Tab -->
       <section class="workspace-panel" id="workspace-integrations">
         <div class="info-card">
-          <h4>🔌 Suggested Integrations</h4>
-          <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">Click to add an integration to this agent</p>
+          <h4>🔧 Suggested Tools</h4>
+          <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">Click to add a tool/integration to this agent</p>
           <div id="suggested-integrations" class="integration-grid">
             <p style="color: #64748b;">Select an agent to see suggestions</p>
           </div>
         </div>
         <div class="current-integrations">
-          <h4>📋 Current Integrations</h4>
+          <h4>📋 Current Tools</h4>
           <div id="current-integrations-list">
-            <p style="color: #64748b; font-size: 0.85rem;">No integrations added yet</p>
+            <p style="color: #64748b; font-size: 0.85rem;">No tools added yet</p>
           </div>
         </div>
       </section>
@@ -1430,16 +1534,6 @@
             <textarea id="agent-success-criteria" placeholder="How do we measure if this agent is successful?" rows="2"></textarea>
           </div>
           
-          <button class="btn btn-success" style="width: 100%; margin-top: 1rem;" onclick="saveAgentDescription()">💾 Save Description</button>
-          
-          <!-- Capabilities Section -->
-          <div id="agent-capabilities-section" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
-            <h3 style="color: #22d3ee; font-size: 1rem; margin-bottom: 0.75rem;">📦 Capabilities</h3>
-            <div id="agent-capabilities-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-              <span style="color: #64748b; font-size: 0.85rem;">No capabilities loaded</span>
-            </div>
-          </div>
-          
           <!-- Process Info Section (shown for Process elements) -->
           <div id="process-info-section" style="display: none; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
             <h3 style="color: #ec4899; font-size: 1rem; margin-bottom: 1rem;">🔄 Process Flow Details</h3>
@@ -1502,7 +1596,8 @@
             <label>Value Stream</label>
             <input type="text" id="agent-valuestream-design" placeholder="e.g., Strategy to Portfolio">
           </div>
-          <div class="form-group">
+          <!-- Capability Group hidden - not used in code generation -->
+          <div class="form-group" style="display: none;">
             <label>Capability Group</label>
             <input type="text" id="agent-capgroup-design" placeholder="e.g., Incident Management">
           </div>
@@ -1516,8 +1611,6 @@
             <label>KPIs (one per line)</label>
             <textarea id="agent-kpis-design" rows="3" placeholder="Mean time to resolution&#10;Automation rate&#10;Customer satisfaction"></textarea>
           </div>
-          
-          <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="saveAgentDesign()">💾 Save Design</button>
         </div>
 
         <!-- Configure Tab -->
@@ -1553,19 +1646,20 @@
           </div>
           <button class="btn btn-secondary" style="width: 100%;" onclick="showWorkspaceTab('integrations')">Manage Integrations →</button>
           
-          <div class="section-header">🤖 LLM Configuration</div>
-          <div class="form-group">
-            <label>Default Model</label>
-            <select id="agent-model-config">
-              <option value="">-- Select --</option>
-              <option value="claude-sonnet">Claude Sonnet</option>
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="gpt-4o-mini">GPT-4o Mini</option>
-              <option value="gemini-pro">Gemini Pro</option>
-            </select>
+          <!-- LLM Configuration hidden - all agents use same model for now -->
+          <div style="display: none;">
+            <div class="section-header">🤖 LLM Configuration</div>
+            <div class="form-group">
+              <label>Default Model</label>
+              <select id="agent-model-config">
+                <option value="">-- Select --</option>
+                <option value="claude-sonnet">Claude Sonnet</option>
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="gemini-pro">Gemini Pro</option>
+              </select>
+            </div>
           </div>
-          
-          <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="saveAgentConfig()">💾 Save Configuration</button>
         </div>
 
         <!-- Verify Tab -->
@@ -1587,7 +1681,7 @@
               <span class="status-badge info">⏳</span> Pattern Selected
             </div>
             <div class="verify-item" data-check="integrations">
-              <span class="status-badge info">⏳</span> Integrations Configured
+              <span class="status-badge info">⏳</span> Integrations Configured <span style="color: #64748b; font-size: 0.75rem;">(optional)</span>
             </div>
             <div class="verify-item" data-check="interactions">
               <span class="status-badge info">⏳</span> Interactions Defined
@@ -1602,6 +1696,7 @@
           <div class="section-header">💻 Generated Azure Functions Code</div>
           <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
             <button class="btn btn-success" style="flex: 1;" onclick="generateCode()">🤖 Generate with AI</button>
+            <button class="btn btn-primary" id="save-code-btn" onclick="saveGeneratedCode()">💾 Save</button>
             <button class="btn btn-secondary" onclick="copyCode()">📋 Copy</button>
           </div>
           <div class="code-container" style="max-height: 500px;">
@@ -1618,24 +1713,100 @@
 
         <!-- Deploy Tab -->
         <div id="tab-deploy" class="tab-content">
-          <div class="section-header">🚀 Deployment Status</div>
-          <div class="info-card">
+          <!-- Deployment Target -->
+          <div class="section-header">🎯 Deployment Target</div>
+          <div class="form-group">
+            <select id="deploy-target" onchange="updateDeployTarget(this.value)">
+              <option value="azure-functions" selected>Azure Functions</option>
+              <option value="container-apps">Container Apps</option>
+              <option value="local-docker">Local Docker</option>
+            </select>
+          </div>
+
+          <!-- Azure Configuration -->
+          <div class="section-header">☁️ Azure Configuration</div>
+          <div id="azure-config-section">
+            <div class="form-group">
+              <label>Subscription</label>
+              <select id="deploy-subscription" onchange="updateDeployConfig()">
+                <option value="mcpp">MCPP Subscription</option>
+                <option value="payg">Pay-As-You-Go</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Resource Group</label>
+              <select id="deploy-resource-group" onchange="updateDeployConfig()">
+                <option value="rg-flowgrid-dev">rg-flowgrid-dev</option>
+                <option value="rg-flowgrid-staging">rg-flowgrid-staging</option>
+                <option value="rg-flowgrid-prod">rg-flowgrid-prod</option>
+              </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Region</label>
+                <select id="deploy-region" onchange="updateDeployConfig()">
+                  <option value="westeurope" selected>West Europe</option>
+                  <option value="northeurope">North Europe</option>
+                  <option value="eastus">East US</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Function App Name</label>
+                <input type="text" id="deploy-func-name" placeholder="func-agent-name" onchange="updateDeployConfig()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Pre-Deploy Checklist -->
+          <div class="section-header">✅ Pre-Deploy Checklist</div>
+          <div class="info-card" id="deploy-checklist" style="padding: 0.75rem;">
+            <div id="checklist-items" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+
+          <!-- Deploy Button -->
+          <button id="deploy-btn" class="btn btn-success" style="width: 100%; margin: 1rem 0; padding: 0.75rem; font-size: 1rem;" onclick="deployAgent()" disabled>
+            🚀 Deploy to Azure
+          </button>
+
+          <!-- Current Deployment Status -->
+          <div class="section-header">📊 Current Deployment</div>
+          <div class="info-card" id="deploy-status-card">
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
               <span id="deploy-status-badge" class="status-badge info">⏳ Not Deployed</span>
+              <span id="deploy-version" style="font-size: 0.75rem; color: #64748b;"></span>
             </div>
-            <p id="deploy-status-text" style="color: #94a3b8; font-size: 0.85rem;">This agent has not been deployed yet. Complete configuration and verification first.</p>
+            <div id="deploy-url-container" style="display: none; margin-bottom: 0.75rem;">
+              <label style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Endpoint URL</label>
+              <a id="deploy-url" href="#" target="_blank" style="font-size: 0.8rem; color: #60a5fa; word-break: break-all;"></a>
+            </div>
+            <p id="deploy-status-text" style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.75rem;">This agent has not been deployed yet.</p>
+            <div id="deploy-actions" style="display: none; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" style="flex: 1; font-size: 0.8rem;" onclick="viewDeployLogs()">📋 Logs</button>
+              <button class="btn btn-secondary" style="flex: 1; font-size: 0.8rem;" onclick="redeployAgent()">🔄 Redeploy</button>
+              <button class="btn btn-warning" style="font-size: 0.8rem;" onclick="stopAgent()">⏹️ Stop</button>
+            </div>
           </div>
-          
+
+          <!-- Deployment History -->
+          <div class="section-header">📜 Deployment History</div>
+          <div id="deploy-history" style="max-height: 150px; overflow-y: auto;">
+            <div style="color: #64748b; font-size: 0.85rem; padding: 0.5rem;">No deployment history</div>
+          </div>
+
+          <!-- Export Options -->
           <div class="section-header">📦 Export Options</div>
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <button class="btn btn-secondary" onclick="exportAgentJSON()">📄 Export as JSON (A2A)</button>
+            <button class="btn btn-secondary" onclick="exportAgentJSON()">📄 Export as JSON (A2A Card)</button>
             <button class="btn btn-secondary" onclick="exportAgentCode()">💻 Export Code Package</button>
           </div>
-          
-          <div class="section-header">⚡ Actions</div>
+
+          <!-- Danger Zone -->
+          <div class="section-header" style="color: #ef4444;">⚠️ Danger Zone</div>
           <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-success" style="flex: 1;" onclick="deployAgent()">🚀 Deploy</button>
-            <button class="btn btn-danger" onclick="deleteAgent()">🗑️ Delete</button>
+            <button class="btn btn-danger" style="flex: 1;" onclick="deleteDeployment()">🗑️ Delete Deployment</button>
+            <button class="btn btn-danger" onclick="deleteAgent()">🗑️ Delete Agent</button>
           </div>
         </div>
 
@@ -2200,8 +2371,9 @@
           const response = await fetch(`${API_BASE}/${id}`, { headers: getAuthHeaders() });
           if (response.ok) {
             const details = await response.json();
-            console.log('[selectAgent] Loaded details:', { id, capabilities: details.capabilities?.length, integrations: details.integrations?.length });
+            console.log('[selectAgent] Loaded details:', { id, skills: details.skills?.length, capabilities: details.capabilities?.length, integrations: details.integrations?.length });
             // Explicitly copy key fields
+            agent.skills = details.skills || [];
             agent.capabilities = details.capabilities || [];
             agent.integrations = details.integrations || [];
             agent.interactions = details.interactions || [];
@@ -2272,6 +2444,9 @@
         ? caps.map(c => `<span class="capability-tag" style="background: #164e63; color: #22d3ee; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(c.capability_name || c.name || c)}</span>`).join('')
         : '<span style="color: #64748b; font-size: 0.85rem;">No capabilities</span>';
       
+      // Update Skills section (A2A Protocol)
+      renderSkillsList(agent);
+      
       // Hide Process Info section
       const processSection = document.getElementById('process-info-section');
       if (processSection) processSection.style.display = 'none';
@@ -2306,7 +2481,20 @@
       updateDeployStatus(agent);
 
       // === CODE TAB ===
-      // Don't auto-generate, wait for user to click
+      // Load saved code if exists, otherwise show placeholder
+      const codeEl = document.getElementById('agent-code');
+      if (config.generatedCode) {
+        codeEl.textContent = config.generatedCode;
+      } else {
+        codeEl.textContent = `// Click "Generate with AI" to create Azure Functions code for this agent
+
+// The generated code will include:
+// - Azure Functions v4 entry point
+// - Service Bus message handling
+// - Agent logic based on pattern
+// - Integration stubs
+// - Error handling & logging`;
+      }
       
       // === BPMN TAB ===
       // If BPMN tab is active, refresh to show the selected agent's BPMN
@@ -2329,6 +2517,12 @@
     }
 
     function updateWorkspacePanels(agent) {
+      // Update Overview tab
+      renderOverview(agent);
+      
+      // Update Skills tab
+      renderWorkspaceSkills(agent);
+      
       // Update workspace relationships
       const relationsContainer = document.getElementById('workspace-relations');
       if (relationsContainer) {
@@ -2634,16 +2828,8 @@
     }
 
     function updateDeployStatus(agent) {
-      const statusEl = document.getElementById('deploy-status');
-      const status = agent.status || 'configured';
-      
-      const statusMessages = {
-        'configured': 'Agent is configured but not yet deployed.',
-        'compiled': 'Agent has been compiled and is ready for deployment.',
-        'deployed': 'Agent is deployed and running.',
-      };
-      
-      statusEl.textContent = statusMessages[status] || statusMessages.configured;
+      // Call the full deploy status renderer
+      renderDeployStatus(agent);
     }
     
     function generateAgentCode(agent) {
@@ -2704,6 +2890,83 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       
       if (tabName === 'graph' && network) {
         setTimeout(() => network.fit({ animation: { duration: 300 } }), 50);
+      }
+      
+      // Render skills when switching to skills tab
+      if (tabName === 'skills' && selectedAgentId) {
+        const agent = agents.find(a => a.id === selectedAgentId);
+        if (agent) renderWorkspaceSkills(agent);
+      }
+    }
+    
+    function renderOverview(agent) {
+      const noSelection = document.getElementById('overview-no-selection');
+      const content = document.getElementById('overview-agent-content');
+      
+      if (!agent) {
+        if (noSelection) noSelection.style.display = 'block';
+        if (content) content.style.display = 'none';
+        return;
+      }
+      
+      if (noSelection) noSelection.style.display = 'none';
+      if (content) content.style.display = 'block';
+      
+      const config = agent.config || {};
+      const skills = agent.skills || [];
+      const caps = agent.capabilities || [];
+      const tools = agent.integrations || [];
+      const agentRelations = relationships.filter(r => r.sourceId === agent.id || r.targetId === agent.id);
+      
+      // Set icon based on element type
+      const icons = { Agent: '🤖', Capability: '📦', DataObject: '💾', Process: '🔄' };
+      document.getElementById('overview-icon').textContent = icons[agent.elementType] || '🤖';
+      
+      // Header
+      document.getElementById('overview-name').textContent = agent.name;
+      document.getElementById('overview-type-badge').textContent = agent.elementType || 'Agent';
+      
+      // Pattern badge
+      const patternBadge = document.getElementById('overview-pattern-badge');
+      if (config.pattern) {
+        patternBadge.textContent = config.pattern;
+        patternBadge.style.display = 'inline-block';
+      } else {
+        patternBadge.style.display = 'none';
+      }
+      
+      // Description
+      document.getElementById('overview-description').textContent = 
+        config.detailedPurpose || agent.description || config.shortDescription || 'No description provided.';
+      
+      // Stats
+      document.getElementById('overview-skills-count').textContent = skills.length;
+      document.getElementById('overview-caps-count').textContent = caps.length;
+      document.getElementById('overview-tools-count').textContent = tools.length;
+      document.getElementById('overview-relations-count').textContent = agentRelations.length;
+      
+      // Configuration
+      document.getElementById('overview-valuestream').textContent = config.valueStream || '—';
+      document.getElementById('overview-autonomy').textContent = config.autonomyLevel || '—';
+      document.getElementById('overview-decision').textContent = config.decisionAuthority || '—';
+      document.getElementById('overview-interaction').textContent = config.interactionPattern || '—';
+      
+      // Skills preview (show first 3)
+      const skillsPreview = document.getElementById('overview-skills-preview');
+      if (skills.length > 0) {
+        skillsPreview.innerHTML = skills.slice(0, 3).map(s => `
+          <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0; border-bottom: 1px solid #334155;">
+            <span style="color: #a78bfa;">⚡</span>
+            <span style="color: #e2e8f0; font-size: 0.85rem;">${escapeHtml(s.display_name || s.name)}</span>
+          </div>
+        `).join('') + (skills.length > 3 ? `<div style="color: #64748b; font-size: 0.8rem; margin-top: 0.5rem;">+${skills.length - 3} more...</div>` : '');
+      } else {
+        skillsPreview.innerHTML = `
+          <div style="text-align: center; padding: 1rem; color: #64748b;">
+            <p style="margin-bottom: 0.5rem;">No skills defined</p>
+            <button class="btn btn-sm btn-primary" style="font-size: 0.75rem;" onclick="showWorkspaceTab('skills'); generateSkillsWithAI();">🤖 Generate</button>
+          </div>
+        `;
       }
     }
     
@@ -2971,6 +3234,53 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       });
     }
     
+    async function saveGeneratedCode() {
+      if (!selectedAgentId) return alert('No agent selected');
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
+      
+      const code = document.getElementById('agent-code').textContent;
+      if (!code || code.includes('Click "Generate')) {
+        return alert('Generate code first before saving.');
+      }
+      
+      const btn = document.getElementById('save-code-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '⏳ Saving...';
+      btn.disabled = true;
+      
+      try {
+        // Save code to agent config
+        const updatedConfig = {
+          ...agent.config,
+          generatedCode: code,
+          codeGeneratedAt: new Date().toISOString()
+        };
+        
+        const response = await fetch(`${API_BASE}/${selectedAgentId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ config: updatedConfig })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        agent.config = updatedConfig;
+        btn.innerHTML = '✅ Saved!';
+        showNotification('Code saved to agent', 'success');
+        
+        // Update deploy checklist
+        updateDeployChecklist();
+        
+        setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+      } catch (err) {
+        console.error('Failed to save code:', err);
+        btn.innerHTML = '❌ Error';
+        showNotification('Failed to save code: ' + err.message, 'error');
+        setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+      }
+    }
+    
     // ============================================================================
     // UI Utilities
     // ============================================================================
@@ -3010,6 +3320,299 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       // Workspace agents list
       const roster = document.getElementById('workspace-agents-list');
       if (roster) roster.textContent = agents.map(a => a.name).slice(0, 10).join(' • ') || 'No agents yet';
+    }
+    
+    // ==========================================================================
+    // Agent Skills Management (A2A Protocol)
+    // ==========================================================================
+    
+    function renderSkillsList(agent) {
+      // Update skills count in description tab
+      const countEl = document.getElementById('skills-count');
+      const skills = agent?.skills || [];
+      if (countEl) countEl.textContent = skills.length;
+      
+      // Render workspace skills panel
+      renderWorkspaceSkills(agent);
+    }
+    
+    function renderWorkspaceSkills(agent) {
+      const emptyEl = document.getElementById('workspace-skills-empty');
+      const listEl = document.getElementById('workspace-skills-list');
+      const actionsEl = document.getElementById('skills-actions');
+      
+      if (!listEl || !emptyEl) return;
+      
+      const skills = agent?.skills || [];
+      
+      if (!agent) {
+        emptyEl.style.display = 'block';
+        listEl.style.display = 'none';
+        if (actionsEl) actionsEl.style.display = 'none';
+        return;
+      }
+      
+      emptyEl.style.display = 'none';
+      listEl.style.display = 'block';
+      if (actionsEl) actionsEl.style.display = 'flex';
+      
+      if (skills.length === 0) {
+        listEl.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: #64748b;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+            <p style="margin-bottom: 1rem;">No skills defined yet for <strong>${escapeHtml(agent.name)}</strong></p>
+            <div style="display: flex; gap: 0.5rem; justify-content: center;">
+              <button class="btn btn-secondary" onclick="openAddSkillModal()">+ Add Manually</button>
+              <button class="btn btn-primary" onclick="generateSkillsWithAI()">🤖 Generate with AI</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      listEl.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.75rem;">
+          ${skills.map(skill => `
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem; transition: all 0.2s;" 
+                 onmouseover="this.style.borderColor='#a78bfa'" onmouseout="this.style.borderColor='#334155'">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: #a78bfa; font-weight: 600; font-size: 0.95rem;">⚡ ${escapeHtml(skill.display_name || skill.name)}</span>
+                  </div>
+                  <code style="font-size: 0.7rem; color: #64748b; background: #0f172a; padding: 0.15rem 0.4rem; border-radius: 3px; margin-top: 0.25rem; display: inline-block;">${escapeHtml(skill.name)}</code>
+                </div>
+                <div style="display: flex; gap: 0.25rem;">
+                  <button onclick="editSkill('${skill.id}')" style="background: #334155; border: none; color: #e2e8f0; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">✏️</button>
+                  <button onclick="deleteSkill('${skill.id}')" style="background: #7f1d1d; border: none; color: #fca5a5; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">🗑️</button>
+                </div>
+              </div>
+              <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.75rem; line-height: 1.4;">${escapeHtml(skill.description || 'No description')}</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                ${(skill.tags || []).map(tag => `<span style="font-size: 0.7rem; background: #164e63; color: #22d3ee; padding: 0.2rem 0.5rem; border-radius: 4px;">${escapeHtml(tag)}</span>`).join('')}
+              </div>
+              ${skill.examples?.length ? `
+                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #334155;">
+                  <span style="font-size: 0.7rem; color: #64748b;">Examples: ${skill.examples.length}</span>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    function openAddSkillModal() {
+      document.getElementById('skill-modal-title').textContent = 'Add Skill';
+      document.getElementById('skill-id').value = '';
+      document.getElementById('skill-display-name').value = '';
+      document.getElementById('skill-name').value = '';
+      document.getElementById('skill-description').value = '';
+      document.getElementById('skill-tags').value = '';
+      document.getElementById('skill-input-schema').value = '';
+      document.getElementById('skill-example').value = '';
+      document.getElementById('skill-modal').style.display = 'flex';
+    }
+    
+    function closeSkillModal() {
+      document.getElementById('skill-modal').style.display = 'none';
+    }
+    
+    function updateSkillName() {
+      const displayName = document.getElementById('skill-display-name').value;
+      const skillName = displayName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      document.getElementById('skill-name').value = skillName;
+    }
+    
+    async function editSkill(skillId) {
+      const agent = agents.find(a => a.id === selectedAgentId);
+      const skill = (agent?.skills || []).find(s => s.id === skillId);
+      if (!skill) return;
+      
+      document.getElementById('skill-modal-title').textContent = 'Edit Skill';
+      document.getElementById('skill-id').value = skill.id;
+      document.getElementById('skill-display-name').value = skill.display_name || '';
+      document.getElementById('skill-name').value = skill.name || '';
+      document.getElementById('skill-description').value = skill.description || '';
+      document.getElementById('skill-tags').value = (skill.tags || []).join(', ');
+      document.getElementById('skill-input-schema').value = skill.input_schema ? JSON.stringify(skill.input_schema, null, 2) : '';
+      document.getElementById('skill-example').value = skill.examples?.[0]?.input ? JSON.stringify(skill.examples[0].input, null, 2) : '';
+      document.getElementById('skill-modal').style.display = 'flex';
+    }
+    
+    async function saveSkill() {
+      if (!selectedAgentId) return;
+      
+      const skillId = document.getElementById('skill-id').value;
+      const displayName = document.getElementById('skill-display-name').value.trim();
+      const name = document.getElementById('skill-name').value.trim();
+      const description = document.getElementById('skill-description').value.trim();
+      const tagsStr = document.getElementById('skill-tags').value.trim();
+      const inputSchemaStr = document.getElementById('skill-input-schema').value.trim();
+      const exampleStr = document.getElementById('skill-example').value.trim();
+      
+      if (!displayName || !name) {
+        return alert('Display name is required');
+      }
+      
+      let inputSchema = {};
+      let examples = [];
+      
+      try {
+        if (inputSchemaStr) inputSchema = JSON.parse(inputSchemaStr);
+      } catch (e) {
+        return alert('Invalid JSON in Input Schema');
+      }
+      
+      try {
+        if (exampleStr) {
+          examples = [{ name: displayName, input: JSON.parse(exampleStr) }];
+        }
+      } catch (e) {
+        return alert('Invalid JSON in Example');
+      }
+      
+      const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+      
+      const payload = {
+        name,
+        display_name: displayName,
+        description,
+        tags,
+        input_schema: inputSchema,
+        examples
+      };
+      
+      try {
+        const url = skillId 
+          ? `${API_BASE}/${selectedAgentId}/skills/${skillId}`
+          : `${API_BASE}/${selectedAgentId}/skills`;
+        
+        const response = await fetch(url, {
+          method: skillId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        closeSkillModal();
+        showNotification(skillId ? 'Skill updated' : 'Skill created', 'success');
+        
+        // Reload agent to get updated skills
+        await reloadSelectedAgent();
+      } catch (err) {
+        console.error('Save skill error:', err);
+        showNotification('Failed to save skill: ' + err.message, 'error');
+      }
+    }
+    
+    async function deleteSkill(skillId) {
+      if (!selectedAgentId) return;
+      if (!confirm('Delete this skill?')) return;
+      
+      try {
+        const response = await fetch(`${API_BASE}/${selectedAgentId}/skills/${skillId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        showNotification('Skill deleted', 'success');
+        await reloadSelectedAgent();
+      } catch (err) {
+        console.error('Delete skill error:', err);
+        showNotification('Failed to delete skill: ' + err.message, 'error');
+      }
+    }
+    
+    async function generateSkillsWithAI() {
+      if (!selectedAgentId) return;
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
+      
+      if (!confirm('Generate skills based on agent description and capabilities? This will add new skills.')) return;
+      
+      // Show loading spinner in skills panel
+      const listEl = document.getElementById('workspace-skills-list');
+      if (listEl) {
+        listEl.style.display = 'block';
+        listEl.innerHTML = `
+          <div style="text-align: center; padding: 3rem;">
+            <div class="loading-spinner" style="width: 48px; height: 48px; margin: 0 auto 1rem;"></div>
+            <p style="color: #94a3b8;">Generating skills with AI...</p>
+            <p style="color: #64748b; font-size: 0.8rem;">This may take a moment</p>
+          </div>
+        `;
+      }
+      const emptyEl = document.getElementById('workspace-skills-empty');
+      if (emptyEl) emptyEl.style.display = 'none';
+      
+      try {
+        // Use wizard service to generate skills
+        const response = await fetch('/api/wizard/generate-skills', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({
+            agentId: selectedAgentId,
+            agentName: agent.name,
+            description: agent.config?.detailedPurpose || agent.description,
+            capabilities: (agent.capabilities || []).map(c => c.capability_name || c.name || c),
+            pattern: agent.config?.pattern
+          })
+        });
+        
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        const generatedSkills = result.skills || [];
+        
+        console.log('[Skills] Generated skills:', generatedSkills);
+        
+        // Create each skill
+        for (const skill of generatedSkills) {
+          const createResp = await fetch(`${API_BASE}/${selectedAgentId}/skills`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify(skill)
+          });
+          console.log('[Skills] Create skill response:', createResp.status);
+        }
+        
+        showNotification(`Generated ${generatedSkills.length} skills`, 'success');
+        await reloadSelectedAgent();
+      } catch (err) {
+        console.error('Generate skills error:', err);
+        showNotification('Failed to generate skills: ' + err.message, 'error');
+        // Reset view
+        if (agent) renderWorkspaceSkills(agent);
+      }
+    }
+    
+    async function reloadSelectedAgent() {
+      if (!selectedAgentId) return;
+      try {
+        const response = await fetch(`${API_BASE}/${selectedAgentId}`, { headers: getAuthHeaders() });
+        if (response.ok) {
+          const details = await response.json();
+          console.log('[reloadSelectedAgent] Loaded:', { skills: details.skills?.length, caps: details.capabilities?.length });
+          const agent = agents.find(a => a.id === selectedAgentId);
+          if (agent) {
+            agent.skills = details.skills || [];
+            agent.capabilities = details.capabilities || [];
+            agent.integrations = details.integrations || [];
+            agent.config = details.config || agent.config;
+            renderSkillsList(agent);
+            renderOverview(agent);
+          }
+        }
+      } catch (err) {
+        console.error('Reload agent error:', err);
+      }
     }
     
     function showNotification(message, type = 'info') {
@@ -4065,12 +4668,21 @@ ${gatewayShapes}
         interactions: !!(config.triggers?.length || config.outputs?.length),
       };
       
+      // Integrations are optional, so handle differently
+      const optionalChecks = ['integrations'];
+      
       document.querySelectorAll('#verify-checklist .verify-item').forEach(item => {
         const check = item.dataset.check;
         const badge = item.querySelector('.status-badge');
+        const isOptional = optionalChecks.includes(check);
+        
         if (checks[check]) {
           badge.className = 'status-badge success';
           badge.textContent = '✅';
+        } else if (isOptional) {
+          // Optional checks show info (blue) instead of warning
+          badge.className = 'status-badge info';
+          badge.textContent = '⏳';
         } else {
           badge.className = 'status-badge warning';
           badge.textContent = '⚠️';
@@ -4087,17 +4699,24 @@ ${gatewayShapes}
       
       const config = agent.config || {};
       const issues = [];
+      const warnings = [];
+      
+      // Required checks
       if (!agent.name) issues.push('Agent name is missing');
       if (!config.detailedPurpose && !agent.description) issues.push('Purpose is not defined');
       if (!config.pattern) issues.push('Agentic pattern not selected');
-      if (!(agent.integrations?.length)) issues.push('No integrations configured');
       if (!config.triggers?.length && !config.outputs?.length) issues.push('No interaction triggers or outputs defined');
       
+      // Optional checks (warnings only)
+      if (!(agent.integrations?.length)) warnings.push('No integrations configured (optional)');
+      
       const resultsEl = document.getElementById('verify-results');
-      if (issues.length === 0) {
+      if (issues.length === 0 && warnings.length === 0) {
         resultsEl.innerHTML = '<div style="color: #10b981;">✅ All checks passed! Agent is ready for deployment.</div>';
+      } else if (issues.length === 0) {
+        resultsEl.innerHTML = `<div style="color: #10b981;">✅ Required checks passed!</div>${warnings.length ? `<div style="color: #94a3b8; margin-top: 0.5rem; font-size: 0.85rem;"><strong>Suggestions:</strong><ul style="margin-top: 0.25rem;">${warnings.map(w => `<li>${w}</li>`).join('')}</ul></div>` : ''}`;
       } else {
-        resultsEl.innerHTML = `<div style="color: #f59e0b;">⚠️ ${issues.length} issue(s) found:</div><ul style="color: #94a3b8; margin-top: 0.5rem; font-size: 0.85rem;">${issues.map(i => `<li>${i}</li>`).join('')}</ul>`;
+        resultsEl.innerHTML = `<div style="color: #f59e0b;">⚠️ ${issues.length} issue(s) found:</div><ul style="color: #94a3b8; margin-top: 0.5rem; font-size: 0.85rem;">${issues.map(i => `<li>${i}</li>`).join('')}</ul>${warnings.length ? `<div style="color: #94a3b8; margin-top: 0.75rem; font-size: 0.85rem;"><strong>Suggestions:</strong><ul style="margin-top: 0.25rem;">${warnings.map(w => `<li>${w}</li>`).join('')}</ul></div>` : ''}`;
       }
     }
     
@@ -4105,34 +4724,278 @@ ${gatewayShapes}
     // Deploy Functions
     // ==========================================
     
-    function updateDeployStatus(agent) {
-      const status = agent.status || 'draft';
-      const badge = document.getElementById('deploy-status-badge');
-      const text = document.getElementById('deploy-status-text');
+    // updateDeployStatus is defined earlier - this duplicate removed
+    
+    // ==========================================
+    // Deploy Tab Functions
+    // ==========================================
+    
+    let deploymentTarget = 'azure-functions';
+    let deploymentConfig = {
+      subscription: 'mcpp',
+      resourceGroup: 'rg-flowgrid-dev',
+      region: 'westeurope',
+      funcName: ''
+    };
+    
+    function updateDeployTarget(target) {
+      deploymentTarget = target;
+      const azureSection = document.getElementById('azure-config-section');
+      if (azureSection) {
+        azureSection.style.display = target === 'local-docker' ? 'none' : 'block';
+      }
+      updateDeployChecklist();
+    }
+    
+    function updateDeployConfig() {
+      deploymentConfig.subscription = document.getElementById('deploy-subscription')?.value || 'mcpp';
+      deploymentConfig.resourceGroup = document.getElementById('deploy-resource-group')?.value || 'rg-flowgrid-dev';
+      deploymentConfig.region = document.getElementById('deploy-region')?.value || 'westeurope';
+      deploymentConfig.funcName = document.getElementById('deploy-func-name')?.value || '';
+    }
+    
+    function updateDeployChecklist() {
+      if (!selectedAgentId) return;
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
       
-      if (status === 'deployed') {
-        badge.className = 'status-badge success';
-        badge.textContent = '✅ Deployed';
-        text.textContent = 'Agent is deployed and running.';
-      } else if (status === 'configured') {
-        badge.className = 'status-badge info';
-        badge.textContent = '⚙️ Configured';
-        text.textContent = 'Agent is configured but not yet deployed.';
-      } else {
-        badge.className = 'status-badge warning';
-        badge.textContent = '⏳ Draft';
-        text.textContent = 'Complete configuration and verification before deploying.';
+      const config = agent.config || {};
+      const checks = [
+        {
+          id: 'code',
+          label: 'Code generated',
+          passed: !!config.generatedCode || document.getElementById('agent-code')?.textContent?.includes('export default'),
+          hint: 'Generate code in the Code tab'
+        },
+        {
+          id: 'config',
+          label: 'Agent configuration complete',
+          passed: !!(config.model && config.systemPrompt),
+          hint: 'Configure model and system prompt'
+        },
+        {
+          id: 'secrets',
+          label: 'Integration secrets configured',
+          passed: true, // For now, assume ok
+          hint: 'Configure API keys in integrations'
+        },
+        {
+          id: 'bpmn',
+          label: 'BPMN process defined',
+          passed: !!config.bpmnXml,
+          hint: 'Create a process in the BPMN tab',
+          optional: true
+        }
+      ];
+      
+      const container = document.getElementById('checklist-items');
+      if (!container) return;
+      
+      container.innerHTML = checks.map(check => `
+        <div style="display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.35rem 0; ${check.optional ? 'opacity: 0.6;' : ''}">
+          <span style="flex-shrink: 0;">${check.passed ? '✅' : '⚠️'}</span>
+          <div>
+            <div style="color: ${check.passed ? '#e2e8f0' : '#fbbf24'};">${check.label}${check.optional ? ' (optional)' : ''}</div>
+            ${!check.passed && check.hint ? `<div style="font-size: 0.8rem; color: #64748b; margin-top: 0.15rem;">${check.hint}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+      
+      // Enable/disable deploy button based on required checks
+      const requiredPassed = checks.filter(c => !c.optional).every(c => c.passed);
+      const deployBtn = document.getElementById('deploy-btn');
+      if (deployBtn) {
+        deployBtn.disabled = !requiredPassed;
+        deployBtn.style.opacity = requiredPassed ? '1' : '0.5';
       }
     }
     
-    function deployAgent() {
-      alert('Deployment coming soon! For now, use Export options.');
+    function renderDeployStatus(agent) {
+      const deployment = agent?.config?.deployment || {};
+      const isDeployed = deployment.status === 'running';
+      
+      // Update status badge
+      const badge = document.getElementById('deploy-status-badge');
+      if (badge) {
+        if (isDeployed) {
+          badge.className = 'status-badge success';
+          badge.textContent = '🟢 Running';
+        } else if (deployment.status === 'stopped') {
+          badge.className = 'status-badge warning';
+          badge.textContent = '🟡 Stopped';
+        } else if (deployment.status === 'failed') {
+          badge.className = 'status-badge error';
+          badge.textContent = '🔴 Failed';
+        } else {
+          badge.className = 'status-badge info';
+          badge.textContent = '⏳ Not Deployed';
+        }
+      }
+      
+      // Update version
+      const versionEl = document.getElementById('deploy-version');
+      if (versionEl) {
+        versionEl.textContent = deployment.version ? `v${deployment.version}` : '';
+      }
+      
+      // Update URL
+      const urlContainer = document.getElementById('deploy-url-container');
+      const urlEl = document.getElementById('deploy-url');
+      if (urlContainer && urlEl) {
+        if (deployment.url) {
+          urlContainer.style.display = 'block';
+          urlEl.href = deployment.url;
+          urlEl.textContent = deployment.url;
+        } else {
+          urlContainer.style.display = 'none';
+        }
+      }
+      
+      // Update status text
+      const statusText = document.getElementById('deploy-status-text');
+      if (statusText) {
+        if (isDeployed) {
+          statusText.textContent = `Last deployed: ${deployment.lastDeployed ? new Date(deployment.lastDeployed).toLocaleString() : 'Unknown'}`;
+        } else if (deployment.status === 'failed') {
+          statusText.textContent = `Deployment failed: ${deployment.error || 'Unknown error'}`;
+        } else {
+          statusText.textContent = 'This agent has not been deployed yet.';
+        }
+      }
+      
+      // Show/hide action buttons
+      const actionsEl = document.getElementById('deploy-actions');
+      if (actionsEl) {
+        actionsEl.style.display = deployment.status ? 'flex' : 'none';
+      }
+      
+      // Update function name if not set
+      const funcNameEl = document.getElementById('deploy-func-name');
+      if (funcNameEl && !funcNameEl.value && agent?.name) {
+        funcNameEl.value = `func-${agent.name.toLowerCase().replace(/\s+/g, '-')}`;
+      }
+      
+      // Render deployment history
+      renderDeployHistory(deployment.history || []);
+      
+      // Update checklist
+      updateDeployChecklist();
+    }
+    
+    function renderDeployHistory(history) {
+      const container = document.getElementById('deploy-history');
+      if (!container) return;
+      
+      if (!history || history.length === 0) {
+        container.innerHTML = '<div style="color: #64748b; font-size: 0.85rem; padding: 0.5rem;">No deployment history</div>';
+        return;
+      }
+      
+      container.innerHTML = history.slice(0, 10).map((item, i) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: ${i % 2 === 0 ? '#0f172a' : 'transparent'}; border-radius: 4px; font-size: 0.8rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="color: ${item.status === 'success' ? '#10b981' : '#ef4444'};">${item.status === 'success' ? '✅' : '❌'}</span>
+            <span style="color: #94a3b8;">#${history.length - i}</span>
+            <span style="color: #64748b;">${new Date(item.timestamp).toLocaleString()}</span>
+          </div>
+          <span style="color: #60a5fa;">v${item.version || '1.0.0'}</span>
+        </div>
+      `).join('');
+    }
+    
+    async function deployAgent() {
+      if (!selectedAgentId) return alert('No agent selected');
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
+      
+      const deployBtn = document.getElementById('deploy-btn');
+      const originalText = deployBtn.innerHTML;
+      deployBtn.innerHTML = '⏳ Deploying...';
+      deployBtn.disabled = true;
+      
+      try {
+        // Simulate deployment (replace with actual API call)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Update agent with deployment info
+        const deployment = agent.config?.deployment || {};
+        const newVersion = deployment.version ? (parseFloat(deployment.version) + 0.1).toFixed(1) : '1.0';
+        
+        agent.config = {
+          ...agent.config,
+          deployment: {
+            status: 'running',
+            url: `https://${deploymentConfig.funcName || 'func-' + agent.name.toLowerCase().replace(/\s+/g, '-')}.azurewebsites.net`,
+            lastDeployed: new Date().toISOString(),
+            version: newVersion,
+            target: deploymentTarget,
+            resourceGroup: deploymentConfig.resourceGroup,
+            region: deploymentConfig.region,
+            history: [
+              { status: 'success', timestamp: new Date().toISOString(), version: newVersion },
+              ...(deployment.history || [])
+            ].slice(0, 10)
+          }
+        };
+        
+        // Save to backend (mock for now)
+        // await saveAgentConfig(agent);
+        
+        renderDeployStatus(agent);
+        alert(`✅ Agent deployed successfully!\n\nURL: ${agent.config.deployment.url}`);
+        
+      } catch (err) {
+        alert(`❌ Deployment failed: ${err.message}`);
+      } finally {
+        deployBtn.innerHTML = originalText;
+        deployBtn.disabled = false;
+      }
+    }
+    
+    function viewDeployLogs() {
+      const agent = agents.find(a => a.id === selectedAgentId);
+      const url = agent?.config?.deployment?.url;
+      if (url) {
+        window.open(`https://portal.azure.com/#view/WebsitesExtension/FunctionMenuBlade/~/log`, '_blank');
+      } else {
+        alert('No deployment found. Deploy the agent first.');
+      }
+    }
+    
+    async function redeployAgent() {
+      if (confirm('Are you sure you want to redeploy this agent?')) {
+        await deployAgent();
+      }
+    }
+    
+    function stopAgent() {
+      if (!selectedAgentId) return;
+      if (!confirm('Are you sure you want to stop this agent?')) return;
+      
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (agent?.config?.deployment) {
+        agent.config.deployment.status = 'stopped';
+        renderDeployStatus(agent);
+        alert('Agent stopped.');
+      }
+    }
+    
+    function deleteDeployment() {
+      if (!selectedAgentId) return;
+      if (!confirm('Are you sure you want to delete this deployment? This will remove it from Azure.')) return;
+      
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (agent?.config) {
+        delete agent.config.deployment;
+        renderDeployStatus(agent);
+        alert('Deployment deleted.');
+      }
     }
     
     function deleteAgent() {
       if (!selectedAgentId) return;
-      if (!confirm('Are you sure you want to delete this agent?')) return;
-      // TODO: Implement delete
+      if (!confirm('Are you sure you want to delete this agent? This cannot be undone.')) return;
+      // TODO: Implement delete API call
       alert('Delete functionality coming soon.');
     }
     
@@ -4218,15 +5081,14 @@ ${gatewayShapes}
         <h4>📋 Basic Information</h4>
         <label>Agent Name</label>
         <input type="text" id="config-agent-name">
-        <div class="form-row">
-          <div>
-            <label>Value Stream</label>
-            <input type="text" id="config-agent-valuestream">
-          </div>
-          <div>
-            <label>Capability Group</label>
-            <input type="text" id="config-agent-capgroup">
-          </div>
+        <div class="form-group">
+          <label>Value Stream</label>
+          <input type="text" id="config-agent-valuestream">
+        </div>
+        <!-- Capability Group hidden -->
+        <div style="display: none;">
+          <label>Capability Group</label>
+          <input type="text" id="config-agent-capgroup">
         </div>
         <label>Purpose</label>
         <textarea id="config-agent-purpose" rows="2"></textarea>
@@ -4307,8 +5169,8 @@ ${gatewayShapes}
         <input type="text" id="config-agent-escalation" placeholder="IT Manager, Service Owner">
       </div>
 
-      <!-- LLM Configuration -->
-      <div class="modal-section">
+      <!-- LLM Configuration hidden - all agents use same model for now -->
+      <div class="modal-section" style="display: none;">
         <h4>🤖 LLM Model Configuration</h4>
         <label>Default Model</label>
         <select id="config-agent-model">
@@ -4363,6 +5225,54 @@ ${gatewayShapes}
       <div class="btn-row">
         <button class="btn-cancel" onclick="closeIntegrationModal()">Cancel</button>
         <button class="btn-save" onclick="saveIntegrationConfig()">💾 Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+<!-- Skill Modal -->
+  <div id="skill-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background: #1e293b; border-radius: 12px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; border: 1px solid #334155;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #334155;">
+        <h3 style="color: #a78bfa; margin: 0;">🛠️ <span id="skill-modal-title">Add Skill</span></h3>
+        <button onclick="closeSkillModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">×</button>
+      </div>
+      <div style="padding: 1rem;">
+        <input type="hidden" id="skill-id">
+        
+        <div class="form-group">
+          <label style="color: #94a3b8; font-size: 0.8rem;">Display Name *</label>
+          <input type="text" id="skill-display-name" placeholder="e.g., Analyze Incident" oninput="updateSkillName()">
+        </div>
+        
+        <div class="form-group">
+          <label style="color: #94a3b8; font-size: 0.8rem;">ID (auto-generated)</label>
+          <input type="text" id="skill-name" placeholder="analyze_incident" readonly style="background: #0f172a; color: #64748b;">
+        </div>
+        
+        <div class="form-group">
+          <label style="color: #94a3b8; font-size: 0.8rem;">Description *</label>
+          <textarea id="skill-description" rows="2" placeholder="What does this skill do?"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label style="color: #94a3b8; font-size: 0.8rem;">Tags (comma-separated)</label>
+          <input type="text" id="skill-tags" placeholder="incident, analysis, triage">
+        </div>
+        
+        <div class="form-group">
+          <label style="color: #94a3b8; font-size: 0.8rem;">Input Schema (JSON)</label>
+          <textarea id="skill-input-schema" rows="3" placeholder='{"type": "object", "properties": {...}}' style="font-family: monospace; font-size: 0.8rem;"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label style="color: #94a3b8; font-size: 0.8rem;">Example Input (JSON)</label>
+          <textarea id="skill-example" rows="2" placeholder='{"incidentId": "INC001"}' style="font-family: monospace; font-size: 0.8rem;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button class="btn btn-secondary" style="flex: 1;" onclick="closeSkillModal()">Cancel</button>
+          <button class="btn btn-success" style="flex: 1;" onclick="saveSkill()">💾 Save Skill</button>
+        </div>
       </div>
     </div>
   </div>

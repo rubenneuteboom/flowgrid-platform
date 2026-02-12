@@ -83,7 +83,8 @@ services:
       DATABASE_URL: postgres://flowgrid:${DB_PASSWORD:-flowgrid_dev_password}@postgres:5432/flowgrid
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-2h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
     ports:
       - "3002:3002"
     depends_on:

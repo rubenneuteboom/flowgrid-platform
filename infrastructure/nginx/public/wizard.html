@@ -1214,12 +1214,12 @@
                 <!-- Results -->
                 <div class="results" id="step5Results">
                     <h2>🔗 Agent Interactions</h2>
-                    <p class="subtitle"><span id="relCount">0</span> relationships and <span id="intCount">0</span> integrations defined.</p>
+                    <p class="subtitle"><span id="relCount">0</span> relationships and <span id="intCount">0</span> tools defined.</p>
 
                     <!-- Tabs -->
                     <div class="int-tabs">
                         <button class="int-tab active" onclick="showInteractionTab('relationships')">🔗 Relations</button>
-                        <button class="int-tab" onclick="showInteractionTab('integrations')">🔌 Integrations</button>
+                        <button class="int-tab" onclick="showInteractionTab('integrations')">🔧 Tools</button>
                         <button class="int-tab" onclick="showInteractionTab('messages')">📨 Messages</button>
                     </div>
 
@@ -1271,7 +1271,7 @@
                     </div>
                     <div class="stat-card purple">
                         <div class="stat-value" id="summaryIntegrations">0</div>
-                        <div class="stat-label">Integrations</div>
+                        <div class="stat-label">Tools</div>
                     </div>
                 </div>
 
@@ -2831,7 +2831,7 @@
                     <div class="int-meta">${i.type} • ${i.system} • ${i.direction}</div>
                     <div class="int-agent">Agent: ${escapeHtml(getAgentName(i.agentId))}</div>
                 </div>
-            `).join('') : '<p style="color: var(--text-muted);">No integrations defined</p>';
+            `).join('') : '<p style="color: var(--text-muted);">No tools defined</p>';
             
             const msgContainer = document.getElementById('intMessages');
             const messageTypes = analysisResult?.messageTypes || [];
@@ -3022,7 +3022,7 @@
                     </div>
                     <div class="stat-card purple">
                         <div class="stat-value">${data.created.integrations}</div>
-                        <div class="stat-label">Integrations</div>
+                        <div class="stat-label">Tools</div>
                     </div>
                 `;
                 

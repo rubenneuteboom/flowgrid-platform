@@ -292,6 +292,12 @@ app.get('/api/agents/:id', async (req: Request, res: Response) => {
       [id, tenantId]
     );
 
+    // Get skills (A2A Protocol)
+    const skillsResult = await pool.query(
+      'SELECT id, name, display_name, description, input_schema, output_schema, tags, examples, is_active FROM agent_skills WHERE agent_id = $1 ORDER BY created_at',
+      [id]
+    );
+
     res.json({
       id: agent.id,
       tenantId: agent.tenant_id,
@@ -306,6 +312,7 @@ app.get('/api/agents/:id', async (req: Request, res: Response) => {
       capabilities: capsResult.rows,
       integrations: intResult.rows,
       interactions: interResult.rows,
+      skills: skillsResult.rows,
     });
   } catch (error) {
     console.error(`[${SERVICE_NAME}] Get agent error:`, error);
@@ -338,7 +345,13 @@ app.get('/api/agents/:id/a2a-card', async (req: Request, res: Response) => {
     const agent = agentResult.rows[0];
     const config = agent.config || {};
 
-    // Get capabilities to build skills
+    // Get actual skills from agent_skills table (A2A Protocol compliant)
+    const skillsResult = await pool.query(
+      'SELECT id, name, display_name, description, input_schema, output_schema, tags, examples FROM agent_skills WHERE agent_id = $1 AND is_active = true ORDER BY created_at',
+      [id]
+    );
+
+    // Get capabilities (for fallback if no skills defined)
     const capsResult = await pool.query(
       'SELECT capability_name, capability_type, config FROM agent_capabilities WHERE agent_id = $1',
       [id]
@@ -352,6 +365,25 @@ app.get('/api/agents/:id/a2a-card', async (req: Request, res: Response) => {
       [id]
     );
 
+    // Build A2A skills: prefer actual skills from database, fallback to generated
+    const a2aSkills = skillsResult.rows.length > 0
+      ? skillsResult.rows.map((skill: any) => ({
+          id: skill.name,
+          name: skill.display_name || skill.name,
+          description: skill.description || `${skill.display_name || skill.name} skill`,
+          tags: skill.tags || [config.pattern || 'agent', 'flowgrid'].filter(Boolean),
+          examples: (skill.examples || []).map((ex: any) => ({
+            name: ex.name || skill.display_name || skill.name,
+            input: ex.input || {},
+            output: ex.output
+          })),
+          inputModes: ["text"],
+          outputModes: ["text"],
+          inputSchema: skill.input_schema,
+          outputSchema: skill.output_schema
+        }))
+      : buildSkillsFromAgent(agent, capsResult.rows);
+
     // Build A2A Protocol v0.2 compliant Agent Card
     const agentCard = {
       // Required fields
@@ -360,7 +392,8 @@ app.get('/api/agents/:id/a2a-card', async (req: Request, res: Response) => {
       version: `${agent.version || 1}.0.0`,
       
       // Recommended fields
-      description: config.shortDescription || agent.description || config.purpose || `${agent.name} agent`,
+      description: config.detailedPurpose || agent.description || config.shortDescription || `${agent.name} agent`,
+      shortDescription: config.shortDescription || null,
       protocolVersion: "0.2",
       documentationUrl: config.documentationUrl || `${baseUrl}/docs/${agent.id}`,
       
@@ -382,8 +415,8 @@ app.get('/api/agents/:id/a2a-card', async (req: Request, res: Response) => {
       defaultInputModes: config.defaultInputModes || ["text"],
       defaultOutputModes: config.defaultOutputModes || ["text"],
       
-      // Skills with full compliance (tags, examples)
-      skills: buildSkillsFromAgent(agent, capsResult.rows),
+      // Skills: actual stored skills or fallback to generated from capabilities
+      skills: a2aSkills,
       
       // FlowGrid extensions (prefixed with underscore per spec recommendation)
       _flowgrid: {
@@ -1040,6 +1073,658 @@ app.get('/api/agents/:id/integrations', async (req: Request, res: Response) => {
   }
 });
 
+// =============================================================================
+// Agent Skills API (A2A Protocol)
+// =============================================================================
+
+// GET /api/agents/:id/skills - List skills for an agent
+app.get('/api/agents/:id/skills', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+
+    const ownership = await pool.query('SELECT id FROM agents WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (ownership.rows.length === 0) {
+      return res.status(404).json({ error: 'Not Found', message: `Agent ${id} not found` });
+    }
+
+    const result = await pool.query(
+      `SELECT id, name, display_name, description, input_schema, output_schema, tags, examples, is_active, created_at, updated_at 
+       FROM agent_skills WHERE agent_id = $1 ORDER BY created_at`,
+      [id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Get agent skills error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to get skills' });
+  }
+});
+
+// POST /api/agents/:id/skills - Create a skill
+app.post('/api/agents/:id/skills', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    const { name, display_name, description, input_schema, output_schema, tags, examples } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Bad Request', message: 'name is required' });
+    }
+
+    const ownership = await pool.query('SELECT id FROM agents WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (ownership.rows.length === 0) {
+      return res.status(404).json({ error: 'Not Found', message: `Agent ${id} not found` });
+    }
+
+    // Ensure JSON fields are properly formatted
+    // Note: tags is text[] (array), not jsonb
+    const inputSchemaJson = input_schema ? JSON.stringify(input_schema) : '{}';
+    const outputSchemaJson = output_schema ? JSON.stringify(output_schema) : '{}';
+    const tagsArray = Array.isArray(tags) ? tags : [];
+    const examplesJson = examples ? JSON.stringify(examples) : '[]';
+
+    const result = await pool.query(
+      `INSERT INTO agent_skills (agent_id, tenant_id, name, display_name, description, input_schema, output_schema, tags, examples)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::text[], $9::jsonb)
+       RETURNING *`,
+      [id, tenantId, name, display_name || name, description, inputSchemaJson, outputSchemaJson, tagsArray, examplesJson]
+    );
+
+    console.log(`[${SERVICE_NAME}] Created skill ${name} for agent ${id}`);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Create skill error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to create skill' });
+  }
+});
+
+// PUT /api/agents/:id/skills/:skillId - Update a skill
+app.put('/api/agents/:id/skills/:skillId', async (req: Request, res: Response) => {
+  try {
+    const { id, skillId } = req.params;
+    const tenantId = req.tenantId;
+    const { name, display_name, description, input_schema, output_schema, tags, examples, is_active } = req.body;
+
+    const ownership = await pool.query(
+      'SELECT s.id FROM agent_skills s JOIN agents a ON s.agent_id = a.id WHERE s.id = $1 AND a.id = $2 AND a.tenant_id = $3',
+      [skillId, id, tenantId]
+    );
+    if (ownership.rows.length === 0) {
+      return res.status(404).json({ error: 'Not Found', message: 'Skill not found' });
+    }
+
+    const result = await pool.query(
+      `UPDATE agent_skills SET
+        name = COALESCE($1, name),
+        display_name = COALESCE($2, display_name),
+        description = COALESCE($3, description),
+        input_schema = COALESCE($4, input_schema),
+        output_schema = COALESCE($5, output_schema),
+        tags = COALESCE($6, tags),
+        examples = COALESCE($7, examples),
+        is_active = COALESCE($8, is_active),
+        updated_at = NOW()
+       WHERE id = $9
+       RETURNING *`,
+      [name, display_name, description, input_schema, output_schema, tags, examples, is_active, skillId]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Update skill error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to update skill' });
+  }
+});
+
+// DELETE /api/agents/:id/skills/:skillId - Delete a skill
+app.delete('/api/agents/:id/skills/:skillId', async (req: Request, res: Response) => {
+  try {
+    const { id, skillId } = req.params;
+    const tenantId = req.tenantId;
+
+    const ownership = await pool.query(
+      'SELECT s.id FROM agent_skills s JOIN agents a ON s.agent_id = a.id WHERE s.id = $1 AND a.id = $2 AND a.tenant_id = $3',
+      [skillId, id, tenantId]
+    );
+    if (ownership.rows.length === 0) {
+      return res.status(404).json({ error: 'Not Found', message: 'Skill not found' });
+    }
+
+    await pool.query('DELETE FROM agent_skills WHERE id = $1', [skillId]);
+    res.json({ success: true, message: 'Skill deleted' });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Delete skill error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to delete skill' });
+  }
+});
+
+// =============================================================================
+// AGENT REGISTRY API - Multi-Tenant Agent Discovery
+// =============================================================================
+
+// GET /api/registry/agents - List all deployed agents for tenant (with A2A cards)
+app.get('/api/registry/agents', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 500);
+    const offset = (page - 1) * limit;
+
+    if (!tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
+    }
+
+    // Only return agents with deployment.status = 'running' in config
+    const query = `
+      SELECT a.*, 
+             (SELECT COUNT(*) FROM agent_skills WHERE agent_id = a.id AND is_active = true) as skill_count
+      FROM agents a
+      WHERE a.tenant_id = $1
+        AND a.config->'deployment'->>'status' = 'running'
+      ORDER BY a.name
+      LIMIT $2 OFFSET $3
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) 
+      FROM agents 
+      WHERE tenant_id = $1 
+        AND config->'deployment'->>'status' = 'running'
+    `;
+
+    const [result, countResult] = await Promise.all([
+      pool.query(query, [tenantId, limit, offset]),
+      pool.query(countQuery, [tenantId])
+    ]);
+
+    const total = parseInt(countResult.rows[0]?.count || '0');
+
+    // Build A2A cards for each agent
+    const agents = await Promise.all(
+      result.rows.map(async (agent) => {
+        const skillsResult = await pool.query(
+          'SELECT id, name, display_name, description, input_schema, output_schema, tags, examples FROM agent_skills WHERE agent_id = $1 AND is_active = true ORDER BY created_at',
+          [agent.id]
+        );
+
+        const capsResult = await pool.query(
+          'SELECT capability_name, capability_type, config FROM agent_capabilities WHERE agent_id = $1 AND is_enabled = true',
+          [agent.id]
+        );
+
+        const config = agent.config || {};
+        const baseUrl = config.baseUrl || `${req.protocol}://${req.get('host')}/agents`;
+
+        // Build A2A skills
+        const a2aSkills = skillsResult.rows.length > 0
+          ? skillsResult.rows.map((skill: any) => ({
+              id: skill.name,
+              name: skill.display_name || skill.name,
+              description: skill.description || `${skill.display_name || skill.name} skill`,
+              tags: skill.tags || [config.pattern || 'agent', 'flowgrid'].filter(Boolean),
+              examples: (skill.examples || []).map((ex: any) => ({
+                name: ex.name || skill.display_name || skill.name,
+                input: ex.input || {},
+                output: ex.output
+              })),
+              inputModes: ["text"],
+              outputModes: ["text"],
+              inputSchema: skill.input_schema,
+              outputSchema: skill.output_schema
+            }))
+          : buildSkillsFromAgent(agent, capsResult.rows);
+
+        return {
+          // A2A Protocol fields
+          name: agent.name,
+          url: `${baseUrl}/${agent.id}`,
+          version: `${agent.version || 1}.0.0`,
+          description: config.detailedPurpose || agent.description || config.shortDescription || `${agent.name} agent`,
+      shortDescription: config.shortDescription || null,
+          protocolVersion: "0.2",
+          documentationUrl: config.documentationUrl || `${baseUrl}/docs/${agent.id}`,
+          
+          provider: {
+            organization: config.provider?.organization || "FlowGrid Platform",
+            url: config.provider?.url || "https://flowgrid.io"
+          },
+          
+          capabilities: {
+            streaming: config.a2aCapabilities?.streaming || false,
+            pushNotifications: config.a2aCapabilities?.pushNotifications || false,
+            stateTransitionHistory: true
+          },
+          
+          authentication: {
+            schemes: config.authentication?.schemes || ["bearer"]
+          },
+          
+          defaultInputModes: config.defaultInputModes || ["text"],
+          defaultOutputModes: config.defaultOutputModes || ["text"],
+          
+          skills: a2aSkills,
+          
+          // FlowGrid extensions
+          _flowgrid: {
+            id: agent.id,
+            tenantId: agent.tenant_id,
+            elementType: agent.element_type || 'Agent',
+            pattern: config.pattern || agent.type,
+            valueStream: config.valueStream,
+            autonomyLevel: config.autonomyLevel || 'supervised',
+            status: agent.status,
+            deploymentStatus: config.deployment?.status || 'running',
+            skillCount: parseInt(agent.skill_count || '0')
+          }
+        };
+      })
+    );
+
+    res.json({
+      data: agents,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] List registry agents error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to list registry agents',
+    });
+  }
+});
+
+// GET /api/registry/agents/:id - Get single agent's A2A card
+app.get('/api/registry/agents/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+
+    if (!tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
+    }
+
+    const agentResult = await pool.query(
+      `SELECT * FROM agents 
+       WHERE id = $1 
+         AND tenant_id = $2 
+         AND config->'deployment'->>'status' = 'running'`,
+      [id, tenantId]
+    );
+
+    if (agentResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Agent ${id} not found or not deployed`,
+      });
+    }
+
+    const agent = agentResult.rows[0];
+    const config = agent.config || {};
+    const baseUrl = req.query.baseUrl as string || `${req.protocol}://${req.get('host')}/agents`;
+
+    // Get skills
+    const skillsResult = await pool.query(
+      'SELECT id, name, display_name, description, input_schema, output_schema, tags, examples FROM agent_skills WHERE agent_id = $1 AND is_active = true ORDER BY created_at',
+      [id]
+    );
+
+    // Get capabilities (for fallback)
+    const capsResult = await pool.query(
+      'SELECT capability_name, capability_type, config FROM agent_capabilities WHERE agent_id = $1 AND is_enabled = true',
+      [id]
+    );
+
+    // Get relationships
+    const relResult = await pool.query(
+      `SELECT i.message_type, i.config
+       FROM agent_interactions i
+       WHERE i.target_agent_id = $1`,
+      [id]
+    );
+
+    // Build A2A skills
+    const a2aSkills = skillsResult.rows.length > 0
+      ? skillsResult.rows.map((skill: any) => ({
+          id: skill.name,
+          name: skill.display_name || skill.name,
+          description: skill.description || `${skill.display_name || skill.name} skill`,
+          tags: skill.tags || [config.pattern || 'agent', 'flowgrid'].filter(Boolean),
+          examples: (skill.examples || []).map((ex: any) => ({
+            name: ex.name || skill.display_name || skill.name,
+            input: ex.input || {},
+            output: ex.output
+          })),
+          inputModes: ["text"],
+          outputModes: ["text"],
+          inputSchema: skill.input_schema,
+          outputSchema: skill.output_schema
+        }))
+      : buildSkillsFromAgent(agent, capsResult.rows);
+
+    // Build A2A Protocol v0.2 compliant Agent Card
+    const agentCard = {
+      // Required fields
+      name: agent.name,
+      url: `${baseUrl}/${agent.id}`,
+      version: `${agent.version || 1}.0.0`,
+      
+      // Recommended fields
+      description: config.detailedPurpose || agent.description || config.shortDescription || `${agent.name} agent`,
+      shortDescription: config.shortDescription || null,
+      protocolVersion: "0.2",
+      documentationUrl: config.documentationUrl || `${baseUrl}/docs/${agent.id}`,
+      
+      provider: {
+        organization: config.provider?.organization || "FlowGrid Platform",
+        url: config.provider?.url || "https://flowgrid.io"
+      },
+      
+      capabilities: {
+        streaming: config.a2aCapabilities?.streaming || false,
+        pushNotifications: config.a2aCapabilities?.pushNotifications || false,
+        stateTransitionHistory: true
+      },
+      
+      authentication: {
+        schemes: config.authentication?.schemes || ["bearer"]
+      },
+      
+      defaultInputModes: config.defaultInputModes || ["text"],
+      defaultOutputModes: config.defaultOutputModes || ["text"],
+      
+      skills: a2aSkills,
+      
+      // FlowGrid extensions
+      _flowgrid: {
+        id: agent.id,
+        tenantId: agent.tenant_id,
+        elementType: agent.element_type || 'Agent',
+        pattern: config.pattern || agent.type,
+        valueStream: config.valueStream,
+        autonomyLevel: config.autonomyLevel || 'supervised',
+        decisionAuthority: config.decisionAuthority || 'propose-and-execute',
+        riskAppetite: config.riskAppetite || 'medium',
+        triggers: config.triggers || [],
+        outputs: config.outputs || [],
+        escalationPath: config.escalationPath,
+        deploymentStatus: config.deployment?.status || 'running',
+        relationships: relResult.rows.map((r: any) => ({
+          messageType: r.message_type,
+          config: r.config
+        }))
+      }
+    };
+
+    res.json(agentCard);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Get registry agent error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to get registry agent',
+    });
+  }
+});
+
+// GET /api/registry/agents/search - Search by skill, tag, pattern, capability
+app.get('/api/registry/agents/search', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const { 
+      skill, 
+      tag, 
+      pattern, 
+      capability, 
+      valueStream,
+      q // general text search
+    } = req.query;
+
+    if (!tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
+    }
+
+    let query = `
+      SELECT DISTINCT a.*, 
+             (SELECT COUNT(*) FROM agent_skills WHERE agent_id = a.id AND is_active = true) as skill_count
+      FROM agents a
+      LEFT JOIN agent_skills s ON a.id = s.agent_id AND s.is_active = true
+      LEFT JOIN agent_capabilities c ON a.id = c.agent_id AND c.is_enabled = true
+      WHERE a.tenant_id = $1
+        AND a.config->'deployment'->>'status' = 'running'
+    `;
+
+    const params: any[] = [tenantId];
+    let paramIndex = 2;
+
+    // Search by skill name
+    if (skill) {
+      query += ` AND s.name ILIKE $${paramIndex}`;
+      params.push(`%${skill}%`);
+      paramIndex++;
+    }
+
+    // Search by tag (skills have tags array)
+    if (tag) {
+      query += ` AND $${paramIndex} = ANY(s.tags)`;
+      params.push(String(tag));
+      paramIndex++;
+    }
+
+    // Search by pattern (in config)
+    if (pattern) {
+      query += ` AND a.config->>'pattern' = $${paramIndex}`;
+      params.push(String(pattern));
+      paramIndex++;
+    }
+
+    // Search by capability name
+    if (capability) {
+      query += ` AND c.capability_name ILIKE $${paramIndex}`;
+      params.push(`%${capability}%`);
+      paramIndex++;
+    }
+
+    // Search by value stream
+    if (valueStream) {
+      query += ` AND a.config->>'valueStream' = $${paramIndex}`;
+      params.push(String(valueStream));
+      paramIndex++;
+    }
+
+    // General text search (name, description, type)
+    if (q) {
+      query += ` AND (
+        a.name ILIKE $${paramIndex} 
+        OR a.description ILIKE $${paramIndex}
+        OR a.type ILIKE $${paramIndex}
+      )`;
+      params.push(`%${q}%`);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY a.name LIMIT 100`;
+
+    const result = await pool.query(query, params);
+
+    // Build A2A cards for results
+    const agents = await Promise.all(
+      result.rows.map(async (agent) => {
+        const skillsResult = await pool.query(
+          'SELECT id, name, display_name, description, input_schema, output_schema, tags, examples FROM agent_skills WHERE agent_id = $1 AND is_active = true ORDER BY created_at',
+          [agent.id]
+        );
+
+        const config = agent.config || {};
+        const baseUrl = `${req.protocol}://${req.get('host')}/agents`;
+
+        const a2aSkills = skillsResult.rows.map((skill: any) => ({
+          id: skill.name,
+          name: skill.display_name || skill.name,
+          description: skill.description,
+          tags: skill.tags || [],
+          inputSchema: skill.input_schema,
+          outputSchema: skill.output_schema
+        }));
+
+        return {
+          name: agent.name,
+          url: `${baseUrl}/${agent.id}`,
+          version: `${agent.version || 1}.0.0`,
+          description: config.detailedPurpose || agent.description || config.shortDescription,
+          skills: a2aSkills,
+          _flowgrid: {
+            id: agent.id,
+            pattern: config.pattern || agent.type,
+            valueStream: config.valueStream,
+            skillCount: parseInt(agent.skill_count || '0')
+          }
+        };
+      })
+    );
+
+    res.json({
+      data: agents,
+      meta: {
+        total: agents.length,
+        searchParams: { skill, tag, pattern, capability, valueStream, q }
+      }
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Search registry agents error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to search registry agents',
+    });
+  }
+});
+
+// POST /api/registry/agents/:id/register - Agent self-registration
+app.post('/api/registry/agents/:id/register', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    const { endpoint, healthCheckUrl, metadata } = req.body;
+
+    if (!tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
+    }
+
+    // Verify agent exists and belongs to tenant
+    const agentResult = await pool.query(
+      'SELECT id, config FROM agents WHERE id = $1 AND tenant_id = $2',
+      [id, tenantId]
+    );
+
+    if (agentResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Agent ${id} not found`,
+      });
+    }
+
+    const agent = agentResult.rows[0];
+    const config = agent.config || {};
+
+    // Update deployment status to 'running'
+    const updatedConfig = {
+      ...config,
+      deployment: {
+        ...config.deployment,
+        status: 'running',
+        endpoint: endpoint || config.deployment?.endpoint,
+        healthCheckUrl: healthCheckUrl || config.deployment?.healthCheckUrl,
+        registeredAt: new Date().toISOString(),
+        metadata: metadata || config.deployment?.metadata
+      }
+    };
+
+    await pool.query(
+      'UPDATE agents SET config = $1, updated_at = NOW() WHERE id = $2',
+      [updatedConfig, id]
+    );
+
+    console.log(`[${SERVICE_NAME}] Agent ${id} registered as running`);
+
+    res.json({
+      success: true,
+      message: 'Agent registered successfully',
+      agentId: id,
+      status: 'running',
+      registeredAt: updatedConfig.deployment.registeredAt
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Register agent error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to register agent',
+    });
+  }
+});
+
+// DELETE /api/registry/agents/:id/unregister - Agent deregistration
+app.delete('/api/registry/agents/:id/unregister', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+
+    if (!tenantId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authenticated tenant context required' });
+    }
+
+    // Verify agent exists and belongs to tenant
+    const agentResult = await pool.query(
+      'SELECT id, config FROM agents WHERE id = $1 AND tenant_id = $2',
+      [id, tenantId]
+    );
+
+    if (agentResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Agent ${id} not found`,
+      });
+    }
+
+    const agent = agentResult.rows[0];
+    const config = agent.config || {};
+
+    // Update deployment status to 'stopped'
+    const updatedConfig = {
+      ...config,
+      deployment: {
+        ...config.deployment,
+        status: 'stopped',
+        unregisteredAt: new Date().toISOString()
+      }
+    };
+
+    await pool.query(
+      'UPDATE agents SET config = $1, updated_at = NOW() WHERE id = $2',
+      [updatedConfig, id]
+    );
+
+    console.log(`[${SERVICE_NAME}] Agent ${id} unregistered`);
+
+    res.json({
+      success: true,
+      message: 'Agent unregistered successfully',
+      agentId: id,
+      status: 'stopped',
+      unregisteredAt: updatedConfig.deployment.unregisteredAt
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Unregister agent error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to unregister agent',
+    });
+  }
+});
+
 app.get('/api/agent-data-contracts', async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId;
@@ -1369,6 +2054,516 @@ app.post('/api/agents/design/import', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal Server Error', message: 'Failed to import design' });
   } finally {
     client.release();
+  }
+});
+
+// ============================================================================
+// Agent Registry Endpoints (Multi-Tenant Runtime Discovery)
+// ============================================================================
+
+// GET /api/registry/agents - List all deployed agents for tenant with A2A cards
+app.get('/api/registry/agents', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const baseUrl = req.query.baseUrl as string || `https://agents.example.com`;
+
+    if (!tenantId) {
+      return res.status(401).json({ 
+        error: 'Unauthorized', 
+        message: 'Authenticated tenant context required' 
+      });
+    }
+
+    // Only return running agents (deployment.status = 'running')
+    const result = await pool.query(
+      `SELECT a.* 
+       FROM agents a
+       WHERE a.tenant_id = $1
+         AND a.config->'deployment'->>'status' = 'running'
+       ORDER BY a.name`,
+      [tenantId]
+    );
+
+    // Build A2A cards for each agent
+    const agentCards = await Promise.all(
+      result.rows.map(async (agent) => {
+        // Get skills for this agent
+        const skillsResult = await pool.query(
+          `SELECT id, name, display_name, description, input_schema, output_schema, tags, examples 
+           FROM agent_skills 
+           WHERE agent_id = $1 AND is_active = true 
+           ORDER BY created_at`,
+          [agent.id]
+        );
+
+        // Get capabilities (for fallback if no skills)
+        const capsResult = await pool.query(
+          'SELECT capability_name, capability_type, config FROM agent_capabilities WHERE agent_id = $1',
+          [agent.id]
+        );
+
+        const config = agent.config || {};
+        
+        // Build A2A skills
+        const a2aSkills = skillsResult.rows.length > 0
+          ? skillsResult.rows.map((skill: any) => ({
+              id: skill.name,
+              name: skill.display_name || skill.name,
+              description: skill.description || `${skill.display_name || skill.name} skill`,
+              tags: skill.tags || [config.pattern || 'agent', 'flowgrid'].filter(Boolean),
+              examples: (skill.examples || []).map((ex: any) => ({
+                name: ex.name || skill.display_name || skill.name,
+                input: ex.input || {},
+                output: ex.output
+              })),
+              inputModes: ["text"],
+              outputModes: ["text"],
+              inputSchema: skill.input_schema,
+              outputSchema: skill.output_schema
+            }))
+          : buildSkillsFromAgent(agent, capsResult.rows);
+
+        // Build A2A card
+        return {
+          name: agent.name,
+          url: `${baseUrl}/${agent.id}`,
+          version: `${agent.version || 1}.0.0`,
+          description: config.detailedPurpose || agent.description || config.shortDescription || `${agent.name} agent`,
+      shortDescription: config.shortDescription || null,
+          protocolVersion: "0.2",
+          documentationUrl: config.documentationUrl || `${baseUrl}/docs/${agent.id}`,
+          provider: {
+            organization: config.provider?.organization || "FlowGrid Platform",
+            url: config.provider?.url || "https://flowgrid.io"
+          },
+          capabilities: {
+            streaming: config.a2aCapabilities?.streaming || false,
+            pushNotifications: config.a2aCapabilities?.pushNotifications || false,
+            stateTransitionHistory: true
+          },
+          authentication: {
+            schemes: config.authentication?.schemes || ["bearer"]
+          },
+          defaultInputModes: config.defaultInputModes || ["text"],
+          defaultOutputModes: config.defaultOutputModes || ["text"],
+          skills: a2aSkills,
+          _flowgrid: {
+            id: agent.id,
+            elementType: agent.element_type || 'Agent',
+            pattern: config.pattern || agent.type,
+            valueStream: config.valueStream,
+            autonomyLevel: config.autonomyLevel || 'supervised',
+            decisionAuthority: config.decisionAuthority || 'propose-and-execute',
+            riskAppetite: config.riskAppetite || 'medium',
+            triggers: config.triggers || [],
+            outputs: config.outputs || [],
+            escalationPath: config.escalationPath
+          }
+        };
+      })
+    );
+
+    res.json({
+      agents: agentCards,
+      total: agentCards.length,
+      tenantId,
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Registry list error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to list registry agents',
+    });
+  }
+});
+
+// GET /api/registry/agents/:id - Get single agent's A2A card
+app.get('/api/registry/agents/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    const baseUrl = req.query.baseUrl as string || `https://agents.example.com`;
+
+    if (!tenantId) {
+      return res.status(401).json({ 
+        error: 'Unauthorized', 
+        message: 'Authenticated tenant context required' 
+      });
+    }
+
+    // Verify agent is running and belongs to tenant
+    const agentResult = await pool.query(
+      `SELECT * 
+       FROM agents 
+       WHERE id = $1 
+         AND tenant_id = $2
+         AND config->'deployment'->>'status' = 'running'`,
+      [id, tenantId]
+    );
+
+    if (agentResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Running agent ${id} not found`,
+      });
+    }
+
+    const agent = agentResult.rows[0];
+    const config = agent.config || {};
+
+    // Get skills
+    const skillsResult = await pool.query(
+      'SELECT id, name, display_name, description, input_schema, output_schema, tags, examples FROM agent_skills WHERE agent_id = $1 AND is_active = true ORDER BY created_at',
+      [id]
+    );
+
+    // Get capabilities
+    const capsResult = await pool.query(
+      'SELECT capability_name, capability_type, config FROM agent_capabilities WHERE agent_id = $1',
+      [id]
+    );
+
+    // Get relationships
+    const relResult = await pool.query(
+      `SELECT i.message_type, i.config
+       FROM agent_interactions i
+       WHERE i.target_agent_id = $1`,
+      [id]
+    );
+
+    // Build A2A skills
+    const a2aSkills = skillsResult.rows.length > 0
+      ? skillsResult.rows.map((skill: any) => ({
+          id: skill.name,
+          name: skill.display_name || skill.name,
+          description: skill.description || `${skill.display_name || skill.name} skill`,
+          tags: skill.tags || [config.pattern || 'agent', 'flowgrid'].filter(Boolean),
+          examples: (skill.examples || []).map((ex: any) => ({
+            name: ex.name || skill.display_name || skill.name,
+            input: ex.input || {},
+            output: ex.output
+          })),
+          inputModes: ["text"],
+          outputModes: ["text"],
+          inputSchema: skill.input_schema,
+          outputSchema: skill.output_schema
+        }))
+      : buildSkillsFromAgent(agent, capsResult.rows);
+
+    // Build A2A Protocol v0.2 compliant Agent Card
+    const agentCard = {
+      name: agent.name,
+      url: `${baseUrl}/${agent.id}`,
+      version: `${agent.version || 1}.0.0`,
+      description: config.detailedPurpose || agent.description || config.shortDescription || `${agent.name} agent`,
+      shortDescription: config.shortDescription || null,
+      protocolVersion: "0.2",
+      documentationUrl: config.documentationUrl || `${baseUrl}/docs/${agent.id}`,
+      provider: {
+        organization: config.provider?.organization || "FlowGrid Platform",
+        url: config.provider?.url || "https://flowgrid.io"
+      },
+      capabilities: {
+        streaming: config.a2aCapabilities?.streaming || false,
+        pushNotifications: config.a2aCapabilities?.pushNotifications || false,
+        stateTransitionHistory: true
+      },
+      authentication: {
+        schemes: config.authentication?.schemes || ["bearer"]
+      },
+      defaultInputModes: config.defaultInputModes || ["text"],
+      defaultOutputModes: config.defaultOutputModes || ["text"],
+      skills: a2aSkills,
+      _flowgrid: {
+        id: agent.id,
+        elementType: agent.element_type || 'Agent',
+        pattern: config.pattern || agent.type,
+        valueStream: config.valueStream,
+        autonomyLevel: config.autonomyLevel || 'supervised',
+        decisionAuthority: config.decisionAuthority || 'propose-and-execute',
+        riskAppetite: config.riskAppetite || 'medium',
+        triggers: config.triggers || [],
+        outputs: config.outputs || [],
+        escalationPath: config.escalationPath,
+        relationships: relResult.rows.map((r: any) => ({
+          messageType: r.message_type,
+          config: r.config
+        }))
+      }
+    };
+
+    res.json(agentCard);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Registry get agent error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to get agent from registry',
+    });
+  }
+});
+
+// GET /api/registry/agents/search - Search agents by skill, tag, pattern, capability
+app.get('/api/registry/agents/search', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const baseUrl = req.query.baseUrl as string || `https://agents.example.com`;
+    const { skill, tag, pattern, capability, q } = req.query;
+
+    if (!tenantId) {
+      return res.status(401).json({ 
+        error: 'Unauthorized', 
+        message: 'Authenticated tenant context required' 
+      });
+    }
+
+    let query = `
+      SELECT DISTINCT a.* 
+      FROM agents a
+      LEFT JOIN agent_skills s ON a.id = s.agent_id
+      LEFT JOIN agent_capabilities c ON a.id = c.agent_id
+      WHERE a.tenant_id = $1
+        AND a.config->'deployment'->>'status' = 'running'
+    `;
+    const params: any[] = [tenantId];
+    let paramIndex = 2;
+
+    // Search by skill name
+    if (skill) {
+      query += ` AND (s.name ILIKE $${paramIndex} OR s.display_name ILIKE $${paramIndex})`;
+      params.push(`%${skill}%`);
+      paramIndex++;
+    }
+
+    // Search by tag (in skill tags or agent config)
+    if (tag) {
+      query += ` AND (s.tags @> ARRAY[$${paramIndex}]::text[] OR a.config->'pattern' = $${paramIndex}::text::jsonb)`;
+      params.push(tag);
+      paramIndex++;
+    }
+
+    // Search by pattern (agent type/pattern)
+    if (pattern) {
+      query += ` AND (a.config->>'pattern' ILIKE $${paramIndex} OR a.type ILIKE $${paramIndex})`;
+      params.push(`%${pattern}%`);
+      paramIndex++;
+    }
+
+    // Search by capability name
+    if (capability) {
+      query += ` AND c.capability_name ILIKE $${paramIndex}`;
+      params.push(`%${capability}%`);
+      paramIndex++;
+    }
+
+    // General text search
+    if (q) {
+      query += ` AND (a.name ILIKE $${paramIndex} OR a.description ILIKE $${paramIndex})`;
+      params.push(`%${q}%`);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY a.name`;
+
+    const result = await pool.query(query, params);
+
+    // Build A2A cards for matched agents
+    const agentCards = await Promise.all(
+      result.rows.map(async (agent) => {
+        const skillsResult = await pool.query(
+          `SELECT id, name, display_name, description, input_schema, output_schema, tags, examples 
+           FROM agent_skills 
+           WHERE agent_id = $1 AND is_active = true 
+           ORDER BY created_at`,
+          [agent.id]
+        );
+
+        const capsResult = await pool.query(
+          'SELECT capability_name, capability_type, config FROM agent_capabilities WHERE agent_id = $1',
+          [agent.id]
+        );
+
+        const config = agent.config || {};
+        
+        const a2aSkills = skillsResult.rows.length > 0
+          ? skillsResult.rows.map((skill: any) => ({
+              id: skill.name,
+              name: skill.display_name || skill.name,
+              description: skill.description || `${skill.display_name || skill.name} skill`,
+              tags: skill.tags || [config.pattern || 'agent', 'flowgrid'].filter(Boolean),
+              examples: (skill.examples || []).map((ex: any) => ({
+                name: ex.name || skill.display_name || skill.name,
+                input: ex.input || {},
+                output: ex.output
+              })),
+              inputModes: ["text"],
+              outputModes: ["text"],
+              inputSchema: skill.input_schema,
+              outputSchema: skill.output_schema
+            }))
+          : buildSkillsFromAgent(agent, capsResult.rows);
+
+        return {
+          name: agent.name,
+          url: `${baseUrl}/${agent.id}`,
+          version: `${agent.version || 1}.0.0`,
+          description: config.detailedPurpose || agent.description || config.shortDescription || `${agent.name} agent`,
+      shortDescription: config.shortDescription || null,
+          protocolVersion: "0.2",
+          documentationUrl: config.documentationUrl || `${baseUrl}/docs/${agent.id}`,
+          provider: {
+            organization: config.provider?.organization || "FlowGrid Platform",
+            url: config.provider?.url || "https://flowgrid.io"
+          },
+          capabilities: {
+            streaming: config.a2aCapabilities?.streaming || false,
+            pushNotifications: config.a2aCapabilities?.pushNotifications || false,
+            stateTransitionHistory: true
+          },
+          authentication: {
+            schemes: config.authentication?.schemes || ["bearer"]
+          },
+          defaultInputModes: config.defaultInputModes || ["text"],
+          defaultOutputModes: config.defaultOutputModes || ["text"],
+          skills: a2aSkills,
+          _flowgrid: {
+            id: agent.id,
+            elementType: agent.element_type || 'Agent',
+            pattern: config.pattern || agent.type,
+            valueStream: config.valueStream,
+            autonomyLevel: config.autonomyLevel || 'supervised',
+            decisionAuthority: config.decisionAuthority || 'propose-and-execute',
+            riskAppetite: config.riskAppetite || 'medium',
+            triggers: config.triggers || [],
+            outputs: config.outputs || [],
+            escalationPath: config.escalationPath
+          }
+        };
+      })
+    );
+
+    res.json({
+      agents: agentCards,
+      total: agentCards.length,
+      query: { skill, tag, pattern, capability, q },
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Registry search error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to search registry',
+    });
+  }
+});
+
+// POST /api/registry/agents/:id/register - Agent self-registration
+app.post('/api/registry/agents/:id/register', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    const { endpoint, metadata } = req.body;
+
+    if (!tenantId) {
+      return res.status(401).json({ 
+        error: 'Unauthorized', 
+        message: 'Authenticated tenant context required' 
+      });
+    }
+
+    // Update deployment status to 'running'
+    const result = await pool.query(
+      `UPDATE agents 
+       SET config = jsonb_set(
+         jsonb_set(
+           COALESCE(config, '{}'::jsonb),
+           '{deployment,status}',
+           '"running"'
+         ),
+         '{deployment,registeredAt}',
+         to_jsonb(NOW())
+       ),
+       config = CASE 
+         WHEN $3 IS NOT NULL THEN jsonb_set(config, '{deployment,endpoint}', to_jsonb($3::text))
+         ELSE config
+       END,
+       config = CASE 
+         WHEN $4 IS NOT NULL THEN jsonb_set(config, '{deployment,metadata}', $4::jsonb)
+         ELSE config
+       END
+       WHERE id = $1 AND tenant_id = $2
+       RETURNING *`,
+      [id, tenantId, endpoint, metadata ? JSON.stringify(metadata) : null]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Agent ${id} not found`,
+      });
+    }
+
+    console.log(`[${SERVICE_NAME}] Agent ${id} registered (tenant: ${tenantId})`);
+
+    res.json({
+      success: true,
+      agentId: id,
+      status: 'running',
+      registeredAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Registry register error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to register agent',
+    });
+  }
+});
+
+// DELETE /api/registry/agents/:id/unregister - Agent deregistration
+app.delete('/api/registry/agents/:id/unregister', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+
+    if (!tenantId) {
+      return res.status(401).json({ 
+        error: 'Unauthorized', 
+        message: 'Authenticated tenant context required' 
+      });
+    }
+
+    // Update deployment status to 'stopped'
+    const result = await pool.query(
+      `UPDATE agents 
+       SET config = jsonb_set(
+         jsonb_set(
+           COALESCE(config, '{}'::jsonb),
+           '{deployment,status}',
+           '"stopped"'
+         ),
+         '{deployment,unregisteredAt}',
+         to_jsonb(NOW())
+       )
+       WHERE id = $1 AND tenant_id = $2
+       RETURNING *`,
+      [id, tenantId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Agent ${id} not found`,
+      });
+    }
+
+    console.log(`[${SERVICE_NAME}] Agent ${id} unregistered (tenant: ${tenantId})`);
+
+    res.status(204).send();
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Registry unregister error:`, error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to unregister agent',
+    });
   }
 });
 
