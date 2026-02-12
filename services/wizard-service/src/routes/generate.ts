@@ -319,6 +319,50 @@ router.post('/generate-bpmn', async (req: Request, res: Response) => {
 });
 
 // ============================================================================
+// POST /api/wizard/generate-orchestrator-bpmn
+// Generate orchestrator BPMN (inter-agent workflow)
+// ============================================================================
+
+router.post('/generate-orchestrator-bpmn', async (req: Request, res: Response) => {
+  try {
+    const { orchestratorAgent, participantAgents, processDescription } = req.body;
+
+    if (!orchestratorAgent || !participantAgents) {
+      return res.status(400).json({ error: 'orchestratorAgent and participantAgents are required' });
+    }
+
+    console.log(`[${SERVICE_NAME}] Generating orchestrator BPMN for: ${orchestratorAgent.name}`);
+
+    // Use the orchestrator BPMN prompt
+    const { executePrompt } = await import('../prompts');
+    
+    const result = await executePrompt('step4.generate-orchestrator-bpmn', {
+      orchestratorAgent,
+      participantAgents,
+      processDescription: processDescription || orchestratorAgent.purpose || 'Multi-agent orchestration workflow',
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'Orchestrator BPMN generation failed' });
+    }
+
+    const bpmnXml = (result.data as any)?.bpmnXml || result.data;
+    
+    res.json({
+      success: true,
+      data: {
+        bpmnXml,
+      },
+      executionTimeMs: result.executionTimeMs,
+    });
+
+  } catch (error: any) {
+    console.error(`[${SERVICE_NAME}] Generate orchestrator BPMN error:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
 // POST /api/wizard/generate-code
 // Generate Azure Functions code for an agent
 // ============================================================================
@@ -361,6 +405,7 @@ Output ONLY the code, no explanations or markdown.`;
 
 ## Agent Specification
 - **Name:** ${agent.name}
+- **Short Description:** ${config.shortDescription || 'Not specified'}
 - **Purpose:** ${config.detailedPurpose || agent.description || 'Not specified'}
 - **Value Stream:** ${config.valueStream || 'Not specified'}
 - **Pattern:** ${config.pattern || 'Specialist'}
@@ -375,9 +420,6 @@ Output ONLY the code, no explanations or markdown.`;
 
 ## Objectives
 ${(config.objectives || []).length > 0 ? (config.objectives || []).map((o: string) => '- ' + o).join('\n') : '- Not specified'}
-
-## Key Responsibilities
-${(config.keyResponsibilities || []).length > 0 ? (config.keyResponsibilities || []).map((r: string) => '- ' + r).join('\n') : '- Not specified'}
 
 ## Capabilities
 ${capabilities.length > 0 ? capabilities.map((c: string) => `- ${c}`).join('\n') : '- None specified'}

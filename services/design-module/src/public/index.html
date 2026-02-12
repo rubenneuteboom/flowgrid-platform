@@ -58,7 +58,7 @@
     }
     /* Canvas background */
     .bjs-container {
-      background: #1e293b !important;
+      background: #ffffff !important;
     }
     .bjs-container .djs-palette {
       background: #f1f5f9 !important;
@@ -73,6 +73,33 @@
     .bjs-container .djs-palette .entry img,
     .bjs-container .djs-palette .entry svg {
       filter: invert(0) !important;
+    }
+    /* BPMN diagram elements - force black text */
+    .bjs-container svg text,
+    .bjs-container svg tspan,
+    .bjs-container .djs-group text,
+    .bjs-container .djs-group tspan,
+    .bjs-container .djs-element text,
+    .bjs-container .djs-element tspan,
+    .bjs-container .djs-visual text,
+    .bjs-container .djs-visual tspan,
+    .bjs-container .djs-label text,
+    .bjs-container .djs-label tspan,
+    #bpmn-canvas-main text,
+    #bpmn-canvas-main tspan {
+      fill: #000000 !important;
+      stroke: none !important;
+    }
+    .bjs-container .djs-direct-editing-content,
+    .bjs-container .djs-direct-editing-content * {
+      color: #000000 !important;
+    }
+    /* BPMN shapes - black strokes */
+    .bjs-container .djs-element .djs-visual path,
+    .bjs-container .djs-element .djs-visual circle,
+    .bjs-container .djs-element .djs-visual rect,
+    .bjs-container .djs-element .djs-visual polygon {
+      stroke: #000000 !important;
     }
   </style>
   <style>
@@ -1095,7 +1122,7 @@
     <div class="stats">
       <div class="stat">
         <div class="stat-value" id="stat-elements">0</div>
-        <div>Elements</div>
+        <div>Agents</div>
       </div>
       <div class="stat">
         <div class="stat-value" id="stat-relationships">0</div>
@@ -1113,8 +1140,47 @@
     <!-- Left Sidebar -->
     <aside class="sidebar">
       <div class="resize-handle" id="sidebar-resize"></div>
+      
+      <!-- Filter Section - All 3 dropdowns -->
+      <div class="sidebar-section foundation-section" id="foundation-section">
+        <h3>🎯 Filters</h3>
+        
+        <!-- Foundation dropdown -->
+        <label style="font-size: 0.7rem; color: #64748b; margin-bottom: 0.25rem; display: block;">Foundation</label>
+        <select id="foundation-select" onchange="onFoundationSelectChange(this.value)" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; font-size: 0.8rem; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #e2e8f0; cursor: pointer;">
+          <option value="">-- Select Foundation --</option>
+        </select>
+        
+        <!-- Process dropdown -->
+        <label style="font-size: 0.7rem; color: #64748b; margin-bottom: 0.25rem; display: block;">Process</label>
+        <select id="process-filter" onchange="onProcessFilterChange(this.value)" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; font-size: 0.8rem; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #e2e8f0; cursor: pointer;">
+          <option value="">All Processes</option>
+        </select>
+        
+        <!-- Sub-process dropdown -->
+        <label style="font-size: 0.7rem; color: #64748b; margin-bottom: 0.25rem; display: block;">Sub-process</label>
+        <select id="subprocess-filter" onchange="onSubprocessFilterChange(this.value)" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; font-size: 0.8rem; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #e2e8f0; cursor: pointer;">
+          <option value="">All Sub-processes</option>
+        </select>
+        
+        <!-- Hidden elements for compatibility -->
+        <div id="foundation-name" style="display: none;"></div>
+        <div id="foundation-tabs-container" style="display: none;">
+          <div id="foundation-capabilities-list" class="foundation-list"></div>
+          <div id="foundation-dataObjects-list" class="foundation-list"></div>
+          <div id="foundation-processes-list" class="foundation-list"></div>
+        </div>
+        <span id="foundation-cap-count" style="display: none;">0</span>
+        <span id="foundation-data-count" style="display: none;">0</span>
+        <span id="foundation-proc-count" style="display: none;">0</span>
+      </div>
+      
       <div class="sidebar-section elements-section">
-        <h3>📋 Elements</h3>
+        <h3>🤖 Agents</h3>
+        
+        <!-- Agent count -->
+        <div id="agent-filter-status" style="font-size: 0.7rem; color: #64748b; margin-bottom: 0.5rem;"></div>
+        
         <div class="element-list" id="element-list">
           <div class="loading"><div class="loading-spinner"></div><p style="margin-top: 0.5rem;">Loading...</p></div>
         </div>
@@ -1160,6 +1226,21 @@
           </div>
         </div>
       </div>
+      
+      <!-- Foundation Counters (shown when foundation selected) -->
+      <div id="foundation-counters" class="sidebar-section" style="display: none; padding: 0.75rem;">
+        <h3 style="font-size: 0.8rem; margin-bottom: 0.5rem;">📊 Foundation Data</h3>
+        <div style="display: flex; gap: 0.5rem;">
+          <div style="flex: 1; text-align: center; padding: 0.5rem; background: #0f172a; border-radius: 6px; border-left: 3px solid #22d3ee;">
+            <div id="counter-capabilities" style="font-size: 1.25rem; font-weight: 700; color: #22d3ee;">0</div>
+            <div style="font-size: 0.65rem; color: #64748b;">Capabilities</div>
+          </div>
+          <div style="flex: 1; text-align: center; padding: 0.5rem; background: #0f172a; border-radius: 6px; border-left: 3px solid #a78bfa;">
+            <div id="counter-data" style="font-size: 1.25rem; font-weight: 700; color: #a78bfa;">0</div>
+            <div style="font-size: 0.65rem; color: #64748b;">Data Objects</div>
+          </div>
+        </div>
+      </div>
     </aside>
 
     <!-- Main Content - Agent Explore -->
@@ -1171,7 +1252,6 @@
       <div class="detail-tabs" style="margin-bottom:0.75rem;">
         <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
         <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
-        <button class="detail-tab workspace-tab" data-tab="capabilities" onclick="showWorkspaceTab('capabilities')">📦 Supported Capabilities</button>
         <button class="detail-tab workspace-tab" data-tab="skills" onclick="showWorkspaceTab('skills')">🛠️ Skills</button>
         <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
         <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🔧 Tools</button>
@@ -1303,24 +1383,6 @@
         </div>
       </section>
 
-      <!-- Supported Capabilities Tab -->
-      <section class="workspace-panel" id="workspace-capabilities">
-        <div style="padding: 1rem;">
-          <h3 style="color: #22d3ee; margin-bottom: 0.5rem;">📦 Supported Capabilities</h3>
-          <p style="color: #94a3b8; margin-bottom: 1rem;">Business capabilities owned by the selected agent.</p>
-          
-          <div id="capabilities-empty" style="color: #64748b; padding: 2rem; text-align: center;">
-            Select an agent to view its capabilities.
-          </div>
-          
-          <div id="capabilities-list" style="display: none;">
-            <div id="capabilities-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
-              <!-- Capabilities populated by JS -->
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- Skills Tab (A2A Protocol) -->
       <section class="workspace-panel" id="workspace-skills">
         <div style="padding: 1rem;">
@@ -1408,18 +1470,12 @@
 
       <!-- BPMN Tab -->
       <section class="workspace-panel" id="workspace-bpmn">
-        <div style="display: grid; grid-template-columns: 280px 1fr; gap: 1rem; height: calc(100vh - 200px);">
-          <!-- Process List -->
-          <div style="background: #1e293b; border-radius: 8px; padding: 1rem; overflow-y: auto;">
-            <h4 style="color: #f59e0b; margin-bottom: 0.75rem;">🔄 Processes</h4>
-            <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">Select a process to view/edit its BPMN diagram.</p>
-            <div id="bpmn-process-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
-              <!-- Populated by JS -->
-            </div>
-          </div>
+        <div style="height: calc(100vh - 200px);">
+          <!-- Hidden process list for compatibility -->
+          <div id="bpmn-process-list" style="display: none;"></div>
           
           <!-- BPMN Canvas Area -->
-          <div style="display: flex; flex-direction: column;">
+          <div style="display: flex; flex-direction: column; height: 100%;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
               <div>
                 <h3 style="color: #f59e0b; margin-bottom: 0.25rem;" id="bpmn-process-title">📊 Select a Process</h3>
@@ -1443,7 +1499,7 @@
             </div>
             
             <!-- BPMN Canvas -->
-            <div id="bpmn-canvas-main" style="flex: 1; display: none; background: #1e293b; border: 1px solid #334155; border-radius: 8px;"></div>
+            <div id="bpmn-canvas-main" style="flex: 1; display: none; background: #ffffff; border: 1px solid #334155; border-radius: 8px;"></div>
             
             <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
               <small style="color: #64748b;">Powered by <a href="https://bpmn.io" target="_blank" style="color: #60a5fa;">bpmn.io</a></small>
@@ -1524,11 +1580,6 @@
             <textarea id="agent-business-value" placeholder="What value does this agent provide to the business?" rows="2"></textarea>
           </div>
           
-          <div class="section-header">📋 Responsibilities</div>
-          <div class="form-group">
-            <label>Key Responsibilities</label>
-            <textarea id="agent-responsibilities" placeholder="List the main responsibilities (one per line)" rows="4"></textarea>
-          </div>
           <div class="form-group">
             <label>Success Criteria</label>
             <textarea id="agent-success-criteria" placeholder="How do we measure if this agent is successful?" rows="2"></textarea>
@@ -1611,6 +1662,8 @@
             <label>KPIs (one per line)</label>
             <textarea id="agent-kpis-design" rows="3" placeholder="Mean time to resolution&#10;Automation rate&#10;Customer satisfaction"></textarea>
           </div>
+          
+          <button class="btn btn-success" onclick="saveAgentDesign()" style="width: 100%; margin-top: 1rem;">💾 Save Design</button>
         </div>
 
         <!-- Configure Tab -->
@@ -1640,11 +1693,11 @@
             <input type="text" id="agent-escalation-config" placeholder="IT Manager, Service Owner">
           </div>
           
-          <div class="section-header">🔌 Integrations</div>
+          <div class="section-header">🔧 Tools</div>
           <div id="config-integrations-list" style="margin-bottom: 0.75rem;">
-            <p style="color: #64748b; font-size: 0.85rem;">No integrations configured</p>
+            <p style="color: #64748b; font-size: 0.85rem;">No tools configured</p>
           </div>
-          <button class="btn btn-secondary" style="width: 100%;" onclick="showWorkspaceTab('integrations')">Manage Integrations →</button>
+          <button class="btn btn-secondary" style="width: 100%;" onclick="showWorkspaceTab('integrations')">Manage Tools →</button>
           
           <!-- LLM Configuration hidden - all agents use same model for now -->
           <div style="display: none;">
@@ -1660,6 +1713,8 @@
               </select>
             </div>
           </div>
+          
+          <button class="btn btn-success" onclick="saveAgentConfig()" style="width: 100%; margin-top: 1rem;">💾 Save Configuration</button>
         </div>
 
         <!-- Verify Tab -->
@@ -1681,10 +1736,10 @@
               <span class="status-badge info">⏳</span> Pattern Selected
             </div>
             <div class="verify-item" data-check="integrations">
-              <span class="status-badge info">⏳</span> Integrations Configured <span style="color: #64748b; font-size: 0.75rem;">(optional)</span>
+              <span class="status-badge info">⏳</span> Tools Configured <span style="color: #64748b; font-size: 0.75rem;">(optional)</span>
             </div>
-            <div class="verify-item" data-check="interactions">
-              <span class="status-badge info">⏳</span> Interactions Defined
+            <div class="verify-item" data-check="relationships">
+              <span class="status-badge info">⏳</span> Relationships Defined
             </div>
           </div>
           
@@ -1955,6 +2010,16 @@
       setGraphState('loading');
 
       try {
+        // Load available foundations for dropdown
+        await loadFoundations();
+        
+        // Check for foundation query param
+        const urlParams = new URLSearchParams(window.location.search);
+        const foundationId = urlParams.get('foundation');
+        if (foundationId) {
+          await loadFoundation(foundationId);
+        }
+        
         await loadAgents();
         await loadRelationships();
         renderGraphLegend();
@@ -1967,6 +2032,261 @@
         setGraphState('error', 'Failed to load data. Make sure the gateway and agent-service are running.');
         showError('Failed to load data. Make sure agent-service is running.');
       }
+    }
+    
+    // ============================================================================
+    // Foundation Loading
+    // ============================================================================
+    
+    let currentFoundation = null;
+    let availableFoundations = [];
+    
+    async function loadFoundations() {
+      console.log('[design-studio] Loading available foundations...');
+      try {
+        const response = await fetch('/api/wizard/foundations', {
+          headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+          console.warn('[design-studio] Failed to load foundations');
+          return;
+        }
+        
+        const data = await response.json();
+        availableFoundations = data.foundations || [];
+        
+        const select = document.getElementById('foundation-select');
+        select.innerHTML = '<option value="">-- Select Foundation --</option>' +
+          availableFoundations.map(f => 
+            `<option value="${f.id}">${f.name} (${f.capability_count || 0} capabilities)</option>`
+          ).join('');
+        
+        console.log('[design-studio] Loaded', availableFoundations.length, 'foundations');
+      } catch (error) {
+        console.error('[design-studio] Foundations load error:', error);
+      }
+    }
+    
+    function onFoundationSelectChange(foundationId) {
+      if (foundationId) {
+        // Update URL without reload
+        const url = new URL(window.location);
+        url.searchParams.set('foundation', foundationId);
+        window.history.pushState({}, '', url);
+        
+        loadFoundation(foundationId);
+      } else {
+        // Clear foundation
+        const url = new URL(window.location);
+        url.searchParams.delete('foundation');
+        window.history.pushState({}, '', url);
+        
+        currentFoundation = null;
+        document.getElementById('foundation-name').style.display = 'none';
+        document.getElementById('foundation-tabs-container').style.display = 'none';
+        document.getElementById('foundation-counters').style.display = 'none';
+        
+        // Reset process/subprocess filters
+        document.getElementById('process-filter').innerHTML = '<option value="">All Processes</option>';
+        document.getElementById('subprocess-filter').innerHTML = '<option value="">All Sub-processes</option>';
+        selectedProcessFilter = '';
+        selectedSubprocessFilter = '';
+        applyAgentFilters();
+      }
+    }
+    
+    async function loadFoundation(foundationId) {
+      console.log('[design-studio] Loading foundation:', foundationId);
+      try {
+        const response = await fetch(`/api/wizard/foundations/${foundationId}`, {
+          headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+          console.warn('[design-studio] Foundation not found:', foundationId);
+          return;
+        }
+        
+        const data = await response.json();
+        currentFoundation = data.foundation;
+        
+        if (currentFoundation) {
+          renderFoundation(currentFoundation);
+        }
+      } catch (error) {
+        console.error('[design-studio] Foundation load error:', error);
+      }
+    }
+    
+    function renderFoundation(foundation) {
+      // Update dropdown selection
+      const select = document.getElementById('foundation-select');
+      if (select && foundation.id) {
+        select.value = foundation.id;
+      }
+      
+      // Update counts
+      const capabilities = foundation.capabilities || [];
+      const dataObjects = foundation.data_objects || [];
+      const processes = foundation.processes || [];
+      
+      // Update hidden count elements (for compatibility)
+      document.getElementById('foundation-cap-count').textContent = capabilities.length;
+      document.getElementById('foundation-data-count').textContent = dataObjects.length;
+      document.getElementById('foundation-proc-count').textContent = processes.length;
+      
+      // Update bottom counters
+      document.getElementById('foundation-counters').style.display = 'block';
+      document.getElementById('counter-capabilities').textContent = capabilities.length;
+      document.getElementById('counter-data').textContent = dataObjects.length;
+      
+      // Populate process filter dropdown
+      populateProcessFilter(processes);
+    }
+    
+    // ============================================================================
+    // Agent Filtering (Foundation → Process → Sub-process → Agents)
+    // ============================================================================
+    
+    let selectedProcessFilter = '';
+    let selectedSubprocessFilter = '';
+    
+    function populateProcessFilter(processes) {
+      const select = document.getElementById('process-filter');
+      
+      if (!processes || processes.length === 0) {
+        select.innerHTML = '<option value="">All Processes</option>';
+      } else {
+        select.innerHTML = '<option value="">All Processes</option>' +
+          processes.map(p => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
+      }
+      
+      // Reset filters and apply
+      selectedProcessFilter = '';
+      selectedSubprocessFilter = '';
+      document.getElementById('subprocess-filter').innerHTML = '<option value="">All Sub-processes</option>';
+      applyAgentFilters();
+    }
+    
+    function onProcessFilterChange(processName) {
+      selectedProcessFilter = processName;
+      selectedSubprocessFilter = '';
+      
+      // Populate sub-process dropdown based on agents with matching processName
+      populateSubprocessFilter(processName);
+      applyAgentFilters();
+    }
+    
+    function populateSubprocessFilter(processName) {
+      const select = document.getElementById('subprocess-filter');
+      
+      if (!processName) {
+        select.innerHTML = '<option value="">All Sub-processes</option>';
+        return;
+      }
+      
+      // Get unique sub-processes from agents matching this process
+      const subprocesses = [...new Set(
+        agents
+          .filter(a => a.config?.processName === processName && a.config?.subProcessName)
+          .map(a => a.config.subProcessName)
+      )].sort();
+      
+      if (subprocesses.length === 0) {
+        select.innerHTML = '<option value="">All Sub-processes</option>';
+        return;
+      }
+      
+      select.innerHTML = '<option value="">All Sub-processes</option>' +
+        subprocesses.map(sp => `<option value="${escapeHtml(sp)}">${escapeHtml(sp)}</option>`).join('');
+    }
+    
+    function onSubprocessFilterChange(subprocessName) {
+      selectedSubprocessFilter = subprocessName;
+      applyAgentFilters();
+    }
+    
+    function applyAgentFilters() {
+      let filtered = [...agents];
+      
+      // Filter by foundation (match processName to foundation processes)
+      if (currentFoundation?.processes?.length) {
+        const foundationProcessNames = currentFoundation.processes.map(p => p.name);
+        // Only filter if we have a foundation selected - show agents whose processName matches foundation processes
+        // OR show all if agent has no processName (legacy agents)
+        filtered = filtered.filter(a => 
+          !a.config?.processName || foundationProcessNames.includes(a.config.processName)
+        );
+      }
+      
+      // Filter by process
+      if (selectedProcessFilter) {
+        filtered = filtered.filter(a => a.config?.processName === selectedProcessFilter);
+      }
+      
+      // Filter by sub-process
+      if (selectedSubprocessFilter) {
+        filtered = filtered.filter(a => a.config?.subProcessName === selectedSubprocessFilter);
+      }
+      
+      // Update status text
+      const statusEl = document.getElementById('agent-filter-status');
+      if (selectedProcessFilter || selectedSubprocessFilter) {
+        statusEl.textContent = `Showing ${filtered.length} of ${agents.length} agents`;
+      } else if (currentFoundation) {
+        statusEl.textContent = `${filtered.length} agents`;
+      } else {
+        statusEl.textContent = '';
+      }
+      
+      // Re-render agent list with filtered agents
+      renderAgentList(filtered);
+      
+      // Also update the graph with filtered agents
+      initGraph();
+    }
+    
+    function renderFoundationItems(items, type) {
+      if (!items || items.length === 0) {
+        return '<div style="color: #64748b; font-size: 0.8rem; padding: 0.5rem;">No items</div>';
+      }
+      
+      const colors = {
+        capability: '#22d3ee',
+        data: '#a78bfa',
+        process: '#f59e0b'
+      };
+      
+      return items.map(item => `
+        <div class="foundation-item" style="
+          padding: 0.4rem 0.5rem;
+          margin-bottom: 0.25rem;
+          background: #0f172a;
+          border-radius: 4px;
+          border-left: 3px solid ${colors[type]};
+          cursor: pointer;
+          font-size: 0.8rem;
+        " title="${item.description || ''}">
+          <div style="font-weight: 500; color: #e2e8f0;">${item.name}</div>
+          ${item.description ? `<div style="font-size: 0.7rem; color: #64748b; margin-top: 0.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.description}</div>` : ''}
+        </div>
+      `).join('');
+    }
+    
+    function showFoundationTab(tab) {
+      // Update tab buttons
+      document.querySelectorAll('.foundation-tab').forEach(btn => {
+        const isActive = btn.dataset.tab === tab;
+        btn.style.background = isActive ? '#334155' : '#1e293b';
+        btn.style.color = isActive ? '#e2e8f0' : '#94a3b8';
+      });
+      
+      // Show/hide lists
+      ['capabilities', 'dataObjects', 'processes'].forEach(t => {
+        const list = document.getElementById(`foundation-${t}-list`);
+        if (list) list.style.display = t === tab ? 'block' : 'none';
+      });
     }
     
     // ============================================================================
@@ -2070,16 +2390,20 @@
     // ============================================================================
     
     function renderElementList() {
+      // Use filters if active, otherwise show all
+      applyAgentFilters();
+    }
+    
+    function renderAgentList(filteredAgents) {
       const container = document.getElementById('element-list');
-      
-      // Show all agents (filter dropdown removed)
-      const filtered = agents;
+      const filtered = filteredAgents || agents;
       
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
             <div class="icon">🔍</div>
-            <p>No elements found</p>
+            <p>No agents found</p>
+            ${selectedProcessFilter || selectedSubprocessFilter ? '<p style="font-size: 0.75rem; color: #64748b;">Try adjusting filters</p>' : ''}
           </div>
         `;
         return;
@@ -2094,6 +2418,7 @@
             <span style="width: 8px; height: 8px; border-radius: 2px; background: ${nodeColors[a.elementType] || nodeColors.default};"></span>
             ${a.elementType || 'Agent'}
           </span>
+          ${a.config?.subProcessName ? `<span style="font-size: 0.65rem; color: #64748b; display: block; margin-top: 2px;">${escapeHtml(a.config.subProcessName)}</span>` : ''}
         </div>
       `).join('');
     }
@@ -2172,7 +2497,29 @@
     function initGraph() {
       const container = document.getElementById('graph-container');
 
-      const visibleAgents = agents.filter(a => !hiddenTypes.has(a.elementType || a.type));
+      // Apply foundation/process/subprocess filters first, then type visibility
+      let filteredAgents = [...agents];
+      
+      // Filter by foundation processes
+      if (currentFoundation?.processes?.length) {
+        const foundationProcessNames = currentFoundation.processes.map(p => p.name);
+        filteredAgents = filteredAgents.filter(a => 
+          !a.config?.processName || foundationProcessNames.includes(a.config.processName)
+        );
+      }
+      
+      // Filter by selected process
+      if (selectedProcessFilter) {
+        filteredAgents = filteredAgents.filter(a => a.config?.processName === selectedProcessFilter);
+      }
+      
+      // Filter by selected subprocess
+      if (selectedSubprocessFilter) {
+        filteredAgents = filteredAgents.filter(a => a.config?.subProcessName === selectedSubprocessFilter);
+      }
+      
+      // Then apply type visibility filter
+      const visibleAgents = filteredAgents.filter(a => !hiddenTypes.has(a.elementType || a.type));
       if (visibleAgents.length === 0) {
         if (network) {
           network.destroy();
@@ -2434,7 +2781,6 @@
       document.getElementById('agent-short-desc').value = config.shortDescription || '';
       document.getElementById('agent-purpose').value = config.detailedPurpose || agent.description || '';
       document.getElementById('agent-business-value').value = config.businessValue || '';
-      document.getElementById('agent-responsibilities').value = (config.keyResponsibilities || []).join('\n');
       document.getElementById('agent-success-criteria').value = config.successCriteria || '';
       
       // Update Capabilities section in Description tab
@@ -2547,38 +2893,11 @@
       // Update workspace integrations (using catalog-based UI)
       loadSuggestedIntegrations(agent.id);
       
-      // Update workspace capabilities
-      const capsEmpty = document.getElementById('capabilities-empty');
-      const capsList = document.getElementById('capabilities-list');
-      const capsGrid = document.getElementById('capabilities-grid');
-      if (capsEmpty && capsList && capsGrid) {
-        const capabilities = agent.capabilities || [];
-        if (capabilities.length > 0) {
-          capsEmpty.style.display = 'none';
-          capsList.style.display = 'block';
-          capsGrid.innerHTML = capabilities.map(c => `
-            <div class="capability-card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.75rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                <span style="font-size: 1.25rem;">📦</span>
-                <span style="color: #22d3ee; font-weight: 500;">${escapeHtml(c.capability_name || c.name || c)}</span>
-              </div>
-              <div style="font-size: 0.75rem; color: #64748b;">
-                Type: ${escapeHtml(c.capability_type || 'action')}
-                ${c.is_enabled === false ? ' • <span style="color: #f87171;">Disabled</span>' : ''}
-              </div>
-            </div>
-          `).join('');
-        } else {
-          capsEmpty.style.display = 'block';
-          capsList.style.display = 'none';
-        }
-      }
-      
       // Update A2A Card panel
       loadA2ACard(agent.id);
       
-      // Update BPMN process list
-      renderBpmnProcessList();
+      // Update BPMN tab with selected agent's BPMN
+      loadAgentBpmn(agent);
     }
     
     // ============================================================================
@@ -2890,6 +3209,15 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       
       if (tabName === 'graph' && network) {
         setTimeout(() => network.fit({ animation: { duration: 300 } }), 50);
+      }
+      
+      // Re-fit BPMN when switching to BPMN tab
+      if (tabName === 'bpmn' && bpmnModeler) {
+        const fitBpmn = () => {
+          try { bpmnModeler.get('canvas').zoom('fit-viewport'); } catch(e) {}
+        };
+        setTimeout(fitBpmn, 50);
+        setTimeout(fitBpmn, 150);
       }
       
       // Render skills when switching to skills tab
@@ -3961,7 +4289,12 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       
       try {
         await window.bpmnViewer.importXML(bpmnXml);
-        window.bpmnViewer.get('canvas').zoom('fit-viewport');
+        // Delayed fit to ensure container is visible and has dimensions
+        setTimeout(() => {
+          try {
+            window.bpmnViewer.get('canvas').zoom('fit-viewport');
+          } catch (e) { /* ignore if already destroyed */ }
+        }, 100);
       } catch (err) {
         console.error('BPMN render error:', err);
         canvas.innerHTML = '<div style="padding:1rem;color:#f87171;">Failed to render BPMN: ' + escapeHtml(err.message) + '</div>';
@@ -4100,6 +4433,83 @@ ${gatewayShapes}
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>`;
+    }
+
+    // Load and display BPMN for the selected agent
+    async function loadAgentBpmn(agent) {
+      const emptyState = document.getElementById('bpmn-empty-state');
+      const canvas = document.getElementById('bpmn-canvas-main');
+      const titleEl = document.getElementById('bpmn-process-title');
+      const descEl = document.getElementById('bpmn-process-desc');
+      
+      if (!agent) {
+        if (emptyState) emptyState.style.display = 'flex';
+        if (canvas) canvas.style.display = 'none';
+        if (titleEl) titleEl.textContent = '📊 Select an Agent';
+        if (descEl) descEl.textContent = 'Select an agent from the sidebar to view its BPMN workflow';
+        return;
+      }
+      
+      // Update title
+      if (titleEl) titleEl.textContent = `📊 ${agent.name}`;
+      if (descEl) descEl.textContent = agent.config?.subProcessName || agent.config?.processName || 'Agent workflow';
+      
+      // Set selected process for save/export
+      selectedProcessId = agent.id;
+      
+      // Check if agent has BPMN
+      const bpmnXml = agent.config?.bpmnXml;
+      
+      if (!bpmnXml) {
+        // Show empty state with generate option
+        if (emptyState) {
+          emptyState.style.display = 'flex';
+          emptyState.innerHTML = `
+            <div style="text-align: center; color: #64748b;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+              <p style="margin-bottom: 1rem;">No BPMN workflow defined for this agent</p>
+              <button class="btn btn-primary" onclick="generateBpmnForAgent('${agent.id}')" style="font-size: 0.9rem;">🔄 Generate BPMN Workflow</button>
+            </div>
+          `;
+        }
+        if (canvas) canvas.style.display = 'none';
+        return;
+      }
+      
+      // Show BPMN
+      if (emptyState) emptyState.style.display = 'none';
+      if (canvas) canvas.style.display = 'block';
+      
+      try {
+        currentBpmnXml = bpmnXml;
+        
+        if (!bpmnModeler) {
+          bpmnModeler = new BpmnJS({ container: canvas });
+        }
+        
+        await bpmnModeler.importXML(bpmnXml);
+        // Multiple delayed fit attempts to handle visibility timing
+        const fitCanvas = () => {
+          try { bpmnModeler.get('canvas').zoom('fit-viewport'); } catch(e) {}
+        };
+        fitCanvas();
+        setTimeout(fitCanvas, 50);
+        setTimeout(fitCanvas, 150);
+        setTimeout(fitCanvas, 300);
+        
+        // Update stats
+        const statsEl = document.getElementById('bpmn-stats');
+        const taskCount = (bpmnXml.match(/<bpmn:(service|user)Task/g) || []).length;
+        const gatewayCount = (bpmnXml.match(/<bpmn:exclusiveGateway/g) || []).length;
+        if (statsEl) statsEl.textContent = `${taskCount} tasks • ${gatewayCount} gateways`;
+        
+      } catch (err) {
+        console.error('BPMN render error:', err);
+        if (canvas) {
+          canvas.style.display = 'block';
+          canvas.innerHTML = `<div style="padding: 2rem; color: #ef4444;">Error rendering BPMN: ${err.message}</div>`;
+        }
+      }
     }
 
     async function generateProcessBPMN(process) {
@@ -4552,7 +4962,6 @@ ${gatewayShapes}
           shortDescription: document.getElementById('agent-short-desc').value,
           detailedPurpose: document.getElementById('agent-purpose').value,
           businessValue: document.getElementById('agent-business-value').value,
-          keyResponsibilities: document.getElementById('agent-responsibilities').value.split('\n').filter(s => s.trim()),
           successCriteria: document.getElementById('agent-success-criteria').value,
         };
         
@@ -4665,7 +5074,7 @@ ${gatewayShapes}
         purpose: !!(config.detailedPurpose || agent.description),
         pattern: !!config.pattern,
         integrations: (agent.integrations || []).length > 0,
-        interactions: !!(config.triggers?.length || config.outputs?.length),
+        relationships: (agent.interactions || []).length > 0,
       };
       
       // Integrations are optional, so handle differently
@@ -4705,10 +5114,10 @@ ${gatewayShapes}
       if (!agent.name) issues.push('Agent name is missing');
       if (!config.detailedPurpose && !agent.description) issues.push('Purpose is not defined');
       if (!config.pattern) issues.push('Agentic pattern not selected');
-      if (!config.triggers?.length && !config.outputs?.length) issues.push('No interaction triggers or outputs defined');
+      if (!(agent.interactions || []).length) issues.push('No relationships defined with other agents');
       
       // Optional checks (warnings only)
-      if (!(agent.integrations?.length)) warnings.push('No integrations configured (optional)');
+      if (!(agent.integrations?.length)) warnings.push('No tools configured (optional)');
       
       const resultsEl = document.getElementById('verify-results');
       if (issues.length === 0 && warnings.length === 0) {

@@ -293,6 +293,18 @@ import './step3/define-skills';
 import './step4/generate-bpmn';
 export { GenerateBPMNInput, GenerateBPMNOutput } from './step4/generate-bpmn';
 
+// Step 4a: Orchestrator BPMN (inter-agent coordination)
+import './step4/generate-orchestrator-bpmn';
+export { GenerateOrchestratorBPMNInput, GenerateOrchestratorBPMNOutput } from './step4/generate-orchestrator-bpmn';
+
 // Step 5: Relationships & Integrations
 import './step5/relationships';
 import './step5/integrations';
+
+// Step 5-Internal: Agent Internal BPMN (intra-agent workflow)
+import './step5-internal/generate-agent-internal-bpmn';
+export { GenerateAgentInternalBPMNInput, GenerateAgentInternalBPMNOutput } from './step5-internal/generate-agent-internal-bpmn';
+
+// Agent Identification (Design Wizard 8-step flow)
+import './agent-identification';
+export { AgentIdentificationInput, AgentIdentificationOutput } from './agent-identification';

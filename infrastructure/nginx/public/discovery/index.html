@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discovery Wizard | FlowGrid</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --secondary: #64748b;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --bg-input: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #475569;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .header h1 span {
+      color: var(--primary);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    /* Progress Steps */
+    .progress-container {
+      background: var(--bg-card);
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .progress-steps {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .progress-step {
+      display: flex;
+      align-items: center;
+      flex: 1;
+    }
+
+    .step-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-input);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+
+    .step-circle.active {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .step-circle.completed {
+      background: var(--success);
+      border-color: var(--success);
+    }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      margin: 0 0.5rem;
+    }
+
+    .step-line.completed {
+      background: var(--success);
+    }
+
+    .step-label {
+      position: absolute;
+      top: 50px;
+      white-space: nowrap;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .step-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Main Content */
+    .main-content {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    .wizard-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 2rem;
+    }
+
+    .wizard-card h2 {
+      margin-bottom: 0.5rem;
+    }
+
+    .wizard-card p.subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 1rem;
+    }
+
+    .form-group textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    /* Upload Area */
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .upload-area:hover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .upload-area.dragover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.2);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .upload-area p {
+      color: var(--text-secondary);
+    }
+
+    .upload-area input[type="file"] {
+      display: none;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-input);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-group {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Items List */
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .item-card {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-card.selected {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .item-info h4 {
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .item-info p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .badge-capability { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+    .badge-data { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+    .badge-process { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      color: var(--text-secondary);
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-count {
+      background: var(--bg-input);
+      padding: 0.125rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      margin-left: 0.5rem;
+    }
+
+    /* Loading */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 1rem;
+      color: var(--text-secondary);
+    }
+
+    /* Step Content */
+    .step-content {
+      display: none;
+    }
+
+    .step-content.active {
+      display: block;
+    }
+
+    /* Summary Cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .summary-card {
+      background: var(--bg-input);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .summary-card .count {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .summary-card .label {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    /* Edit Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      width: 90%;
+      max-width: 500px;
+      padding: 1.5rem;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>🔍 <span>Discovery</span> Wizard</h1>
+    <div class="header-actions">
+      <a href="/" class="btn btn-secondary">← Back to Home</a>
+    </div>
+  </header>
+
+  <!-- Progress Steps -->
+  <div class="progress-container">
+    <div class="progress-steps">
+      <div class="step-wrapper">
+        <div class="step-circle active" data-step="1">1</div>
+        <span class="step-label">Upload</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-wrapper">
+        <div class="step-circle" data-step="2">2</div>
+        <span class="step-label">Extract</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-wrapper">
+        <div class="step-circle" data-step="3">3</div>
+        <span class="step-label">Review</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-wrapper">
+        <div class="step-circle" data-step="4">4</div>
+        <span class="step-label">Save</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Step 1: Upload -->
+    <div class="step-content active" data-step="1">
+      <div class="wizard-card">
+        <h2>📤 Upload Materials</h2>
+        <p class="subtitle">Upload documents, images, or describe your domain to extract capabilities and processes.</p>
+        
+        <div class="tabs">
+          <div class="tab active" data-tab="upload">Upload Files</div>
+          <div class="tab" data-tab="describe">Describe Domain</div>
+        </div>
+
+        <div class="tab-content" data-tab="upload">
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <p><strong>Drop files here</strong> or click to browse</p>
+            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Supports: PDF, DOCX, images (PNG, JPG), Visio, ArchiMate XML</p>
+            <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.xml,.vsdx">
+          </div>
+          <div id="fileList" style="margin-top: 1rem;"></div>
+        </div>
+
+        <div class="tab-content hidden" data-tab="describe">
+          <div class="form-group">
+            <label>Domain Description</label>
+            <textarea id="domainDescription" placeholder="Describe your business domain, processes, and capabilities...
+
+Example:
+Our IT Service Desk handles incident management, service requests, and change management. Key processes include:
+- Incident triage and classification
+- SLA monitoring and escalation
+- Knowledge article creation
+- Change approval workflows"></textarea>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <div></div>
+          <button class="btn btn-primary" id="btnExtract" disabled>
+            Extract with AI →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Extract (Loading) -->
+    <div class="step-content" data-step="2">
+      <div class="wizard-card" style="text-align: center; padding: 4rem 2rem;">
+        <div class="spinner" style="margin: 0 auto;"></div>
+        <h2 style="margin-top: 1.5rem;">🤖 Analyzing your materials...</h2>
+        <p class="subtitle" id="extractionStatus">Extracting capabilities and processes...</p>
+      </div>
+    </div>
+
+    <!-- Step 3: Review -->
+    <div class="step-content" data-step="3">
+      <div class="wizard-card">
+        <h2>📋 Review Extracted Elements</h2>
+        <p class="subtitle">Review and refine the extracted capabilities, data objects, and processes.</p>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="count" id="capabilityCount">0</div>
+            <div class="label">Capabilities</div>
+          </div>
+          <div class="summary-card">
+            <div class="count" id="dataObjectCount">0</div>
+            <div class="label">Data Objects</div>
+          </div>
+          <div class="summary-card">
+            <div class="count" id="processCount">0</div>
+            <div class="label">Processes</div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active" data-review-tab="capabilities">
+            Capabilities <span class="tab-count" id="capTabCount">0</span>
+          </div>
+          <div class="tab" data-review-tab="dataObjects">
+            Data Objects <span class="tab-count" id="dataTabCount">0</span>
+          </div>
+          <div class="tab" data-review-tab="processes">
+            Processes <span class="tab-count" id="processTabCount">0</span>
+          </div>
+        </div>
+
+        <div class="review-content" data-review-tab="capabilities">
+          <div class="items-list" id="capabilitiesList"></div>
+        </div>
+        <div class="review-content hidden" data-review-tab="dataObjects">
+          <div class="items-list" id="dataObjectsList"></div>
+        </div>
+        <div class="review-content hidden" data-review-tab="processes">
+          <div class="items-list" id="processesList"></div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-primary" onclick="goToStep(4)">Continue to Save →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Save -->
+    <div class="step-content" data-step="4">
+      <div class="wizard-card">
+        <h2>💾 Save Foundation</h2>
+        <p class="subtitle">Save this discovery as a foundation for agent design.</p>
+
+        <div class="form-group">
+          <label>Foundation Name *</label>
+          <input type="text" id="foundationName" placeholder="e.g., IT Service Management Foundation">
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="foundationDescription" placeholder="Describe what this foundation covers..." style="min-height: 100px;"></textarea>
+        </div>
+
+        <div class="summary-grid" style="margin-top: 1.5rem;">
+          <div class="summary-card">
+            <div class="count" id="finalCapCount">0</div>
+            <div class="label">Capabilities</div>
+          </div>
+          <div class="summary-card">
+            <div class="count" id="finalDataCount">0</div>
+            <div class="label">Data Objects</div>
+          </div>
+          <div class="summary-card">
+            <div class="count" id="finalProcessCount">0</div>
+            <div class="label">Processes</div>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="goToStep(3)">← Back</button>
+          <button class="btn btn-primary" id="btnSave">
+            💾 Save Foundation
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success State -->
+    <div class="step-content" data-step="5">
+      <div class="wizard-card" style="text-align: center;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+        <h2>Foundation Saved!</h2>
+        <p class="subtitle">Your discovery foundation has been saved and is ready for agent design.</p>
+        
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+          <a id="designWizardLink" href="/design/" class="btn btn-primary">→ Start Design Wizard</a>
+          <a href="/discovery/" class="btn btn-secondary">+ New Discovery</a>
+        </div>
+        <p style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.875rem;">
+          Foundation ID: <code id="savedFoundationId" style="background: var(--bg-input); padding: 0.25rem 0.5rem; border-radius: 4px;">-</code>
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p class="loading-text" id="loadingText">Processing...</p>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal hidden" id="editModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Item</h3>
+        <button class="modal-close" onclick="closeEditModal()">×</button>
+      </div>
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="editName">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="editDescription" style="min-height: 80px;"></textarea>
+      </div>
+      <div class="btn-group" style="border-top: none; padding-top: 0;">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth-ui.js"></script>
+  <script>
+    // State
+    let currentStep = 1;
+    let uploadedFiles = [];
+    let extractedData = {
+      capabilities: [],
+      dataObjects: [],
+      processes: []
+    };
+    let editingItem = null;
+    let csrfToken = '';
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check auth
+      const token = localStorage.getItem('flowgrid_access_token');
+      if (!token) {
+        window.location.href = '/login.html?redirect=/discovery/';
+        return;
+      }
+
+      // Get CSRF token
+      try {
+        const res = await fetch('/api/wizard/csrf-token', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        csrfToken = data.csrfToken;
+      } catch (e) {
+        console.error('Failed to get CSRF token:', e);
+      }
+
+      initTabs();
+      initUpload();
+      initButtons();
+    });
+
+    // Tab switching
+    function initTabs() {
+      // Upload tabs
+      document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content[data-tab]').forEach(c => c.classList.add('hidden'));
+          tab.classList.add('active');
+          document.querySelector(`.tab-content[data-tab="${tab.dataset.tab}"]`).classList.remove('hidden');
+          updateExtractButton();
+        });
+      });
+
+      // Review tabs
+      document.querySelectorAll('.tab[data-review-tab]').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab[data-review-tab]').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.review-content[data-review-tab]').forEach(c => c.classList.add('hidden'));
+          tab.classList.add('active');
+          document.querySelector(`.review-content[data-review-tab="${tab.dataset.reviewTab}"]`).classList.remove('hidden');
+        });
+      });
+    }
+
+    // File upload
+    function initUpload() {
+      const uploadArea = document.getElementById('uploadArea');
+      const fileInput = document.getElementById('fileInput');
+
+      uploadArea.addEventListener('click', () => fileInput.click());
+      
+      uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+      });
+
+      uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+      });
+
+      uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+      });
+
+      // Text input
+      document.getElementById('domainDescription').addEventListener('input', updateExtractButton);
+    }
+
+    function handleFiles(files) {
+      uploadedFiles = [...uploadedFiles, ...Array.from(files)];
+      renderFileList();
+      updateExtractButton();
+    }
+
+    function renderFileList() {
+      const list = document.getElementById('fileList');
+      if (uploadedFiles.length === 0) {
+        list.innerHTML = '';
+        return;
+      }
+
+      list.innerHTML = uploadedFiles.map((f, i) => `
+        <div class="item-card">
+          <div class="item-info">
+            <h4>📄 ${f.name}</h4>
+            <p>${(f.size / 1024).toFixed(1)} KB</p>
+          </div>
+          <button class="btn btn-secondary" onclick="removeFile(${i})" style="padding: 0.5rem;">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function removeFile(index) {
+      uploadedFiles.splice(index, 1);
+      renderFileList();
+      updateExtractButton();
+    }
+
+    function updateExtractButton() {
+      const hasFiles = uploadedFiles.length > 0;
+      const hasDescription = document.getElementById('domainDescription').value.trim().length > 20;
+      const activeTab = document.querySelector('.tab[data-tab].active').dataset.tab;
+      
+      document.getElementById('btnExtract').disabled = !(
+        (activeTab === 'upload' && hasFiles) || 
+        (activeTab === 'describe' && hasDescription)
+      );
+    }
+
+    // Buttons
+    function initButtons() {
+      document.getElementById('btnExtract').addEventListener('click', startExtraction);
+      document.getElementById('btnSave').addEventListener('click', saveFoundation);
+    }
+
+    // Step navigation
+    function goToStep(step) {
+      currentStep = step;
+      document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+      document.querySelector(`.step-content[data-step="${step}"]`).classList.add('active');
+
+      // Update progress circles
+      document.querySelectorAll('.step-circle').forEach(c => {
+        const s = parseInt(c.dataset.step);
+        c.classList.remove('active', 'completed');
+        if (s < step) c.classList.add('completed');
+        if (s === step) c.classList.add('active');
+      });
+
+      // Update lines
+      document.querySelectorAll('.step-line').forEach((line, i) => {
+        line.classList.toggle('completed', i < step - 1);
+      });
+
+      // Update summary counts on step 4
+      if (step === 4) {
+        document.getElementById('finalCapCount').textContent = extractedData.capabilities.length;
+        document.getElementById('finalDataCount').textContent = extractedData.dataObjects.length;
+        document.getElementById('finalProcessCount').textContent = extractedData.processes.length;
+      }
+    }
+
+    // Extraction
+    async function startExtraction() {
+      goToStep(2);
+      const token = localStorage.getItem('flowgrid_access_token');
+      const activeTab = document.querySelector('.tab[data-tab].active').dataset.tab;
+
+      try {
+        let response;
+        
+        if (activeTab === 'describe') {
+          // Text analysis
+          document.getElementById('extractionStatus').textContent = 'Analyzing text description...';
+          response = await fetch('/api/wizard/analyze-text', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({
+              text: document.getElementById('domainDescription').value
+            })
+          });
+        } else {
+          // File upload - determine endpoint based on file type
+          document.getElementById('extractionStatus').textContent = 'Processing uploaded files...';
+          const formData = new FormData();
+          formData.append('file', uploadedFiles[0]);
+          
+          // Use upload-xml for XML/ArchiMate files, upload-image for images
+          const fileName = uploadedFiles[0].name.toLowerCase();
+          const isXml = fileName.endsWith('.xml') || fileName.endsWith('.archimate');
+          const endpoint = isXml ? '/api/wizard/upload-xml' : '/api/wizard/upload-image';
+          
+          response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'X-CSRF-Token': csrfToken
+            },
+            body: formData
+          });
+        }
+
+        if (!response.ok) throw new Error('Extraction failed');
+        
+        const data = await response.json();
+        
+        // Map extracted data - API returns { analysis: { extractedCapabilities, agents, ... } }
+        const analysis = data.analysis || data;
+        
+        extractedData.capabilities = (analysis.extractedCapabilities || analysis.capabilities || [])
+          .map((c, i) => ({ id: `cap-${i}`, name: c.name, description: c.description || c.rationale || '' }));
+        
+        extractedData.dataObjects = (analysis.dataObjects || [])
+          .map((d, i) => ({ id: `data-${i}`, name: d.name, description: d.description || '' }));
+        
+        // Processes might come from agents or a separate field
+        extractedData.processes = (analysis.processes || [])
+          .map((p, i) => ({ id: `proc-${i}`, name: p.name, description: p.description || '' }));
+        
+        // Also extract agents as potential processes (they represent capabilities)
+        if (analysis.agents && analysis.agents.length > 0 && extractedData.processes.length === 0) {
+          extractedData.processes = analysis.agents
+            .map((a, i) => ({ id: `agent-${i}`, name: a.name, description: a.purpose || a.description || '' }));
+        }
+        
+        console.log('Extracted:', { 
+          capabilities: extractedData.capabilities.length,
+          dataObjects: extractedData.dataObjects.length, 
+          processes: extractedData.processes.length 
+        });
+
+        renderReviewLists();
+        goToStep(3);
+      } catch (error) {
+        console.error('Extraction error:', error);
+        alert('Extraction failed: ' + error.message);
+        goToStep(1);
+      }
+    }
+
+    // Render review lists
+    function renderReviewLists() {
+      // Update counts
+      document.getElementById('capabilityCount').textContent = extractedData.capabilities.length;
+      document.getElementById('dataObjectCount').textContent = extractedData.dataObjects.length;
+      document.getElementById('processCount').textContent = extractedData.processes.length;
+      document.getElementById('capTabCount').textContent = extractedData.capabilities.length;
+      document.getElementById('dataTabCount').textContent = extractedData.dataObjects.length;
+      document.getElementById('processTabCount').textContent = extractedData.processes.length;
+
+      // Render lists
+      document.getElementById('capabilitiesList').innerHTML = renderItemsList(extractedData.capabilities, 'capability');
+      document.getElementById('dataObjectsList').innerHTML = renderItemsList(extractedData.dataObjects, 'data');
+      document.getElementById('processesList').innerHTML = renderItemsList(extractedData.processes, 'process');
+    }
+
+    function renderItemsList(items, type) {
+      if (items.length === 0) {
+        return '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No items found</p>';
+      }
+      return items.map(item => `
+        <div class="item-card">
+          <div class="item-info">
+            <h4>${item.name}</h4>
+            <p>${item.description || 'No description'}</p>
+          </div>
+          <div class="item-actions">
+            <span class="badge badge-${type}">${type}</span>
+            <button class="btn btn-secondary" style="padding: 0.5rem;" onclick="editItem('${type}', '${item.id}')">✏️</button>
+            <button class="btn btn-secondary" style="padding: 0.5rem;" onclick="deleteItem('${type}', '${item.id}')">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Edit item
+    function editItem(type, id) {
+      const list = type === 'capability' ? extractedData.capabilities : 
+                   type === 'data' ? extractedData.dataObjects : extractedData.processes;
+      const item = list.find(i => i.id === id);
+      if (!item) return;
+
+      editingItem = { type, id };
+      document.getElementById('editName').value = item.name;
+      document.getElementById('editDescription').value = item.description || '';
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+      editingItem = null;
+    }
+
+    function saveEdit() {
+      if (!editingItem) return;
+      
+      const list = editingItem.type === 'capability' ? extractedData.capabilities : 
+                   editingItem.type === 'data' ? extractedData.dataObjects : extractedData.processes;
+      const item = list.find(i => i.id === editingItem.id);
+      if (item) {
+        item.name = document.getElementById('editName').value;
+        item.description = document.getElementById('editDescription').value;
+      }
+      
+      closeEditModal();
+      renderReviewLists();
+    }
+
+    // Delete item
+    function deleteItem(type, id) {
+      if (!confirm('Delete this item?')) return;
+      
+      if (type === 'capability') {
+        extractedData.capabilities = extractedData.capabilities.filter(i => i.id !== id);
+      } else if (type === 'data') {
+        extractedData.dataObjects = extractedData.dataObjects.filter(i => i.id !== id);
+      } else {
+        extractedData.processes = extractedData.processes.filter(i => i.id !== id);
+      }
+      
+      renderReviewLists();
+    }
+
+    // Save foundation
+    async function saveFoundation() {
+      const name = document.getElementById('foundationName').value.trim();
+      if (!name) {
+        alert('Please enter a foundation name');
+        return;
+      }
+
+      const token = localStorage.getItem('flowgrid_access_token');
+      showLoading('Saving foundation...');
+
+      try {
+        const response = await fetch('/api/wizard/foundations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-CSRF-Token': csrfToken
+          },
+          body: JSON.stringify({
+            name,
+            description: document.getElementById('foundationDescription').value,
+            capabilities: extractedData.capabilities,
+            data_objects: extractedData.dataObjects,
+            processes: extractedData.processes
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to save foundation');
+        
+        const result = await response.json();
+        const foundationId = result.foundation?.id;
+        
+        // Update the design wizard link with foundation ID
+        if (foundationId) {
+          document.getElementById('designWizardLink').href = `/wizard.html?foundation=${foundationId}`;
+          document.getElementById('savedFoundationId').textContent = foundationId;
+        }
+        
+        hideLoading();
+        goToStep(5);
+      } catch (error) {
+        hideLoading();
+        alert('Failed to save: ' + error.message);
+      }
+    }
+
+    // Loading helpers
+    function showLoading(text) {
+      document.getElementById('loadingText').textContent = text;
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

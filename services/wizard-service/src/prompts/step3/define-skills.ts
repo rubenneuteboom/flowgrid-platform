@@ -126,7 +126,8 @@ const buildUserMessage = (input: DefineSkillsInput): string => {
     return `- [${a.id}] ${a.name}
   Pattern: ${pattern?.pattern || a.suggestedPattern}
   Purpose: ${a.purpose}
-  Responsibilities: ${a.responsibilities.join('; ')}`;
+  Triggers: ${(a.triggers || []).join('; ') || 'Not specified'}
+  Outputs: ${(a.outputs || []).join('; ') || 'Not specified'}`;
   }).join('\n\n');
 
   const detailLevel = input.detailLevel || 'standard';

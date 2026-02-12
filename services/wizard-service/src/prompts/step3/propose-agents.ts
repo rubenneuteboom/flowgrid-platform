@@ -44,15 +44,24 @@ Define what each agent:
 
 ## Agentic Patterns Reference
 
-| Pattern | Use When | Example |
-|---------|----------|---------|
-| Orchestrator | Coordinating multiple agents/workflows | "Ticket Workflow Manager" |
-| Specialist | Deep domain expertise needed | "Compliance Checker" |
-| Coordinator | Managing handoffs between teams | "Incident Coordinator" |
-| Gateway | External system integration | "ERP Integration Agent" |
-| Monitor | Watching for conditions/thresholds | "SLA Monitor" |
-| Executor | Performing automated actions | "Auto-Remediation Agent" |
-| Analyzer | Processing data for insights | "Trend Analyzer" |
+| Pattern | Use When | Example | isOrchestrator |
+|---------|----------|---------|----------------|
+| Orchestrator | Coordinating multiple agents/workflows | "Ticket Workflow Manager" | true |
+| Specialist | Deep domain expertise needed | "Compliance Checker" | false |
+| Coordinator | Managing handoffs between teams | "Incident Coordinator" | true (if coordinates agents) |
+| Gateway | External system integration | "ERP Integration Agent" | false |
+| Monitor | Watching for conditions/thresholds | "SLA Monitor" | false |
+| Executor | Performing automated actions | "Auto-Remediation Agent" | false |
+| Analyzer | Processing data for insights | "Trend Analyzer" | false |
+
+## Orchestrator Identification
+
+Set isOrchestrator: true if this agent's PRIMARY purpose is to coordinate other agents.
+Typically there is ONE main orchestrator per process, but complex processes may have multiple.
+
+## Internal BPMN Generation
+
+Set needsInternalBpmn: true for ALL agents (we always generate internal workflows).
 
 ## JSON Output Format
 {
@@ -101,7 +110,9 @@ Define what each agent:
         "internal": ["Ticket routing", "Status tracking"],
         "delegates": ["Technical diagnosis to Specialist"],
         "escalates": ["VIP customer issues", "Security incidents"]
-      }
+      },
+      "isOrchestrator": true,
+      "needsInternalBpmn": true
     }
   ],
   "orphanedElements": ["cap-015"]

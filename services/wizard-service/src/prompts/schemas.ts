@@ -103,13 +103,15 @@ export const ProposeAgentsOutputSchema = z.object({
     outputs: z.array(z.string()).max(5).optional(),
     escalationPath: z.string().max(150).optional(),
     // Original fields
-    responsibilities: z.array(z.string()).min(2).max(6),
     ownedElements: z.array(z.string()),
     boundaries: z.object({
       internal: z.array(z.string()),
       delegates: z.array(z.string()),
       escalates: z.array(z.string()),
     }),
+    // Orchestration & BPMN fields (new)
+    isOrchestrator: z.boolean().optional(), // True if this agent coordinates other agents
+    needsInternalBpmn: z.boolean().optional(), // True = always generate internal BPMN
   })),
   orphanedElements: z.array(z.string()),
 });
@@ -227,8 +229,10 @@ export const FullAnalysisResultSchema = z.object({
     pattern: AgenticPattern.optional(),
     autonomyLevel: AutonomyLevel.optional(),
     riskAppetite: RiskAppetite.optional(),
-    responsibilities: z.array(z.string()).optional(),
+    shortDescription: z.string().optional(),
+    interactionPattern: z.string().optional(),
     triggers: z.array(z.string()).optional(),
+    escalationPath: z.string().optional(),
     outputs: z.array(z.string()).optional(),
   })),
   relationships: z.array(z.object({

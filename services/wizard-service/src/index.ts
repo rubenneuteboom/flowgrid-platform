@@ -49,6 +49,8 @@ import { setCsrfCookie, verifyCsrfToken, getCsrfTokenEndpoint } from './middlewa
 import analyzeRoutes from './routes/analyze';
 import sessionRoutes from './routes/session';
 import generateRoutes from './routes/generate';
+import foundationsRoutes from './routes/foundations';
+import identifyAgentsRoutes from './routes/identify-agents';
 
 // ============================================================================
 // Service Configuration
@@ -138,6 +140,9 @@ app.use(morgan('combined'));
 // Set CSRF cookie on all requests
 app.use(setCsrfCookie);
 
+// Make database pool available to routes
+app.locals.pool = pool;
+
 // ============================================================================
 // Health Check (Platform Observability)
 // ============================================================================
@@ -197,6 +202,12 @@ app.use('/api/wizard', analyzeRoutes);
 // Generation routes (generate-network, generate-process, apply, suggest-interactions)
 app.use('/api/wizard', generateRoutes);
 
+// Foundation routes (CRUD for Discovery Wizard)
+app.use('/api/wizard/foundations', foundationsRoutes);
+
+// Agent identification routes (8-step Design Wizard)
+app.use('/api/wizard', identifyAgentsRoutes);
+
 // ============================================================================
 // Error Handling
 // ============================================================================
@@ -226,6 +237,12 @@ app.use((req: Request, res: Response) => {
       'POST /api/wizard/generate-process',
       'POST /api/wizard/suggest-interactions',
       'POST /api/wizard/apply',
+      'POST /api/wizard/identify-agents',
+      'GET /api/wizard/foundations',
+      'GET /api/wizard/foundations/:id',
+      'POST /api/wizard/foundations',
+      'PUT /api/wizard/foundations/:id',
+      'DELETE /api/wizard/foundations/:id',
     ],
   });
 });
