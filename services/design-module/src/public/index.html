@@ -1196,6 +1196,19 @@
           <option value="">All Sub-processes</option>
         </select>
         
+        <!-- Agent Type dropdown -->
+        <label style="font-size: 0.7rem; color: #64748b; margin-bottom: 0.25rem; display: block;">Agent Type</label>
+        <select id="agenttype-filter" onchange="onAgentTypeFilterChange(this.value)" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; font-size: 0.8rem; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #e2e8f0; cursor: pointer;">
+          <option value="">All Types</option>
+          <option value="orchestrator">🎯 Orchestrator</option>
+          <option value="specialist">⚡ Specialist</option>
+          <option value="coordinator">🔄 Coordinator</option>
+          <option value="gatekeeper">🛡️ Gatekeeper</option>
+          <option value="validator">✅ Validator</option>
+          <option value="router">🔀 Router</option>
+          <option value="monitor">📊 Monitor</option>
+        </select>
+        
         <!-- Hidden elements for compatibility -->
         <div id="foundation-name" style="display: none;"></div>
         <div id="foundation-tabs-container" style="display: none;">
@@ -2255,11 +2268,13 @@
         document.getElementById('foundation-tabs-container').style.display = 'none';
         document.getElementById('foundation-counters').style.display = 'none';
         
-        // Reset process/subprocess filters
+        // Reset process/subprocess/type filters
         document.getElementById('process-filter').innerHTML = '<option value="">All Processes</option>';
         document.getElementById('subprocess-filter').innerHTML = '<option value="">All Sub-processes</option>';
+        document.getElementById('agenttype-filter').value = '';
         selectedProcessFilter = '';
         selectedSubprocessFilter = '';
+        selectedAgentTypeFilter = '';
         applyAgentFilters();
       }
     }
@@ -2319,6 +2334,12 @@
     
     let selectedProcessFilter = '';
     let selectedSubprocessFilter = '';
+    let selectedAgentTypeFilter = '';
+
+    function onAgentTypeFilterChange(value) {
+      selectedAgentTypeFilter = value;
+      applyAgentFilters();
+    }
     
     function populateProcessFilter(processes) {
       const select = document.getElementById('process-filter');
@@ -2398,9 +2419,14 @@
         filtered = filtered.filter(a => a.config?.subProcessName === selectedSubprocessFilter);
       }
       
+      // Filter by agent type (pattern)
+      if (selectedAgentTypeFilter) {
+        filtered = filtered.filter(a => (a.pattern || a.config?.pattern || '').toLowerCase() === selectedAgentTypeFilter);
+      }
+      
       // Update status text
       const statusEl = document.getElementById('agent-filter-status');
-      if (selectedProcessFilter || selectedSubprocessFilter) {
+      if (selectedProcessFilter || selectedSubprocessFilter || selectedAgentTypeFilter) {
         statusEl.textContent = `Showing ${filtered.length} of ${agents.length} agents`;
       } else if (currentFoundation) {
         statusEl.textContent = `${filtered.length} agents`;
