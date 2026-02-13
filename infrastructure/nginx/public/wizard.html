@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/vis-network.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/dist/vis-network.min.css" rel="stylesheet">
     <!-- bpmn-js for BPMN viewer -->
-    <script src="https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-navigated-viewer.production.min.js"></script>
+    <script src="/js/bpmn-navigated-viewer.production.min.js"></script>
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -187,7 +187,7 @@
         .agent-card textarea { min-height: 60px; }
 
         /* BPMN viewer */
-        .bpmn-container { height: 400px; background: white; border-radius: 8px; border: 1px solid var(--border-default); margin-bottom: 1rem; }
+        .bpmn-container { height: 600px; background: white; border-radius: 8px; border: 1px solid var(--border-default); margin-bottom: 1rem; }
 
         /* Tabs */
         .tab-bar { display: flex; gap: 0.25rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.25rem; }
@@ -279,6 +279,7 @@
                 <span class="header-subtitle">Process-first agent swarm design in 8 steps</span>
             </div>
             <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <a href="/design/" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; background: var(--accent-primary); color: white; border-radius: 6px;">⚡ Design Module</a>
                 <a href="/" target="_top" class="back-btn">← Dashboard</a>
             </div>
         </header>
@@ -307,12 +308,12 @@
             <div class="step-line"></div>
             <div class="step" data-step="5" onclick="navigateToStep(5)">
                 <div class="step-circle">5</div>
-                <span class="step-label">BPMN</span>
+                <span class="step-label">Flows</span>
             </div>
             <div class="step-line"></div>
             <div class="step" data-step="6" onclick="navigateToStep(6)">
                 <div class="step-circle">6</div>
-                <span class="step-label">Review BPMN</span>
+                <span class="step-label">Review Flows</span>
             </div>
             <div class="step-line"></div>
             <div class="step" data-step="7" onclick="navigateToStep(7)">
@@ -391,8 +392,13 @@
         <!-- ============================================================ -->
         <section id="step2" class="step-content hidden">
             <div class="card">
-                <h2>📋 Define Sub-Process</h2>
-                <p class="subtitle">Describe what you want to automate within the selected process.</p>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div>
+                        <h2>📋 Define Sub-Process</h2>
+                        <p class="subtitle">Describe what you want to automate within the selected process.</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="surpriseMe()" style="white-space: nowrap;">🎲 Surprise Me</button>
+                </div>
 
                 <div class="input-group">
                     <label for="subProcessName">Sub-process Name *</label>
@@ -427,11 +433,11 @@
             <div class="card">
                 <div class="loading" id="step3Loading">
                     <div class="loading-icon">🤖</div>
-                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Identifying Agents...</h3>
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Identifying & Optimizing Agents...</h3>
                     <div class="progress-container">
                         <div class="progress-track"><div class="progress-fill" id="step3Progress"></div></div>
                     </div>
-                    <p class="loading-status" id="step3Status">AI is analyzing your process and proposing agents...</p>
+                    <p class="loading-status" id="step3Status">AI is analyzing your process...</p>
                 </div>
 
                 <div class="results" id="step3Results">
@@ -472,7 +478,7 @@
 
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="goToStep(3)">← Back</button>
-                    <button class="btn btn-success" onclick="generateAllBpmn()">📊 Approve & Generate BPMN</button>
+                    <button class="btn btn-success" onclick="generateAllBpmn()">📊 Approve & Generate Agent Flows</button>
                 </div>
             </div>
         </section>
@@ -484,15 +490,15 @@
             <div class="card">
                 <div class="loading" id="step5Loading">
                     <div class="loading-icon">📊</div>
-                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Generating BPMN Workflows...</h3>
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">Generating Agent Flows...</h3>
                     <div class="progress-container">
                         <div class="progress-track"><div class="progress-fill" id="step5Progress"></div></div>
                     </div>
-                    <p class="loading-status" id="step5Status">Generating orchestrator BPMN...</p>
+                    <p class="loading-status" id="step5Status">Generating orchestrator flow...</p>
                 </div>
 
                 <div class="results" id="step5Results">
-                    <h2>✅ BPMN Generated</h2>
+                    <h2>✅ Agent Flows Generated</h2>
                     <p class="subtitle">All workflows have been generated. Review them in the next step.</p>
 
                     <div class="stats-grid">
@@ -510,7 +516,7 @@
 
                     <div class="btn-group">
                         <button class="btn btn-secondary" onclick="goToStep(4)">← Back</button>
-                        <button class="btn btn-primary" onclick="goToStep(6)">Review BPMN →</button>
+                        <button class="btn btn-primary" onclick="goToStep(6)">Review Agent Flows →</button>
                     </div>
                 </div>
             </div>
@@ -521,8 +527,8 @@
         <!-- ============================================================ -->
         <section id="step6" class="step-content hidden">
             <div class="card">
-                <h2>📊 Review BPMN Workflows</h2>
-                <p class="subtitle">Review the generated BPMN for each agent. Switch between tabs to inspect.</p>
+                <h2>📊 Review Agent Flows</h2>
+                <p class="subtitle">Review the generated flows for each agent. Switch between tabs to inspect. These flows are fully editable in the Design Module after import.</p>
 
                 <div class="tab-bar" id="bpmnTabBar">
                     <!-- Tabs rendered dynamically -->
@@ -588,7 +594,7 @@
                     </div>
                     <div class="stat-card blue">
                         <div class="stat-value" id="summaryBpmn">0</div>
-                        <div class="stat-label">BPMN Workflows</div>
+                        <div class="stat-label">Agent Flows</div>
                     </div>
                     <div class="stat-card yellow">
                         <div class="stat-value" id="summarySkills">0</div>
@@ -649,8 +655,55 @@
     <!-- ============================================================ -->
     <!-- JAVASCRIPT -->
     <!-- ============================================================ -->
+    <!-- Global Error Notification Element -->
+    <div id="globalNotification" style="display:none; position:fixed; top:1rem; right:1rem; z-index:2000; max-width:420px; padding:1rem 1.25rem; border-radius:10px; font-size:0.9rem; box-shadow:0 4px 24px rgba(0,0,0,0.4); animation: slideIn 0.3s ease-out;" role="alert">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem;">
+            <span id="globalNotificationText"></span>
+            <button onclick="hideGlobalNotification()" style="background:none; border:none; color:inherit; cursor:pointer; font-size:1.1rem; line-height:1; opacity:0.7;">✕</button>
+        </div>
+    </div>
+    <style>
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .notif-error { background: rgba(239,68,68,0.95); color: white; border: 1px solid #dc2626; }
+        .notif-success { background: rgba(16,185,129,0.95); color: white; border: 1px solid #059669; }
+        .notif-info { background: rgba(59,130,246,0.95); color: white; border: 1px solid #3b82f6; }
+    </style>
+
     <script src="/js/auth-ui.js"></script>
     <script>
+        // ==========================================
+        // GLOBAL ERROR BOUNDARY
+        // ==========================================
+        let _notifTimer = null;
+
+        function showGlobalNotification(message, type = 'error', durationMs = 6000) {
+            const el = document.getElementById('globalNotification');
+            const text = document.getElementById('globalNotificationText');
+            if (!el || !text) return;
+            const prefix = type === 'error' ? '❌ ' : type === 'success' ? '✅ ' : 'ℹ️ ';
+            text.textContent = prefix + message;
+            el.className = `notif-${type}`;
+            el.style.display = 'block';
+            if (_notifTimer) clearTimeout(_notifTimer);
+            if (durationMs > 0) _notifTimer = setTimeout(hideGlobalNotification, durationMs);
+        }
+
+        function hideGlobalNotification() {
+            const el = document.getElementById('globalNotification');
+            if (el) el.style.display = 'none';
+            if (_notifTimer) { clearTimeout(_notifTimer); _notifTimer = null; }
+        }
+
+        window.addEventListener('error', function(event) {
+            console.error('Uncaught error:', event.error || event.message);
+            showGlobalNotification('Something went wrong. Please try again or refresh the page.');
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            const msg = (event.reason && (event.reason.message || String(event.reason))) || 'An unexpected error occurred.';
+            showGlobalNotification(msg);
+        });
         // ==========================================
         // STATE
         // ==========================================
@@ -671,6 +724,45 @@
         };
 
         const CONSENT_KEY = 'flowgrid_consent';
+        const WIZARD_STATE_KEY = 'flowgrid_design_wizard_state';
+
+        // Save wizard state to localStorage
+        function saveWizardState() {
+            try {
+                const stateToSave = {
+                    currentStep,
+                    selectedFoundation,
+                    wizardState,
+                    savedAt: Date.now()
+                };
+                localStorage.setItem(WIZARD_STATE_KEY, JSON.stringify(stateToSave));
+            } catch (e) {
+                console.warn('Failed to save wizard state:', e);
+            }
+        }
+
+        // Load wizard state from localStorage
+        function loadWizardState() {
+            try {
+                const saved = localStorage.getItem(WIZARD_STATE_KEY);
+                if (!saved) return null;
+                const state = JSON.parse(saved);
+                // Expire after 24 hours
+                if (Date.now() - state.savedAt > 24 * 60 * 60 * 1000) {
+                    localStorage.removeItem(WIZARD_STATE_KEY);
+                    return null;
+                }
+                return state;
+            } catch (e) {
+                console.warn('Failed to load wizard state:', e);
+                return null;
+            }
+        }
+
+        // Clear wizard state
+        function clearWizardState() {
+            localStorage.removeItem(WIZARD_STATE_KEY);
+        }
 
         // ==========================================
         // AUTH & FETCH (kept from original)
@@ -683,7 +775,7 @@
         function clearAuthToken() { window.FlowgridAuthUI.clearAuthState(); }
         function redirectToLogin(message) {
             clearAuthToken();
-            alert(message || 'Please log in to use the wizard.');
+            // Note: notification may not be visible long since we redirect immediately
             window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
         }
 
@@ -784,6 +876,9 @@
             if (step === 6) renderBpmnReview();
             if (step === 7 && wizardState.agentConfigs.length) renderAgentConfigs();
             if (step === 8) renderImportSummary();
+
+            // Save state after each step (except step 8 which is the final import)
+            if (step < 8) saveWizardState();
         }
 
         // ==========================================
@@ -867,6 +962,60 @@
         }
 
         // ==========================================
+        // SURPRISE ME - AI-powered sub-process suggestion
+        // ==========================================
+        async function surpriseMe() {
+            const processName = wizardState.selectedProcess?.name || 'IT Service Management';
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            try {
+                // Show loading state
+                btn.disabled = true;
+                btn.textContent = '🎲 Thinking...';
+                
+                // Clear existing values
+                document.getElementById('subProcessName').value = '';
+                document.getElementById('subProcessDesc').value = 'Generating AI suggestion...';
+                document.getElementById('subProcessOutcome').value = '';
+                document.getElementById('subProcessConstraints').value = '';
+
+                const response = await fetchWithAuth('/api/wizard/suggest-subprocess', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        processName,
+                        foundationContext: selectedFoundation?.name || null
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(await extractErrorMessage(response, 'Failed to generate suggestion'));
+                }
+
+                const data = await response.json();
+                
+                if (data.success && data.suggestion) {
+                    const s = data.suggestion;
+                    document.getElementById('subProcessName').value = s.name || '';
+                    document.getElementById('subProcessDesc').value = s.description || '';
+                    document.getElementById('subProcessOutcome').value = s.expectedOutcome || '';
+                    document.getElementById('subProcessConstraints').value = s.constraints || '';
+                } else {
+                    throw new Error('Invalid response from AI');
+                }
+
+            } catch (error) {
+                console.error('Surprise Me error:', error);
+                document.getElementById('subProcessDesc').value = '';
+                showError('step2Error', 'Failed to generate suggestion: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // ==========================================
         // STEP 2→3: IDENTIFY AGENTS
         // ==========================================
         async function identifyAgents() {
@@ -887,13 +1036,14 @@
             goToStep(3);
             document.getElementById('step3Loading').classList.add('active');
             document.getElementById('step3Results').classList.remove('active');
-            updateProgress('step3', 20, 'Sending to AI...');
+            updateProgress('step3', 10, '🔍 Phase 1: Identifying agents...');
 
             try {
                 const capabilities = (selectedFoundation?.capabilities || []).map(c => c.name);
                 const integrations = []; // Could be expanded from foundation data
 
-                const response = await fetchWithAuth('/api/wizard/identify-agents', {
+                // Phase 1: Identify agents
+                const identifyResponse = await fetchWithAuth('/api/wizard/identify-agents', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -904,19 +1054,54 @@
                     })
                 });
 
-                updateProgress('step3', 70, 'Processing response...');
+                updateProgress('step3', 40, '🔍 Agents identified, preparing optimization...');
 
-                if (!response.ok) throw new Error(await extractErrorMessage(response, 'Agent identification failed'));
+                if (!identifyResponse.ok) throw new Error(await extractErrorMessage(identifyResponse, 'Agent identification failed'));
 
-                const data = await parseApiResponse(response);
-                if (!data.success) throw new Error(data.error || 'Agent identification failed');
+                const identifyData = await parseApiResponse(identifyResponse);
+                if (!identifyData.success) throw new Error(identifyData.error || 'Agent identification failed');
 
-                wizardState.proposedAgents = data.data;
+                // Phase 2: Optimize agents
+                updateProgress('step3', 50, '⚡ Phase 2: Optimizing agent design...');
+
+                const processCtx = `Process: ${wizardState.selectedProcess?.name || ''}. Sub-process: ${wizardState.subProcessInfo?.name || ''}. ${wizardState.subProcessInfo?.description || ''}`;
+
+                try {
+                    const optimizeResponse = await fetchWithAuth('/api/wizard/optimize-agents', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            proposedAgents: identifyData.data,
+                            processContext: processCtx,
+                        })
+                    });
+
+                    if (optimizeResponse.ok) {
+                        const optimizeData = await parseApiResponse(optimizeResponse);
+                        if (optimizeData.success) {
+                            updateProgress('step3', 90, '✅ Optimization complete!');
+                            wizardState.proposedAgents = optimizeData.data;
+                            wizardState.optimizationMeta = optimizeData.meta?.optimization || null;
+                        } else {
+                            console.warn('Optimization returned error, using unoptimized result:', optimizeData.error);
+                            wizardState.proposedAgents = identifyData.data;
+                            wizardState.optimizationMeta = null;
+                        }
+                    } else {
+                        console.warn('Optimization request failed, using unoptimized result');
+                        wizardState.proposedAgents = identifyData.data;
+                        wizardState.optimizationMeta = null;
+                    }
+                } catch (optError) {
+                    console.warn('Optimization pass failed, using unoptimized result:', optError);
+                    wizardState.proposedAgents = identifyData.data;
+                    wizardState.optimizationMeta = null;
+                }
 
                 // Build approvedAgents from proposed
                 rebuildApprovedAgents();
 
-                updateProgress('step3', 100, 'Agents identified!');
+                updateProgress('step3', 100, '✅ Agents ready!');
                 await delay(400);
 
                 document.getElementById('step3Loading').classList.remove('active');
@@ -1017,24 +1202,20 @@
                         ${!agent.isOrchestrator ? `<button class="btn btn-danger btn-sm" onclick="deleteAgent(${i})">🗑️</button>` : ''}
                     </div>
                     <div class="input-group" style="margin-bottom: 0.5rem;">
+                        <label style="font-size: 0.7rem;">Agent type</label>
+                        <select onchange="updateAgent(${i}, 'pattern', this.value)">
+                            ${['orchestrator','specialist','coordinator','gateway','monitor','executor','analyzer','validator','router'].map(p =>
+                                `<option value="${p}" ${agent.pattern === p ? 'selected' : ''}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0.5rem;">
                         <label style="font-size: 0.7rem;">Name</label>
                         <input type="text" value="${escapeHtml(agent.name)}" onchange="updateAgent(${i}, 'name', this.value)">
                     </div>
                     <div class="input-group" style="margin-bottom: 0.5rem;">
                         <label style="font-size: 0.7rem;">Purpose</label>
-                        <textarea rows="2" style="min-height: 50px;" onchange="updateAgent(${i}, 'purpose', this.value)">${escapeHtml(agent.purpose)}</textarea>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 0.5rem;">
-                        <label style="font-size: 0.7rem;">Pattern</label>
-                        <select onchange="updateAgent(${i}, 'pattern', this.value)">
-                            ${['orchestrator','specialist','coordinator','gateway','monitor','executor','analyzer'].map(p =>
-                                `<option value="${p}" ${agent.pattern === p ? 'selected' : ''}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 0;">
-                        <label style="font-size: 0.7rem;">Responsibilities (one per line)</label>
-                        <textarea rows="3" style="min-height: 60px;" onchange="updateAgent(${i}, 'responsibilities', this.value.split('\\n').filter(s => s.trim()))">${(agent.responsibilities || []).join('\n')}</textarea>
+                        <p style="font-size: 0.8rem; color: #e2e8f0; background: #1e293b; border-radius: 6px; padding: 0.5rem; margin: 0; line-height: 1.4;">${escapeHtml(agent.purpose)}</p>
                     </div>
                 </div>
             `).join('');
@@ -1087,21 +1268,33 @@
             let completed = 0;
 
             try {
-                // Generate orchestrator BPMN
-                updateProgress('step5', 10, `Generating orchestrator BPMN (1/${total})...`);
+                // Generate ALL flows in parallel (orchestrator + specialists)
+                updateProgress('step5', 10, `Generating ${total} agent flows in parallel...`);
+                const allPromises = [];
+
                 if (orchestrator) {
-                    const bpmn = await generateBpmnForAgent(orchestrator, agents, true);
-                    wizardState.generatedBpmn[orchestrator.id] = bpmn;
-                    completed++;
+                    allPromises.push(
+                        generateBpmnForAgent(orchestrator, agents, true).then(bpmn => {
+                            wizardState.generatedBpmn[orchestrator.id] = bpmn;
+                            completed++;
+                            updateProgress('step5', (completed / total) * 90 + 10, `Completed ${completed}/${total} flows...`);
+                            return bpmn;
+                        })
+                    );
                 }
 
-                // Generate each specialist's internal BPMN
                 for (const agent of specialists) {
-                    updateProgress('step5', (completed / total) * 90 + 10, `Generating ${agent.name} (${completed + 1}/${total})...`);
-                    const bpmn = await generateBpmnForAgent(agent, agents, false);
-                    wizardState.generatedBpmn[agent.id] = bpmn;
-                    completed++;
+                    allPromises.push(
+                        generateBpmnForAgent(agent, agents, false).then(bpmn => {
+                            wizardState.generatedBpmn[agent.id] = bpmn;
+                            completed++;
+                            updateProgress('step5', (completed / total) * 90 + 10, `Completed ${completed}/${total} flows...`);
+                            return bpmn;
+                        })
+                    );
                 }
+
+                await Promise.all(allPromises);
 
                 updateProgress('step5', 100, 'All BPMN generated!');
                 await delay(400);
@@ -1121,21 +1314,24 @@
             try {
                 const endpoint = isOrchestrator ? '/api/wizard/generate-orchestrator-bpmn' : '/api/wizard/generate-bpmn';
 
+                // Build skills from triggers/outputs or empty array
+                const agentSkills = (agent.triggers || []).concat(agent.outputs || []).map((s, i) => ({ id: `skill-${i}`, name: s, description: s }));
+                
                 const body = isOrchestrator ? {
-                    orchestratorAgent: { id: agent.id, name: agent.name, skills: agent.responsibilities.map((r, i) => ({ id: `skill-${i}`, name: r, description: r })) },
-                    participantAgents: allAgents.filter(a => !a.isOrchestrator).map(a => ({
-                        id: a.id, name: a.name,
-                        skills: a.responsibilities.map((r, i) => ({ id: `skill-${i}`, name: r, description: r }))
-                    })),
+                    orchestratorAgent: { id: agent.id, name: agent.name, purpose: agent.purpose, skills: agentSkills },
+                    participantAgents: allAgents.filter(a => !a.isOrchestrator).map(a => {
+                        const skills = (a.triggers || []).concat(a.outputs || []).map((s, i) => ({ id: `skill-${i}`, name: s, description: s }));
+                        return { id: a.id, name: a.name, purpose: a.purpose, skills };
+                    }),
                     processDescription: wizardState.subProcessInfo?.description || agent.purpose,
                 } : {
                     processId: agent.id,
                     processName: agent.name,
                     processDescription: agent.purpose,
                     involvedAgents: [agent.name],
-                    capabilities: agent.responsibilities || [],
-                    triggers: [],
-                    outputs: [],
+                    capabilities: (agent.triggers || []).concat(agent.outputs || []),
+                    triggers: agent.triggers || [],
+                    outputs: agent.outputs || [],
                 };
 
                 const response = await fetchWithAuth(endpoint, {
@@ -1199,10 +1395,15 @@
                         initBpmnViewer(i, bpmn);
                     }
                 });
-                // Force re-zoom on first tab after init
-                if (bpmnViewers[0]) {
-                    try { bpmnViewers[0].get('canvas').zoom('fit-viewport'); } catch {}
-                }
+                // Force re-zoom on first tab after init with multiple delays
+                const fitFirst = () => {
+                    if (bpmnViewers[0]) {
+                        try { bpmnViewers[0].get('canvas').zoom('fit-viewport'); } catch {}
+                    }
+                };
+                setTimeout(fitFirst, 100);
+                setTimeout(fitFirst, 300);
+                setTimeout(fitFirst, 600);
             }, 100);
         }
 
@@ -1216,8 +1417,16 @@
                 const viewer = new BpmnJS({ container: `#${containerId}` });
                 bpmnViewers[index] = viewer;
                 await viewer.importXML(bpmnXml);
-                const canvas = viewer.get('canvas');
-                canvas.zoom('fit-viewport');
+                
+                // Multiple delayed fit attempts to handle visibility timing
+                const fitCanvas = () => {
+                    try { viewer.get('canvas').zoom('fit-viewport'); } catch {}
+                };
+                fitCanvas();
+                setTimeout(fitCanvas, 50);
+                setTimeout(fitCanvas, 150);
+                setTimeout(fitCanvas, 300);
+                setTimeout(fitCanvas, 500);
             } catch (e) {
                 console.error('BPMN viewer error:', e);
                 container.innerHTML = `<div style="padding: 1rem; color: var(--error); font-size: 0.8rem;">Failed to render BPMN: ${escapeHtml(e.message)}<br><textarea style="width:100%;height:200px;font-size:0.7rem;margin-top:0.5rem;" readonly>${escapeHtml(bpmnXml)}</textarea></div>`;
@@ -1229,13 +1438,18 @@
             document.querySelectorAll('#bpmnTabContents .tab-content').forEach((c, i) => c.classList.toggle('active', i === index));
             // Re-zoom viewer when switching tabs (needed because hidden containers don't render)
             if (bpmnViewers[index]) {
-                try { bpmnViewers[index].get('canvas').zoom('fit-viewport'); } catch {}
+                const fitCanvas = () => {
+                    try { bpmnViewers[index].get('canvas').zoom('fit-viewport'); } catch {}
+                };
+                fitCanvas();
+                setTimeout(fitCanvas, 50);
+                setTimeout(fitCanvas, 150);
             }
         }
 
         function copyBpmn(agentId) {
             const xml = wizardState.generatedBpmn[agentId];
-            if (xml) navigator.clipboard.writeText(xml).then(() => alert('BPMN XML copied!'));
+            if (xml) navigator.clipboard.writeText(xml).then(() => showGlobalNotification('BPMN XML copied to clipboard!', 'success', 3000));
         }
 
         function downloadBpmn(agentId, agentName) {
@@ -1252,8 +1466,19 @@
             const agent = wizardState.approvedAgents.find(a => a.id === agentId);
             if (!agent) return;
 
-            // Show loading state in the tab
-            const container = document.getElementById(`bpmn-viewer-${tabIndex}`);
+            // Show loading state in the tab — use tab content as fallback if viewer div doesn't exist
+            let container = document.getElementById(`bpmn-viewer-${tabIndex}`);
+            const tabContent = document.getElementById(`bpmn-tab-${tabIndex}`);
+            if (!container && tabContent) {
+                // Create the viewer container if it doesn't exist (e.g., after initial failure)
+                const existingError = tabContent.querySelector('[style*="text-align: center"]');
+                if (existingError) existingError.remove();
+                const div = document.createElement('div');
+                div.className = 'bpmn-container';
+                div.id = `bpmn-viewer-${tabIndex}`;
+                tabContent.appendChild(div);
+                container = div;
+            }
             if (container) {
                 container.innerHTML = `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
                     <div class="spinner" style="margin-bottom: 0.5rem;"></div>
@@ -1302,22 +1527,25 @@
                     updateProgress('step7', ((i + 1) / total) * 90, `Configuring ${agent.name} (${i + 1}/${total})...`);
 
                     // Build A2A config from agent data + foundation
+                    // Build skills from triggers and outputs
+                    const skillSources = (agent.triggers || []).concat(agent.outputs || []);
                     const config = {
                         agentId: agent.id,
                         agentName: agent.name,
                         pattern: agent.pattern,
                         purpose: agent.purpose,
-                        skills: agent.responsibilities.map((r, si) => ({
+                        shortDescription: agent.shortDescription || '',
+                        skills: skillSources.map((s, si) => ({
                             skillId: `${agent.id}-skill-${si}`,
-                            name: r,
-                            description: r,
+                            name: s,
+                            description: s,
                             tags: [agent.pattern, wizardState.selectedProcess?.name?.toLowerCase().replace(/\s+/g, '-') || 'general'],
                         })),
                         tools: (selectedFoundation?.integrations || []).filter(() => agent.pattern === 'gateway').map(int => int.name || int),
                         interactions: {
-                            triggers: agent.isOrchestrator ? ['process-start', 'manual-trigger'] : ['orchestrator-request'],
-                            outputs: agent.isOrchestrator ? ['process-complete', 'escalation'] : ['task-result', 'error-report'],
-                            escalation: agent.isOrchestrator ? 'human-operator' : wizardState.approvedAgents.find(a => a.isOrchestrator)?.name || 'orchestrator',
+                            triggers: agent.triggers || (agent.isOrchestrator ? ['process-start', 'manual-trigger'] : ['orchestrator-request']),
+                            outputs: agent.outputs || (agent.isOrchestrator ? ['process-complete', 'escalation'] : ['task-result', 'error-report']),
+                            escalation: agent.escalationPath || (agent.isOrchestrator ? 'human-operator' : wizardState.approvedAgents.find(a => a.isOrchestrator)?.name || 'orchestrator'),
                         },
                         hasBpmn: !!wizardState.generatedBpmn[agent.id],
                     };
@@ -1474,6 +1702,9 @@
                     }
                 }
 
+                // Clear saved state on successful import
+                clearWizardState();
+
                 // Show success
                 document.getElementById('step8Loading').classList.remove('active');
                 document.getElementById('step8ImportCard').classList.add('hidden');
@@ -1488,7 +1719,7 @@
                 }
                 document.getElementById('finalSummary').innerHTML = `
                     <div class="stat-card green"><div class="stat-value">${createdAgents.length}</div><div class="stat-label">Agents Created</div></div>
-                    <div class="stat-card blue"><div class="stat-value">${Object.keys(wizardState.generatedBpmn).length}</div><div class="stat-label">BPMN Workflows</div></div>
+                    <div class="stat-card blue"><div class="stat-value">${Object.keys(wizardState.generatedBpmn).length}</div><div class="stat-label">Agent Flows</div></div>
                     <div class="stat-card yellow"><div class="stat-value">${wizardState.agentConfigs.reduce((s, c) => s + c.skills.length, 0)}</div><div class="stat-label">Skills Defined</div></div>
                 `;
 
@@ -1534,6 +1765,36 @@
             checkConsent();
             await fetchCsrfToken();
             await loadFoundations();
+            
+            // Try to restore saved state
+            const savedState = loadWizardState();
+            if (savedState && savedState.currentStep > 1) {
+                // Restore state
+                if (savedState.selectedFoundation) {
+                    selectedFoundation = savedState.selectedFoundation;
+                    const select = document.getElementById('foundationSelect');
+                    if (select) select.value = selectedFoundation.id || '';
+                }
+                if (savedState.wizardState) {
+                    wizardState = savedState.wizardState;
+                }
+                
+                // Show inline resume prompt instead of confirm()
+                const resumeBanner = document.createElement('div');
+                resumeBanner.id = 'resumeBanner';
+                resumeBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:1500;background:var(--bg-card);border-bottom:2px solid var(--accent-primary);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;';
+                resumeBanner.innerHTML = `
+                    <span style="color:var(--text-secondary);font-size:0.9rem;">📝 You have a saved wizard session (Step ${savedState.currentStep}). Resume where you left off?</span>
+                    <div style="display:flex;gap:0.5rem;">
+                        <button id="resumeYes" class="btn btn-primary btn-sm">Resume</button>
+                        <button id="resumeNo" class="btn btn-secondary btn-sm">Start Over</button>
+                    </div>`;
+                document.body.prepend(resumeBanner);
+                document.getElementById('resumeYes').onclick = () => { resumeBanner.remove(); goToStep(savedState.currentStep); };
+                document.getElementById('resumeNo').onclick = () => { resumeBanner.remove(); clearWizardState(); goToStep(1); };
+                return;
+            }
+            
             goToStep(1);
         });
     </script>

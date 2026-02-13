@@ -1133,6 +1133,10 @@
         <div>Agents</div>
       </div>
     </div>
+    <div class="header-actions" style="display: flex; gap: 0.5rem;">
+      <a href="/discovery/" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem; text-decoration: none;">🔍 Discovery Wizard</a>
+      <a id="wizard-link" href="/wizard.html" class="btn btn-primary" style="font-size: 0.8rem; padding: 0.5rem 1rem; text-decoration: none;" onclick="if(currentFoundation?.id){this.href='/wizard.html?foundation='+currentFoundation.id}">✨ Design Wizard</a>
+    </div>
   </header>
   <input type="file" id="design-import-input" accept="application/json" style="display: none;">
 
@@ -2816,9 +2820,10 @@
       // Config integrations list
       const configIntList = document.getElementById('config-integrations-list');
       const ints = agent.integrations || [];
-      configIntList.innerHTML = ints.length
-        ? ints.map(i => `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;"><span>🔌</span><span style="color:#e2e8f0;font-size:0.85rem;">${escapeHtml(i.integration_name || i.integration_type)}</span></div>`).join('')
-        : '<p style="color: #64748b; font-size: 0.85rem;">No integrations configured</p>';
+      const demotedToolsList = agent.tools || [];
+      const intHtml = ints.map(i => `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;"><span>🔌</span><span style="color:#e2e8f0;font-size:0.85rem;">${escapeHtml(i.integration_name || i.integration_type)}</span></div>`).join('');
+      const demotedHtml = demotedToolsList.map(t => `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;"><span>🔧</span><div><span style="color:#e2e8f0;font-size:0.85rem;">${escapeHtml(t.name)}</span><span style="color:#64748b;font-size:0.75rem;"> (from ${escapeHtml(t.originalAgent || 'demoted agent')})</span></div></div>`).join('');
+      configIntList.innerHTML = (intHtml + demotedHtml) || '<p style="color: #64748b; font-size: 0.85rem;">No tools configured</p>';
 
       // === VERIFY TAB ===
       updateVerifyChecklist(agent);
@@ -3243,7 +3248,7 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       const config = agent.config || {};
       const skills = agent.skills || [];
       const caps = agent.capabilities || [];
-      const tools = agent.integrations || [];
+      const tools = [...(agent.integrations || []), ...(agent.tools || [])];
       const agentRelations = relationships.filter(r => r.sourceId === agent.id || r.targetId === agent.id);
       
       // Set icon based on element type
@@ -4001,6 +4006,24 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       if (file) importDesignBundle(file);
     });
     
+    // Global 401 interceptor — redirect to login on auth failure
+    (function() {
+      const originalFetch = window.fetch;
+      window.fetch = async function(...args) {
+        const response = await originalFetch.apply(this, args);
+        if (response.status === 401) {
+          console.warn('[auth] 401 received, redirecting to login');
+          if (window.FlowgridAuthUI?.clearAuthState) {
+            window.FlowgridAuthUI.clearAuthState();
+          }
+          const target = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/login.html?redirect=${target}&expired=true`;
+          return response;
+        }
+        return response;
+      };
+    })();
+
     // Initialize on load
     document.addEventListener('DOMContentLoaded', () => {
       if (window.FlowgridAuthUI?.initPage) {
