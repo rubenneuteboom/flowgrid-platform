@@ -1361,10 +1361,6 @@
               <h4 style="color: #f59e0b; font-size: 0.85rem; margin-bottom: 0.75rem;">⚙️ Configuration</h4>
               <div style="background: #1e293b; border-radius: 8px; padding: 1rem;">
                 <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #334155;">
-                  <span style="color: #94a3b8; font-size: 0.85rem;">Value Stream</span>
-                  <span id="overview-valuestream" style="color: #e2e8f0; font-size: 0.85rem;">—</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #334155;">
                   <span style="color: #94a3b8; font-size: 0.85rem;">Autonomy</span>
                   <span id="overview-autonomy" style="color: #e2e8f0; font-size: 0.85rem;">—</span>
                 </div>
@@ -1621,16 +1617,6 @@
             <label>Detailed Purpose</label>
             <textarea id="agent-purpose" placeholder="Describe what this agent does and its core function..." rows="3"></textarea>
           </div>
-          <div class="form-group">
-            <label>Business Value</label>
-            <textarea id="agent-business-value" placeholder="What value does this agent provide to the business?" rows="2"></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label>Success Criteria</label>
-            <textarea id="agent-success-criteria" placeholder="How do we measure if this agent is successful?" rows="2"></textarea>
-          </div>
-          
           <!-- Process Info Section (shown for Process elements) -->
           <div id="process-info-section" style="display: none; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
             <h3 style="color: #ec4899; font-size: 1rem; margin-bottom: 1rem;">🔄 Process Flow Details</h3>
@@ -1684,27 +1670,6 @@
               <option value="supervised">Supervised</option>
               <option value="human-in-loop">Human in Loop</option>
             </select>
-          </div>
-          
-          <div class="section-header">📊 Classification</div>
-          <div class="form-group">
-            <label>Value Stream</label>
-            <input type="text" id="agent-valuestream-design" placeholder="e.g., Strategy to Portfolio">
-          </div>
-          <!-- Capability Group hidden - not used in code generation -->
-          <div class="form-group" style="display: none;">
-            <label>Capability Group</label>
-            <input type="text" id="agent-capgroup-design" placeholder="e.g., Incident Management">
-          </div>
-          
-          <div class="section-header">🎯 Goals</div>
-          <div class="form-group">
-            <label>Objectives (one per line)</label>
-            <textarea id="agent-objectives-design" rows="4" placeholder="Reduce incident resolution time by 30%&#10;Automate routine tasks&#10;Improve SLA compliance"></textarea>
-          </div>
-          <div class="form-group">
-            <label>KPIs (one per line)</label>
-            <textarea id="agent-kpis-design" rows="3" placeholder="Mean time to resolution&#10;Automation rate&#10;Customer satisfaction"></textarea>
           </div>
           
           <button class="btn btn-success" onclick="saveAgentDesign()" style="width: 100%; margin-top: 1rem;">💾 Save Design</button>
@@ -2972,8 +2937,6 @@
       document.getElementById('agent-display-name').value = agent.name || '';
       document.getElementById('agent-short-desc').value = config.shortDescription || '';
       document.getElementById('agent-purpose').value = config.detailedPurpose || agent.description || '';
-      document.getElementById('agent-business-value').value = config.businessValue || '';
-      document.getElementById('agent-success-criteria').value = config.successCriteria || '';
       
       // Update Capabilities section in Description tab
       const capsContainer = document.getElementById('agent-capabilities-list');
@@ -2997,10 +2960,6 @@
       if (!patternSelect.value && patternVal) patternSelect.value = patternVal; // fallback exact match
       document.getElementById('agent-decision-design').value = config.decisionAuthority || '';
       document.getElementById('agent-autonomy-design').value = config.autonomyLevel || '';
-      document.getElementById('agent-valuestream-design').value = config.valueStream || '';
-      document.getElementById('agent-capgroup-design').value = config.capabilityGroup || '';
-      document.getElementById('agent-objectives-design').value = (config.objectives || []).join('\n');
-      document.getElementById('agent-kpis-design').value = (config.kpis || []).join('\n');
       
       // === CONFIGURE TAB ===
       document.getElementById('agent-interaction-config').value = config.interactionPattern || '';
@@ -3372,7 +3331,6 @@
       const checks = [
         { name: 'Purpose defined', pass: !!agent.purpose },
         { name: 'Pattern selected', pass: !!agent.pattern },
-        { name: 'Value stream assigned', pass: !!agent.valueStream },
         { name: 'Has integrations', pass: (agent.integrations || []).length > 0 },
       ];
       
@@ -3405,13 +3363,10 @@ You are ${agent.name}, an AI agent in the Flowgrid platform.
 ### Purpose
 ${agent.purpose || 'No purpose defined'}
 
-### Value Stream
-${agent.valueStream || 'Not specified'}
 
 ### Capability Group  
 ${agent.capabilityGroup || 'Not specified'}
 
-### Objectives
 ${(agent.objectives || ['No objectives defined']).map(o => `- ${o}`).join('\n')}
 
 ### Behavior Guidelines
@@ -3536,7 +3491,6 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       document.getElementById('overview-relations-count').textContent = agentRelations.length;
       
       // Configuration
-      document.getElementById('overview-valuestream').textContent = config.valueStream || '—';
       document.getElementById('overview-autonomy').textContent = config.autonomyLevel || '—';
       document.getElementById('overview-decision').textContent = config.decisionAuthority || '—';
       document.getElementById('overview-interaction').textContent = config.interactionPattern || '—';
@@ -3572,7 +3526,6 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       
       // Update from form
       agent.purpose = document.getElementById('agent-purpose').value;
-      agent.valueStream = document.getElementById('agent-valuestream').value;
       agent.capabilityGroup = document.getElementById('agent-capgroup').value;
       agent.pattern = document.getElementById('agent-pattern').value;
       agent.objectives = document.getElementById('agent-objectives').value.split('\n').filter(o => o.trim());
@@ -4860,10 +4813,7 @@ ${gatewayShapes}
       
       // Basic Information
       document.getElementById('config-agent-name').value = agent.name || '';
-      document.getElementById('config-agent-valuestream').value = config.valueStream || '';
-      document.getElementById('config-agent-capgroup').value = config.capabilityGroup || '';
       document.getElementById('config-agent-purpose').value = agent.description || agent.purpose || '';
-      document.getElementById('config-agent-objectives').value = (config.objectives || []).join('\n');
       
       // Capabilities from agent_capabilities table
       const caps = agent.capabilities || [];
@@ -4912,9 +4862,6 @@ ${gatewayShapes}
         const existingConfig = agent.config || {};
         const newConfig = {
           ...existingConfig,
-          valueStream: document.getElementById('config-agent-valuestream').value || null,
-          capabilityGroup: document.getElementById('config-agent-capgroup').value || null,
-          objectives: document.getElementById('config-agent-objectives').value.split('\n').map(s => s.trim()).filter(s => s),
           pattern: document.getElementById('config-agent-pattern').value || null,
           decisionAuthority: document.getElementById('config-agent-decision').value || null,
           autonomyLevel: document.getElementById('config-agent-autonomy').value || null,
@@ -5227,8 +5174,6 @@ ${gatewayShapes}
           ...(agent.config || {}),
           shortDescription: document.getElementById('agent-short-desc').value,
           detailedPurpose: document.getElementById('agent-purpose').value,
-          businessValue: document.getElementById('agent-business-value').value,
-          successCriteria: document.getElementById('agent-success-criteria').value,
         };
         
         const name = document.getElementById('agent-display-name').value || agent.name;
@@ -5262,10 +5207,6 @@ ${gatewayShapes}
           pattern: document.getElementById('agent-pattern-design').value,
           decisionAuthority: document.getElementById('agent-decision-design').value,
           autonomyLevel: document.getElementById('agent-autonomy-design').value,
-          valueStream: document.getElementById('agent-valuestream-design').value,
-          capabilityGroup: document.getElementById('agent-capgroup-design').value,
-          objectives: document.getElementById('agent-objectives-design').value.split('\n').filter(s => s.trim()),
-          kpis: document.getElementById('agent-kpis-design').value.split('\n').filter(s => s.trim()),
         };
         
         await saveAgentToAPI(selectedAgentId, { config });
@@ -6146,19 +6087,8 @@ ${agent.config.generatedCode ? `--- src/index.js ---\n${agent.config.generatedCo
         <h4>📋 Basic Information</h4>
         <label>Agent Name</label>
         <input type="text" id="config-agent-name">
-        <div class="form-group">
-          <label>Value Stream</label>
-          <input type="text" id="config-agent-valuestream">
-        </div>
-        <!-- Capability Group hidden -->
-        <div style="display: none;">
-          <label>Capability Group</label>
-          <input type="text" id="config-agent-capgroup">
-        </div>
         <label>Purpose</label>
         <textarea id="config-agent-purpose" rows="2"></textarea>
-        <label>Objectives (one per line)</label>
-        <textarea id="config-agent-objectives" rows="3" placeholder="Reduce incident resolution time by 30%&#10;Automate routine ticket triage&#10;Improve SLA compliance to 95%"></textarea>
         <label>Capabilities (comma-separated)</label>
         <textarea id="config-agent-capabilities" rows="2"></textarea>
       </div>
