@@ -628,7 +628,7 @@
                 <p class="success-subtitle" id="successMessage">Your agents have been created and are ready to configure.</p>
                 <div class="stats-grid" id="finalSummary"></div>
                 <div class="btn-group" style="justify-content: center;">
-                    <a id="openDesignLink" href="/design/" target="_top" class="btn btn-primary" style="text-decoration: none;">🎨 Open Design Module →</a>
+                    <a id="openDesignLink" href="/design/" class="btn btn-primary" style="text-decoration: none;" onclick="event.preventDefault(); if (window.parent && window.parent.loadModuleByUrl) { window.parent.loadModuleByUrl(this.href, 'FlowGrid Design Studio'); } else { window.location.href = this.href; }">🎨 Open Design Module →</a>
                     <button class="btn btn-secondary" onclick="location.reload()">Create Another Swarm</button>
                 </div>
             </div>
@@ -1080,6 +1080,19 @@
                         const optimizeData = await parseApiResponse(optimizeResponse);
                         if (optimizeData.success) {
                             updateProgress('step3', 90, '✅ Optimization complete!');
+                            // Merge interaction fields from identify step if optimizer dropped them
+                            const origAgents = identifyData.data?.agents || [];
+                            const optAgents = optimizeData.data?.agents || optimizeData.data?.optimizedAgents || [];
+                            for (const optAgent of optAgents) {
+                                const orig = origAgents.find(a => a.id === optAgent.id);
+                                if (orig) {
+                                    if (!optAgent.triggers?.length && orig.triggers?.length) optAgent.triggers = orig.triggers;
+                                    if (!optAgent.outputs?.length && orig.outputs?.length) optAgent.outputs = orig.outputs;
+                                    if (!optAgent.interactionPattern && orig.interactionPattern) optAgent.interactionPattern = orig.interactionPattern;
+                                    if (!optAgent.escalationPath && orig.escalationPath) optAgent.escalationPath = orig.escalationPath;
+                                    if (!optAgent.decisionAuthority && orig.decisionAuthority) optAgent.decisionAuthority = orig.decisionAuthority;
+                                }
+                            }
                             wizardState.proposedAgents = optimizeData.data;
                             wizardState.optimizationMeta = optimizeData.meta?.optimization || null;
                         } else {
@@ -1674,6 +1687,26 @@
                     if (response.ok) {
                         const data = await parseApiResponse(response);
                         createdAgents.push(data);
+
+                        // Create skills for this agent in agent_skills table
+                        const agentId = data.id || data.agentId;
+                        const skills = config.skills || [];
+                        for (const skill of skills) {
+                            try {
+                                await fetchWithAuth(`/api/agents/${agentId}/skills`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        name: skill.name?.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || skill.skillId,
+                                        display_name: skill.name,
+                                        description: skill.description || skill.name,
+                                        tags: skill.tags || [agent.pattern || 'general'],
+                                        input_schema: skill.inputSchema || {},
+                                        examples: skill.examples || [],
+                                    })
+                                });
+                            } catch (e) { console.warn(`Skill creation failed for ${skill.name}:`, e); }
+                        }
                     } else {
                         const errMsg = await extractErrorMessage(response);
                         console.error(`Failed to create agent ${agent.name}:`, errMsg);

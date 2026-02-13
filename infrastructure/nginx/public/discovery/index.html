@@ -20,11 +20,7 @@
       --border: #475569;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
@@ -33,7 +29,6 @@
       min-height: 100vh;
     }
 
-    /* Header */
     .header {
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
@@ -42,23 +37,9 @@
       justify-content: space-between;
       align-items: center;
     }
-
-    .header h1 {
-      font-size: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .header h1 span {
-      color: var(--primary);
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-    }
+    .header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .header h1 span { color: var(--primary); }
+    .header-actions { display: flex; gap: 1rem; align-items: center; }
 
     /* Progress Steps */
     .progress-container {
@@ -66,404 +47,284 @@
       padding: 1.5rem 2rem;
       border-bottom: 1px solid var(--border);
     }
-
     .progress-steps {
       display: flex;
       justify-content: center;
-      gap: 0;
       max-width: 800px;
       margin: 0 auto;
     }
-
-    .progress-step {
-      display: flex;
-      align-items: center;
-      flex: 1;
-    }
-
+    .progress-step { display: flex; align-items: center; flex: 1; }
     .step-circle {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--bg-input);
-      border: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      flex-shrink: 0;
-      transition: all 0.3s;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--bg-input); border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; flex-shrink: 0; transition: all 0.3s;
     }
-
-    .step-circle.active {
-      background: var(--primary);
-      border-color: var(--primary);
-    }
-
-    .step-circle.completed {
-      background: var(--success);
-      border-color: var(--success);
-    }
-
-    .step-line {
-      flex: 1;
-      height: 2px;
-      background: var(--border);
-      margin: 0 0.5rem;
-    }
-
-    .step-line.completed {
-      background: var(--success);
-    }
-
+    .step-circle.active { background: var(--primary); border-color: var(--primary); }
+    .step-circle.completed { background: var(--success); border-color: var(--success); }
+    .step-line { flex: 1; height: 2px; background: var(--border); margin: 0 0.5rem; }
+    .step-line.completed { background: var(--success); }
     .step-label {
-      position: absolute;
-      top: 50px;
-      white-space: nowrap;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
+      position: absolute; top: 50px; white-space: nowrap;
+      font-size: 0.75rem; color: var(--text-secondary);
     }
-
     .step-wrapper {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      position: relative; display: flex; flex-direction: column; align-items: center;
     }
 
-    /* Main Content */
-    .main-content {
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 0 2rem;
-    }
-
+    /* Main */
+    .main-content { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
     .wizard-card {
-      background: var(--bg-card);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      padding: 2rem;
+      background: var(--bg-card); border-radius: 12px;
+      border: 1px solid var(--border); padding: 2rem;
+      max-width: 100%; overflow: hidden; box-sizing: border-box;
     }
+    .wizard-card h2 { margin-bottom: 0.5rem; }
+    .wizard-card p.subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; }
 
-    .wizard-card h2 {
-      margin-bottom: 0.5rem;
+    /* Form */
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; padding: 0.75rem 1rem;
+      background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-primary); font-size: 1rem;
+      font-family: inherit;
     }
+    .form-group textarea { min-height: 150px; resize: vertical; }
 
-    .wizard-card p.subtitle {
-      color: var(--text-secondary);
-      margin-bottom: 1.5rem;
-    }
-
-    /* Form Elements */
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-    }
-
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text-primary);
-      font-size: 1rem;
-    }
-
-    .form-group textarea {
-      min-height: 150px;
-      resize: vertical;
-    }
-
-    /* Upload Area */
+    /* Upload */
     .upload-area {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 3rem 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s;
+      border: 2px dashed var(--border); border-radius: 12px;
+      padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s;
     }
-
-    .upload-area:hover {
-      border-color: var(--primary);
-      background: rgba(99, 102, 241, 0.1);
-    }
-
-    .upload-area.dragover {
-      border-color: var(--primary);
-      background: rgba(99, 102, 241, 0.2);
-    }
-
-    .upload-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-    }
-
-    .upload-area p {
-      color: var(--text-secondary);
-    }
-
-    .upload-area input[type="file"] {
-      display: none;
-    }
+    .upload-area:hover { border-color: var(--primary); background: rgba(99,102,241,0.1); }
+    .upload-area.dragover { border-color: var(--primary); background: rgba(99,102,241,0.2); }
+    .upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .upload-area p { color: var(--text-secondary); }
+    .upload-area input[type="file"] { display: none; }
 
     /* Buttons */
     .btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      border: none;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
+      padding: 0.75rem 1.5rem; border-radius: 8px; border: none;
+      font-weight: 500; cursor: pointer; transition: all 0.2s;
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-size: 0.9rem; text-decoration: none;
     }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-hover);
-    }
-
-    .btn-secondary {
-      background: var(--bg-input);
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: var(--border);
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    .btn-danger:hover { background: rgba(239,68,68,0.1); }
+    .btn-sm { padding: 0.4rem 0.75rem; font-size: 0.8rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-group {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 2rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between;
+      margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
     }
 
-    /* Items List */
-    .items-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-
+    /* Item card */
     .item-card {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 0.75rem;
+      transition: all 0.15s; cursor: default;
     }
-
-    .item-card.selected {
-      border-color: var(--primary);
-      background: rgba(99, 102, 241, 0.1);
+    .item-card:hover { border-color: var(--primary); background: rgba(99,102,241,0.05); }
+    .item-card.selected { border-color: var(--primary); background: rgba(99,102,241,0.1); }
+    .item-card input[type="checkbox"] {
+      width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0;
     }
-
-    .item-info h4 {
-      font-size: 0.95rem;
-      margin-bottom: 0.25rem;
+    .item-info { flex: 1; min-width: 0; }
+    .item-info h4 { font-size: 0.9rem; margin-bottom: 0.15rem; }
+    .item-info p { font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
+    .item-btn {
+      background: none; border: none; color: var(--text-secondary);
+      cursor: pointer; padding: 0.25rem; font-size: 0.85rem; border-radius: 4px;
+      transition: color 0.15s;
     }
+    .item-btn:hover { color: var(--text-primary); }
+    .item-btn.delete:hover { color: var(--danger); }
 
-    .item-info p {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-    }
-
-    .item-actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-
+    /* Badges */
     .badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 500;
+      padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 500;
     }
-
-    .badge-capability { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
-    .badge-data { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
-    .badge-process { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+    .badge-capability { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+    .badge-data { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    .badge-process { background: rgba(245,158,11,0.2); color: #fcd34d; }
 
     /* Tabs */
-    .tabs {
-      display: flex;
-      gap: 0;
-      margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
+    .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
     .tab {
-      padding: 0.75rem 1.5rem;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-      color: var(--text-secondary);
+      padding: 0.75rem 1.5rem; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all 0.2s; color: var(--text-secondary);
     }
-
-    .tab:hover {
-      color: var(--text-primary);
-    }
-
-    .tab.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-    }
-
+    .tab:hover { color: var(--text-primary); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
     .tab-count {
-      background: var(--bg-input);
-      padding: 0.125rem 0.5rem;
-      border-radius: 10px;
-      font-size: 0.75rem;
-      margin-left: 0.5rem;
+      background: var(--bg-input); padding: 0.125rem 0.5rem;
+      border-radius: 10px; font-size: 0.75rem; margin-left: 0.5rem;
     }
 
     /* Loading */
     .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(15, 23, 42, 0.9);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15,23,42,0.9); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 1000;
     }
-
-    .loading-overlay.hidden {
-      display: none;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
+    .loading-overlay.hidden { display: none; }
+    .hidden { display: none !important; }
     .spinner {
-      width: 50px;
-      height: 50px;
-      border: 3px solid var(--border);
-      border-top-color: var(--primary);
-      border-radius: 50%;
+      width: 50px; height: 50px; border: 3px solid var(--border);
+      border-top-color: var(--primary); border-radius: 50%;
       animation: spin 1s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { margin-top: 1rem; color: var(--text-secondary); }
+    .step-content { display: none; }
+    .step-content.active { display: block; }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    /* Summary */
+    .summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .summary-card { background: var(--bg-input); border-radius: 8px; padding: 1.25rem; text-align: center; }
+    .summary-card .count { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .summary-card .label { color: var(--text-secondary); font-size: 0.875rem; }
+
+    /* Modal */
+    .modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15,23,42,0.9); display: flex;
+      align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal.hidden { display: none; }
+    .modal-content {
+      background: var(--bg-card); border-radius: 12px;
+      border: 1px solid var(--border); width: 90%; max-width: 500px; padding: 1.5rem;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
+
+    /* ===== DUAL LIST EDITOR ===== */
+    .dual-list-container { display: flex; gap: 0; align-items: stretch; margin-bottom: 1.5rem; width: 100%; overflow: hidden; }
+    .list-panel {
+      flex: 1; min-width: 0; background: var(--bg-dark); border: 1px solid var(--border);
+      border-radius: 10px; display: flex; flex-direction: column; min-height: 350px; overflow: hidden;
+    }
+    .list-header {
+      padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg-card); border-radius: 10px 10px 0 0;
+    }
+    .list-header h3 { font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; }
+    .list-header .count-badge {
+      background: var(--bg-input); padding: 0.15rem 0.5rem;
+      border-radius: 10px; font-size: 0.75rem; color: var(--text-secondary);
+    }
+    .list-add-row {
+      padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border);
+      display: flex; gap: 0.5rem;
+    }
+    .list-add-row input {
+      flex: 1; padding: 0.4rem 0.6rem; background: var(--bg-input);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-primary); font-size: 0.85rem; font-family: inherit;
+    }
+    .list-add-row input::placeholder { color: var(--text-secondary); }
+    .list-items {
+      flex: 1; overflow-y: auto; padding: 0.5rem;
+      display: flex; flex-direction: column; gap: 0.4rem;
+      max-height: 400px;
+    }
+    .list-items::-webkit-scrollbar { width: 6px; }
+    .list-items::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .list-footer {
+      padding: 0.5rem 0.75rem; border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end;
     }
 
-    .loading-text {
-      margin-top: 1rem;
-      color: var(--text-secondary);
+    /* Transfer arrows */
+    .transfer-arrows {
+      display: flex; flex-direction: column; justify-content: center;
+      gap: 0.5rem; padding: 0 0.5rem;
+    }
+    .transfer-btn {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .transfer-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+    .transfer-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .transfer-btn:disabled:hover { background: var(--bg-card); color: var(--text-secondary); border-color: var(--border); }
+
+    /* Data objects collapsible */
+    .data-objects-section { margin-top: 1rem; }
+    .collapsible-header {
+      display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+      padding: 0.75rem 1rem; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 8px; transition: all 0.2s; user-select: none;
+    }
+    .collapsible-header:hover { background: var(--border); }
+    .collapsible-header .arrow { transition: transform 0.2s; }
+    .collapsible-header.open .arrow { transform: rotate(90deg); }
+    .collapsible-body {
+      max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+      border: 1px solid var(--border); border-top: none;
+      border-radius: 0 0 8px 8px;
+    }
+    .collapsible-body.open { max-height: 500px; }
+    .collapsible-body-inner { padding: 0.75rem; }
+    .data-items-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 250px; overflow-y: auto; }
+    .data-add-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .data-add-row input {
+      flex: 1; padding: 0.4rem 0.6rem; background: var(--bg-input);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-primary); font-size: 0.85rem; font-family: inherit;
     }
 
-    /* Step Content */
-    .step-content {
-      display: none;
-    }
-
-    .step-content.active {
-      display: block;
-    }
-
-    /* Summary Cards */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .summary-card {
-      background: var(--bg-input);
-      border-radius: 8px;
-      padding: 1.25rem;
+    /* Skip button */
+    .skip-section {
+      margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
       text-align: center;
     }
+    .btn-skip {
+      background: transparent; color: var(--text-secondary); border: 1px dashed var(--border);
+      padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer;
+      font-size: 0.95rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-skip:hover { color: var(--text-primary); border-color: var(--primary); background: rgba(99,102,241,0.05); }
 
-    .summary-card .count {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--primary);
+    /* Inline edit */
+    .inline-edit-input {
+      background: var(--bg-dark); border: 1px solid var(--primary);
+      border-radius: 4px; color: var(--text-primary); padding: 0.2rem 0.4rem;
+      font-size: inherit; font-family: inherit; width: 100%;
     }
 
-    .summary-card .label {
-      color: var(--text-secondary);
-      font-size: 0.875rem;
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 2rem 1rem; color: var(--text-secondary);
+      font-size: 0.85rem;
     }
 
-    /* Edit Modal */
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(15, 23, 42, 0.9);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .modal.hidden {
-      display: none;
-    }
-
-    .modal-content {
-      background: var(--bg-card);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      width: 90%;
-      max-width: 500px;
-      padding: 1.5rem;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 1.5rem;
-      cursor: pointer;
+    /* Responsive */
+    @media (max-width: 768px) {
+      .dual-list-container { flex-direction: column; }
+      .transfer-arrows { flex-direction: row; justify-content: center; padding: 0.5rem 0; }
+      .transfer-btn { transform: rotate(90deg); }
+      .main-content { padding: 0 1rem; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .header { flex-direction: column; gap: 0.5rem; text-align: center; }
     }
   </style>
 </head>
 <body>
-  <!-- Header -->
   <header class="header">
     <h1>🔍 <span>Discovery</span> Wizard</h1>
     <div class="header-actions">
@@ -472,7 +333,6 @@
     </div>
   </header>
 
-  <!-- Progress Steps -->
   <div class="progress-container">
     <div class="progress-steps">
       <div class="step-wrapper">
@@ -487,7 +347,7 @@
       <div class="step-line"></div>
       <div class="step-wrapper">
         <div class="step-circle" data-step="3">3</div>
-        <span class="step-label">Review</span>
+        <span class="step-label">Edit</span>
       </div>
       <div class="step-line"></div>
       <div class="step-wrapper">
@@ -497,14 +357,13 @@
     </div>
   </div>
 
-  <!-- Main Content -->
   <main class="main-content">
     <!-- Step 1: Upload -->
     <div class="step-content active" data-step="1">
       <div class="wizard-card">
         <h2>📤 Upload Materials</h2>
-        <p class="subtitle">Choose how you want to provide information about your domain.</p>
-        
+        <p class="subtitle">Provide information about your domain, or start from scratch.</p>
+
         <div class="tabs">
           <div class="tab active" data-tab="image">🖼️ Image</div>
           <div class="tab" data-tab="data">📄 Data File</div>
@@ -521,10 +380,7 @@
           <div id="fileListImage" style="margin-top: 1rem;"></div>
           <div class="form-group" style="margin-top: 1rem;">
             <label>Additional Context <span style="color: var(--text-secondary); font-weight: normal;">(optional)</span></label>
-            <textarea id="imageContext" placeholder="Provide any additional context about the image...
-
-Example:
-This is our IT4IT value stream diagram showing the Request to Fulfill process." rows="3"></textarea>
+            <textarea id="imageContext" placeholder="Provide any additional context about the image..." rows="3"></textarea>
           </div>
         </div>
 
@@ -538,37 +394,35 @@ This is our IT4IT value stream diagram showing the Request to Fulfill process." 
           <div id="fileListData" style="margin-top: 1rem;"></div>
           <div class="form-group" style="margin-top: 1rem;">
             <label>Additional Context <span style="color: var(--text-secondary); font-weight: normal;">(optional)</span></label>
-            <textarea id="dataContext" placeholder="Describe what this data represents...
-
-Example:
-This is our service catalog export containing all IT services and their capabilities." rows="3"></textarea>
+            <textarea id="dataContext" placeholder="Describe what this data represents..." rows="3"></textarea>
           </div>
         </div>
 
         <div class="tab-content hidden" data-tab="website">
           <div class="form-group">
             <label>Company Website URL</label>
-            <input type="url" id="websiteUrl" placeholder="https://example.com" style="width: 100%; padding: 0.75rem; background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 1rem;">
+            <input type="url" id="websiteUrl" placeholder="https://example.com">
           </div>
           <div class="form-group" style="margin-top: 1rem;">
             <label>Additional Context <span style="color: var(--text-secondary); font-weight: normal;">(optional)</span></label>
-            <textarea id="websiteContext" placeholder="Tell us what to focus on...
-
-Example:
-Focus on our IT services and ITSM processes. We're a managed services provider specializing in cloud infrastructure." rows="3"></textarea>
+            <textarea id="websiteContext" placeholder="Tell us what to focus on..." rows="3"></textarea>
           </div>
         </div>
 
         <div class="btn-group">
           <div></div>
-          <button class="btn btn-primary" id="btnExtract" disabled>
-            Extract with AI →
+          <button class="btn btn-primary" id="btnExtract" disabled>Extract with AI →</button>
+        </div>
+
+        <div class="skip-section">
+          <button class="btn-skip" onclick="skipToEdit()">
+            Skip — Start from Scratch →
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Step 2: Extract (Loading) -->
+    <!-- Step 2: Extract -->
     <div class="step-content" data-step="2">
       <div class="wizard-card" style="text-align: center; padding: 4rem 2rem;">
         <div class="spinner" style="margin: 0 auto;"></div>
@@ -577,11 +431,11 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
       </div>
     </div>
 
-    <!-- Step 3: Review -->
+    <!-- Step 3: Edit Foundation -->
     <div class="step-content" data-step="3">
       <div class="wizard-card">
-        <h2>📋 Review Extracted Elements</h2>
-        <p class="subtitle">Review and refine the extracted capabilities, data objects, and processes.</p>
+        <h2>📋 Edit Foundation</h2>
+        <p class="subtitle">Build your foundation by managing capabilities and processes. Use the arrows to reclassify items.</p>
 
         <div class="summary-grid">
           <div class="summary-card">
@@ -598,26 +452,64 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
           </div>
         </div>
 
-        <div class="tabs">
-          <div class="tab active" data-review-tab="capabilities">
-            Capabilities <span class="tab-count" id="capTabCount">0</span>
+        <!-- Dual List -->
+        <div class="dual-list-container">
+          <!-- Capabilities -->
+          <div class="list-panel">
+            <div class="list-header">
+              <h3>📦 Capabilities <span class="count-badge" id="capListCount">0</span></h3>
+            </div>
+            <div class="list-add-row">
+              <input type="text" id="addCapInput" placeholder="New capability name…">
+              <button class="btn btn-primary btn-sm" onclick="addItem('capabilities')">+ Add</button>
+            </div>
+            <div class="list-items" id="capabilitiesList"></div>
+            <div class="list-footer">
+              <button class="btn btn-danger btn-sm" onclick="removeSelected('capabilities')">🗑️ Remove Selected</button>
+            </div>
           </div>
-          <div class="tab" data-review-tab="dataObjects">
-            Data Objects <span class="tab-count" id="dataTabCount">0</span>
+
+          <!-- Transfer Arrows -->
+          <div class="transfer-arrows">
+            <button class="transfer-btn" onclick="transferSelected('toProcess')" title="Move to Processes" id="btnToProcess">→</button>
+            <button class="transfer-btn" onclick="transferSelected('toCapability')" title="Move to Capabilities" id="btnToCap">←</button>
           </div>
-          <div class="tab" data-review-tab="processes">
-            Processes <span class="tab-count" id="processTabCount">0</span>
+
+          <!-- Processes -->
+          <div class="list-panel">
+            <div class="list-header">
+              <h3>🔄 Processes <span class="count-badge" id="procListCount">0</span></h3>
+            </div>
+            <div class="list-add-row">
+              <input type="text" id="addProcInput" placeholder="New process name…">
+              <button class="btn btn-primary btn-sm" onclick="addItem('processes')">+ Add</button>
+            </div>
+            <div class="list-items" id="processesList"></div>
+            <div class="list-footer">
+              <button class="btn btn-danger btn-sm" onclick="removeSelected('processes')">🗑️ Remove Selected</button>
+            </div>
           </div>
         </div>
 
-        <div class="review-content" data-review-tab="capabilities">
-          <div class="items-list" id="capabilitiesList"></div>
-        </div>
-        <div class="review-content hidden" data-review-tab="dataObjects">
-          <div class="items-list" id="dataObjectsList"></div>
-        </div>
-        <div class="review-content hidden" data-review-tab="processes">
-          <div class="items-list" id="processesList"></div>
+        <!-- Data Objects (collapsible) -->
+        <div class="data-objects-section">
+          <div class="collapsible-header" onclick="toggleDataObjects()">
+            <span class="arrow">▶</span>
+            <span>📊 Data Objects</span>
+            <span class="count-badge" id="dataListCount">0</span>
+          </div>
+          <div class="collapsible-body" id="dataObjectsBody">
+            <div class="collapsible-body-inner">
+              <div class="data-add-row">
+                <input type="text" id="addDataInput" placeholder="New data object name…">
+                <button class="btn btn-primary btn-sm" onclick="addItem('dataObjects')">+ Add</button>
+              </div>
+              <div class="data-items-list" id="dataObjectsList"></div>
+              <div style="margin-top: 0.5rem; text-align: right;">
+                <button class="btn btn-danger btn-sm" onclick="removeSelected('dataObjects')">🗑️ Remove Selected</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="btn-group">
@@ -637,7 +529,6 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
           <label>Foundation Name *</label>
           <input type="text" id="foundationName" placeholder="e.g., IT Service Management Foundation">
         </div>
-
         <div class="form-group">
           <label>Description</label>
           <textarea id="foundationDescription" placeholder="Describe what this foundation covers..." style="min-height: 100px;"></textarea>
@@ -660,20 +551,17 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
 
         <div class="btn-group">
           <button class="btn btn-secondary" onclick="goToStep(3)">← Back</button>
-          <button class="btn btn-primary" id="btnSave">
-            💾 Save Foundation
-          </button>
+          <button class="btn btn-primary" id="btnSave">💾 Save Foundation</button>
         </div>
       </div>
     </div>
 
-    <!-- Success State -->
+    <!-- Step 5: Done -->
     <div class="step-content" data-step="5">
       <div class="wizard-card" style="text-align: center;">
         <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
         <h2>Foundation Saved!</h2>
         <p class="subtitle">Your discovery foundation has been saved and is ready for agent design.</p>
-        
         <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
           <a id="designWizardLink" href="/design/" class="btn btn-primary">→ Start Design Wizard</a>
           <a href="/discovery/" class="btn btn-secondary">+ New Discovery</a>
@@ -695,7 +583,7 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
   <div class="modal hidden" id="editModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Edit Item</h3>
+        <h3 id="editModalTitle">Edit Item</h3>
         <button class="modal-close" onclick="closeEditModal()">×</button>
       </div>
       <div class="form-group">
@@ -715,33 +603,24 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
 
   <script src="/js/auth-ui.js"></script>
   <script>
-    // State
+    // ===== STATE =====
     let currentStep = 1;
-    // File state managed by imageFile and xmlFile variables
-    let extractedData = {
-      capabilities: [],
-      dataObjects: [],
-      processes: []
-    };
+    let imageFile = null;
+    let dataFile = null;
+    let extractedData = { capabilities: [], dataObjects: [], processes: [] };
+    let selectedItems = { capabilities: new Set(), dataObjects: new Set(), processes: new Set() };
     let editingItem = null;
     let csrfToken = '';
+    let idCounters = { cap: 0, proc: 0, data: 0 };
 
-    // Initialize
+    // ===== INIT =====
     document.addEventListener('DOMContentLoaded', async () => {
-      // Check auth (try both storage types)
       const token = localStorage.getItem('flowgrid_access_token') || sessionStorage.getItem('flowgrid_access_token');
-      if (!token) {
-        window.location.href = '/login.html?redirect=/discovery/';
-        return;
-      }
+      if (!token) { window.location.href = '/login.html?redirect=/discovery/'; return; }
 
-      // Get CSRF token
       try {
-        const res = await fetch('/api/wizard/csrf-token', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetch('/api/wizard/csrf-token', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.status === 401) {
-          // Token expired, redirect to login
           localStorage.removeItem('flowgrid_access_token');
           sessionStorage.removeItem('flowgrid_access_token');
           window.location.href = '/login.html?redirect=/discovery/';
@@ -749,18 +628,16 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
         }
         const data = await res.json();
         csrfToken = data.csrfToken;
-      } catch (e) {
-        console.error('Failed to get CSRF token:', e);
-      }
+      } catch (e) { console.error('Failed to get CSRF token:', e); }
 
       initTabs();
       initUpload();
       initButtons();
+      initKeyboardShortcuts();
     });
 
-    // Tab switching
+    // ===== TABS =====
     function initTabs() {
-      // Upload tabs
       document.querySelectorAll('.tab[data-tab]').forEach(tab => {
         tab.addEventListener('click', () => {
           document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
@@ -770,143 +647,95 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
           updateExtractButton();
         });
       });
-
-      // Review tabs
-      document.querySelectorAll('.tab[data-review-tab]').forEach(tab => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('.tab[data-review-tab]').forEach(t => t.classList.remove('active'));
-          document.querySelectorAll('.review-content[data-review-tab]').forEach(c => c.classList.add('hidden'));
-          tab.classList.add('active');
-          document.querySelector(`.review-content[data-review-tab="${tab.dataset.reviewTab}"]`).classList.remove('hidden');
-        });
-      });
     }
 
-    // File upload - separate handlers for image and data files
-    let imageFile = null;
-    let dataFile = null;
-
+    // ===== FILE UPLOAD =====
     function initUpload() {
-      // Image upload
-      const uploadAreaImage = document.getElementById('uploadAreaImage');
-      const fileInputImage = document.getElementById('fileInputImage');
+      const setupDrop = (areaId, inputId, handler) => {
+        const area = document.getElementById(areaId);
+        const input = document.getElementById(inputId);
+        area.addEventListener('click', () => input.click());
+        area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('dragover'); });
+        area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+        area.addEventListener('drop', e => { e.preventDefault(); area.classList.remove('dragover'); handler(e.dataTransfer.files[0]); });
+        input.addEventListener('change', e => handler(e.target.files[0]));
+      };
+      setupDrop('uploadAreaImage', 'fileInputImage', handleImageFile);
+      setupDrop('uploadAreaData', 'fileInputData', handleDataFile);
 
-      uploadAreaImage.addEventListener('click', () => fileInputImage.click());
-      uploadAreaImage.addEventListener('dragover', (e) => { e.preventDefault(); uploadAreaImage.classList.add('dragover'); });
-      uploadAreaImage.addEventListener('dragleave', () => uploadAreaImage.classList.remove('dragover'));
-      uploadAreaImage.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadAreaImage.classList.remove('dragover');
-        handleImageFile(e.dataTransfer.files[0]);
+      ['imageContext','dataContext','websiteUrl','websiteContext'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateExtractButton);
       });
-      fileInputImage.addEventListener('change', (e) => handleImageFile(e.target.files[0]));
-
-      // Data file upload (XML, CSV, XLSX)
-      const uploadAreaData = document.getElementById('uploadAreaData');
-      const fileInputData = document.getElementById('fileInputData');
-
-      uploadAreaData.addEventListener('click', () => fileInputData.click());
-      uploadAreaData.addEventListener('dragover', (e) => { e.preventDefault(); uploadAreaData.classList.add('dragover'); });
-      uploadAreaData.addEventListener('dragleave', () => uploadAreaData.classList.remove('dragover'));
-      uploadAreaData.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadAreaData.classList.remove('dragover');
-        handleDataFile(e.dataTransfer.files[0]);
-      });
-      fileInputData.addEventListener('change', (e) => handleDataFile(e.target.files[0]));
-
-      // Context inputs
-      document.getElementById('imageContext').addEventListener('input', updateExtractButton);
-      document.getElementById('dataContext').addEventListener('input', updateExtractButton);
-      document.getElementById('websiteUrl').addEventListener('input', updateExtractButton);
-      document.getElementById('websiteContext').addEventListener('input', updateExtractButton);
     }
 
-    function handleImageFile(file) {
-      if (!file) return;
-      imageFile = file;
-      renderFileList('image');
-      updateExtractButton();
-    }
-
-    function handleDataFile(file) {
-      if (!file) return;
-      dataFile = file;
-      renderFileList('data');
-      updateExtractButton();
-    }
+    function handleImageFile(file) { if (!file) return; imageFile = file; renderFileList('image'); updateExtractButton(); }
+    function handleDataFile(file) { if (!file) return; dataFile = file; renderFileList('data'); updateExtractButton(); }
 
     function renderFileList(type) {
       const file = type === 'image' ? imageFile : dataFile;
       const list = document.getElementById(type === 'image' ? 'fileListImage' : 'fileListData');
-      
-      if (!file) {
-        list.innerHTML = '';
-        return;
-      }
-
+      if (!file) { list.innerHTML = ''; return; }
       const icon = type === 'image' ? '🖼️' : '📄';
-      list.innerHTML = `
-        <div class="item-card">
-          <div class="item-info">
-            <h4>${icon} ${file.name}</h4>
-            <p>${(file.size / 1024).toFixed(1)} KB</p>
-          </div>
-          <button class="btn btn-secondary" onclick="removeFile('${type}')" style="padding: 0.5rem;">✕</button>
-        </div>
-      `;
+      list.innerHTML = `<div class="item-card"><div class="item-info"><h4>${icon} ${file.name}</h4><p>${(file.size/1024).toFixed(1)} KB</p></div><button class="btn btn-secondary" onclick="removeFile('${type}')" style="padding:0.5rem;">✕</button></div>`;
     }
 
     function removeFile(type) {
-      if (type === 'image') {
-        imageFile = null;
-        document.getElementById('fileInputImage').value = '';
-      } else if (type === 'data') {
-        dataFile = null;
-        document.getElementById('fileInputData').value = '';
-      }
-      renderFileList(type);
-      updateExtractButton();
+      if (type === 'image') { imageFile = null; document.getElementById('fileInputImage').value = ''; }
+      else { dataFile = null; document.getElementById('fileInputData').value = ''; }
+      renderFileList(type); updateExtractButton();
     }
 
     function updateExtractButton() {
       const activeTab = document.querySelector('.tab[data-tab].active').dataset.tab;
-      const websiteUrl = document.getElementById('websiteUrl').value.trim();
-      
-      let isValid = false;
-      if (activeTab === 'image' && imageFile) isValid = true;
-      if (activeTab === 'data' && dataFile) isValid = true;
-      if (activeTab === 'website' && websiteUrl.length > 5) isValid = true;
-      
-      document.getElementById('btnExtract').disabled = !isValid;
+      let valid = false;
+      if (activeTab === 'image' && imageFile) valid = true;
+      if (activeTab === 'data' && dataFile) valid = true;
+      if (activeTab === 'website' && document.getElementById('websiteUrl').value.trim().length > 5) valid = true;
+      document.getElementById('btnExtract').disabled = !valid;
     }
 
-    // Buttons
+    // ===== BUTTONS =====
     function initButtons() {
       document.getElementById('btnExtract').addEventListener('click', startExtraction);
       document.getElementById('btnSave').addEventListener('click', saveFoundation);
     }
 
-    // Step navigation
+    function initKeyboardShortcuts() {
+      ['addCapInput','addProcInput','addDataInput'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const type = id === 'addCapInput' ? 'capabilities' : id === 'addProcInput' ? 'processes' : 'dataObjects';
+            addItem(type);
+          }
+        });
+      });
+    }
+
+    // ===== SKIP =====
+    function skipToEdit() {
+      extractedData = { capabilities: [], dataObjects: [], processes: [] };
+      selectedItems = { capabilities: new Set(), dataObjects: new Set(), processes: new Set() };
+      renderAllLists();
+      goToStep(3);
+    }
+
+    // ===== STEP NAVIGATION =====
     function goToStep(step) {
       currentStep = step;
       document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
       document.querySelector(`.step-content[data-step="${step}"]`).classList.add('active');
 
-      // Update progress circles
       document.querySelectorAll('.step-circle').forEach(c => {
         const s = parseInt(c.dataset.step);
         c.classList.remove('active', 'completed');
         if (s < step) c.classList.add('completed');
         if (s === step) c.classList.add('active');
       });
-
-      // Update lines
       document.querySelectorAll('.step-line').forEach((line, i) => {
         line.classList.toggle('completed', i < step - 1);
       });
 
-      // Update summary counts on step 4
       if (step === 4) {
         document.getElementById('finalCapCount').textContent = extractedData.capabilities.length;
         document.getElementById('finalDataCount').textContent = extractedData.dataObjects.length;
@@ -914,45 +743,34 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
       }
     }
 
-    // Extraction
+    // ===== EXTRACTION =====
     async function startExtraction() {
       goToStep(2);
       const token = localStorage.getItem('flowgrid_access_token') || sessionStorage.getItem('flowgrid_access_token');
       const activeTab = document.querySelector('.tab[data-tab].active').dataset.tab;
 
-      if (!token) {
-        alert('Please log in first');
-        window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
-        return;
-      }
+      if (!token) { alert('Please log in first'); window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname); return; }
 
       try {
         let response;
-        
+
         if (activeTab === 'image') {
-          // Image upload with optional context
           document.getElementById('extractionStatus').textContent = 'Analyzing image...';
           const formData = new FormData();
           formData.append('file', imageFile);
           const context = document.getElementById('imageContext').value.trim();
           if (context) formData.append('context', context);
-          
           response = await fetch('/api/wizard/upload-image', {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-CSRF-Token': csrfToken
-            },
+            headers: { 'Authorization': `Bearer ${token}`, 'X-CSRF-Token': csrfToken },
             body: formData
           });
         } else if (activeTab === 'data') {
-          // Data file upload (XML, CSV, XLSX)
           const fileName = dataFile.name.toLowerCase();
           const context = document.getElementById('dataContext').value.trim();
           const formData = new FormData();
           formData.append('file', dataFile);
           if (context) formData.append('context', context);
-          
           let endpoint;
           if (fileName.endsWith('.xml') || fileName.endsWith('.archimate')) {
             document.getElementById('extractionStatus').textContent = 'Parsing XML/ArchiMate file...';
@@ -960,65 +778,46 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
           } else if (fileName.endsWith('.csv') || fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
             document.getElementById('extractionStatus').textContent = 'Analyzing spreadsheet data...';
             endpoint = '/api/wizard/upload-data';
-          } else {
-            throw new Error('Unsupported file type');
-          }
-          
+          } else { throw new Error('Unsupported file type'); }
           response = await fetch(endpoint, {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-CSRF-Token': csrfToken
-            },
+            headers: { 'Authorization': `Bearer ${token}`, 'X-CSRF-Token': csrfToken },
             body: formData
           });
         } else if (activeTab === 'website') {
-          // Website analysis
           document.getElementById('extractionStatus').textContent = 'Analyzing website...';
           const websiteUrl = document.getElementById('websiteUrl').value.trim();
           const context = document.getElementById('websiteContext').value.trim();
-          
           response = await fetch('/api/wizard/analyze-website', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-              'X-CSRF-Token': csrfToken
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-CSRF-Token': csrfToken },
             body: JSON.stringify({ url: websiteUrl, context })
           });
         }
 
         if (!response.ok) throw new Error('Extraction failed');
-        
         const data = await response.json();
-        
-        // Map extracted data - API returns { analysis: { extractedCapabilities, agents, ... } }
         const analysis = data.analysis || data;
-        
+
         extractedData.capabilities = (analysis.extractedCapabilities || analysis.capabilities || [])
           .map((c, i) => ({ id: `cap-${i}`, name: c.name, description: c.description || c.rationale || '' }));
-        
         extractedData.dataObjects = (analysis.dataObjects || [])
           .map((d, i) => ({ id: `data-${i}`, name: d.name, description: d.description || '' }));
-        
-        // Processes might come from agents or a separate field
         extractedData.processes = (analysis.processes || [])
           .map((p, i) => ({ id: `proc-${i}`, name: p.name, description: p.description || '' }));
-        
-        // Also extract agents as potential processes (they represent capabilities)
+
         if (analysis.agents && analysis.agents.length > 0 && extractedData.processes.length === 0) {
           extractedData.processes = analysis.agents
-            .map((a, i) => ({ id: `agent-${i}`, name: a.name, description: a.purpose || a.description || '' }));
+            .map((a, i) => ({ id: `proc-${i}`, name: a.name, description: a.purpose || a.description || '' }));
         }
-        
-        console.log('Extracted:', { 
-          capabilities: extractedData.capabilities.length,
-          dataObjects: extractedData.dataObjects.length, 
-          processes: extractedData.processes.length 
-        });
 
-        renderReviewLists();
+        // Set counters past extracted IDs
+        idCounters.cap = extractedData.capabilities.length;
+        idCounters.proc = extractedData.processes.length;
+        idCounters.data = extractedData.dataObjects.length;
+
+        selectedItems = { capabilities: new Set(), dataObjects: new Set(), processes: new Set() };
+        renderAllLists();
         goToStep(3);
       } catch (error) {
         console.error('Extraction error:', error);
@@ -1027,108 +826,192 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
       }
     }
 
-    // Render review lists
-    function renderReviewLists() {
-      // Update counts
-      document.getElementById('capabilityCount').textContent = extractedData.capabilities.length;
-      document.getElementById('dataObjectCount').textContent = extractedData.dataObjects.length;
-      document.getElementById('processCount').textContent = extractedData.processes.length;
-      document.getElementById('capTabCount').textContent = extractedData.capabilities.length;
-      document.getElementById('dataTabCount').textContent = extractedData.dataObjects.length;
-      document.getElementById('processTabCount').textContent = extractedData.processes.length;
-
-      // Render lists
-      document.getElementById('capabilitiesList').innerHTML = renderItemsList(extractedData.capabilities, 'capability');
-      document.getElementById('dataObjectsList').innerHTML = renderItemsList(extractedData.dataObjects, 'data');
-      document.getElementById('processesList').innerHTML = renderItemsList(extractedData.processes, 'process');
+    // ===== DUAL LIST RENDERING =====
+    function renderAllLists() {
+      renderList('capabilities');
+      renderList('processes');
+      renderList('dataObjects');
+      updateCounts();
     }
 
-    function renderItemsList(items, type) {
+    function renderList(type) {
+      const items = extractedData[type];
+      const listEl = document.getElementById(type === 'capabilities' ? 'capabilitiesList' : type === 'processes' ? 'processesList' : 'dataObjectsList');
+
       if (items.length === 0) {
-        return '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No items found</p>';
+        listEl.innerHTML = `<div class="empty-state">${type === 'capabilities' ? '📦 No capabilities yet' : type === 'processes' ? '🔄 No processes yet' : '📊 No data objects yet'}</div>`;
+        return;
       }
-      return items.map(item => `
-        <div class="item-card">
-          <div class="item-info">
-            <h4>${item.name}</h4>
-            <p>${item.description || 'No description'}</p>
-          </div>
-          <div class="item-actions">
-            <span class="badge badge-${type}">${type}</span>
-            <button class="btn btn-secondary" style="padding: 0.5rem;" onclick="editItem('${type}', '${item.id}')">✏️</button>
-            <button class="btn btn-secondary" style="padding: 0.5rem;" onclick="deleteItem('${type}', '${item.id}')">🗑️</button>
-          </div>
-        </div>
-      `).join('');
+
+      listEl.innerHTML = items.map(item => {
+        const checked = selectedItems[type].has(item.id) ? 'checked' : '';
+        const selectedClass = selectedItems[type].has(item.id) ? 'selected' : '';
+        return `
+          <div class="item-card ${selectedClass}" data-id="${item.id}">
+            <input type="checkbox" ${checked} onchange="toggleSelect('${type}','${item.id}', this.checked)">
+            <div class="item-info" ondblclick="startInlineEdit('${type}','${item.id}', this)">
+              <h4>${escapeHtml(item.name)}</h4>
+              <p>${escapeHtml(item.description || 'No description')}</p>
+            </div>
+            <div class="item-actions">
+              <button class="item-btn" onclick="editItem('${type}','${item.id}')" title="Edit">✏️</button>
+              <button class="item-btn delete" onclick="deleteSingleItem('${type}','${item.id}')" title="Delete">✕</button>
+            </div>
+          </div>`;
+      }).join('');
     }
 
-    // Edit item
-    function editItem(type, id) {
-      const list = type === 'capability' ? extractedData.capabilities : 
-                   type === 'data' ? extractedData.dataObjects : extractedData.processes;
-      const item = list.find(i => i.id === id);
-      if (!item) return;
+    function updateCounts() {
+      const caps = extractedData.capabilities.length;
+      const data = extractedData.dataObjects.length;
+      const procs = extractedData.processes.length;
 
+      document.getElementById('capabilityCount').textContent = caps;
+      document.getElementById('dataObjectCount').textContent = data;
+      document.getElementById('processCount').textContent = procs;
+      document.getElementById('capListCount').textContent = caps;
+      document.getElementById('procListCount').textContent = procs;
+      document.getElementById('dataListCount').textContent = data;
+
+      // Transfer button states
+      document.getElementById('btnToProcess').disabled = selectedItems.capabilities.size === 0;
+      document.getElementById('btnToCap').disabled = selectedItems.processes.size === 0;
+    }
+
+    // ===== SELECTION =====
+    function toggleSelect(type, id, checked) {
+      if (checked) selectedItems[type].add(id);
+      else selectedItems[type].delete(id);
+      renderList(type);
+      updateCounts();
+    }
+
+    // ===== ADD ITEM =====
+    function addItem(type) {
+      const inputId = type === 'capabilities' ? 'addCapInput' : type === 'processes' ? 'addProcInput' : 'addDataInput';
+      const input = document.getElementById(inputId);
+      const name = input.value.trim();
+      if (!name) return;
+
+      const prefix = type === 'capabilities' ? 'cap' : type === 'processes' ? 'proc' : 'data';
+      const id = `${prefix}-${idCounters[prefix]++}`;
+      extractedData[type].push({ id, name, description: '' });
+      input.value = '';
+      renderList(type);
+      updateCounts();
+
+      // Scroll to bottom
+      const listEl = document.getElementById(type === 'capabilities' ? 'capabilitiesList' : type === 'processes' ? 'processesList' : 'dataObjectsList');
+      listEl.scrollTop = listEl.scrollHeight;
+    }
+
+    // ===== REMOVE SELECTED =====
+    function removeSelected(type) {
+      const sel = selectedItems[type];
+      if (sel.size === 0) return;
+      extractedData[type] = extractedData[type].filter(i => !sel.has(i.id));
+      sel.clear();
+      renderList(type);
+      updateCounts();
+    }
+
+    // ===== DELETE SINGLE =====
+    function deleteSingleItem(type, id) {
+      extractedData[type] = extractedData[type].filter(i => i.id !== id);
+      selectedItems[type].delete(id);
+      renderList(type);
+      updateCounts();
+    }
+
+    // ===== TRANSFER =====
+    function transferSelected(direction) {
+      if (direction === 'toProcess') {
+        const sel = selectedItems.capabilities;
+        if (sel.size === 0) return;
+        const moving = extractedData.capabilities.filter(i => sel.has(i.id));
+        extractedData.capabilities = extractedData.capabilities.filter(i => !sel.has(i.id));
+        moving.forEach(item => {
+          item.id = `proc-${idCounters.proc++}`;
+          extractedData.processes.push(item);
+        });
+        sel.clear();
+      } else {
+        const sel = selectedItems.processes;
+        if (sel.size === 0) return;
+        const moving = extractedData.processes.filter(i => sel.has(i.id));
+        extractedData.processes = extractedData.processes.filter(i => !sel.has(i.id));
+        moving.forEach(item => {
+          item.id = `cap-${idCounters.cap++}`;
+          extractedData.capabilities.push(item);
+        });
+        sel.clear();
+      }
+      renderAllLists();
+    }
+
+    // ===== EDIT MODAL =====
+    function editItem(type, id) {
+      const item = extractedData[type].find(i => i.id === id);
+      if (!item) return;
       editingItem = { type, id };
+      document.getElementById('editModalTitle').textContent = `Edit ${type === 'capabilities' ? 'Capability' : type === 'processes' ? 'Process' : 'Data Object'}`;
       document.getElementById('editName').value = item.name;
       document.getElementById('editDescription').value = item.description || '';
       document.getElementById('editModal').classList.remove('hidden');
     }
 
-    function closeEditModal() {
-      document.getElementById('editModal').classList.add('hidden');
-      editingItem = null;
-    }
+    function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); editingItem = null; }
 
     function saveEdit() {
       if (!editingItem) return;
-      
-      const list = editingItem.type === 'capability' ? extractedData.capabilities : 
-                   editingItem.type === 'data' ? extractedData.dataObjects : extractedData.processes;
-      const item = list.find(i => i.id === editingItem.id);
+      const item = extractedData[editingItem.type].find(i => i.id === editingItem.id);
       if (item) {
         item.name = document.getElementById('editName').value;
         item.description = document.getElementById('editDescription').value;
       }
-      
       closeEditModal();
-      renderReviewLists();
+      renderList(editingItem.type);
     }
 
-    // Delete item
-    function deleteItem(type, id) {
-      if (!confirm('Delete this item?')) return;
-      
-      if (type === 'capability') {
-        extractedData.capabilities = extractedData.capabilities.filter(i => i.id !== id);
-      } else if (type === 'data') {
-        extractedData.dataObjects = extractedData.dataObjects.filter(i => i.id !== id);
-      } else {
-        extractedData.processes = extractedData.processes.filter(i => i.id !== id);
-      }
-      
-      renderReviewLists();
+    // ===== INLINE EDIT (double-click) =====
+    function startInlineEdit(type, id, el) {
+      const item = extractedData[type].find(i => i.id === id);
+      if (!item) return;
+      const h4 = el.querySelector('h4');
+      const oldName = item.name;
+      h4.innerHTML = `<input class="inline-edit-input" value="${escapeAttr(oldName)}" />`;
+      const inp = h4.querySelector('input');
+      inp.focus();
+      inp.select();
+      const finish = () => {
+        const val = inp.value.trim();
+        item.name = val || oldName;
+        renderList(type);
+      };
+      inp.addEventListener('blur', finish);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.value = oldName; inp.blur(); } });
     }
 
-    // Save foundation
+    // ===== DATA OBJECTS COLLAPSIBLE =====
+    function toggleDataObjects() {
+      const header = document.querySelector('.collapsible-header');
+      const body = document.getElementById('dataObjectsBody');
+      header.classList.toggle('open');
+      body.classList.toggle('open');
+    }
+
+    // ===== SAVE =====
     async function saveFoundation() {
       const name = document.getElementById('foundationName').value.trim();
-      if (!name) {
-        alert('Please enter a foundation name');
-        return;
-      }
+      if (!name) { alert('Please enter a foundation name'); return; }
 
-      const token = localStorage.getItem('flowgrid_access_token');
+      const token = localStorage.getItem('flowgrid_access_token') || sessionStorage.getItem('flowgrid_access_token');
       showLoading('Saving foundation...');
 
       try {
         const response = await fetch('/api/wizard/foundations', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-CSRF-Token': csrfToken
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-CSRF-Token': csrfToken },
           body: JSON.stringify({
             name,
             description: document.getElementById('foundationDescription').value,
@@ -1139,16 +1022,14 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
         });
 
         if (!response.ok) throw new Error('Failed to save foundation');
-        
         const result = await response.json();
         const foundationId = result.foundation?.id;
-        
-        // Update the design wizard link with foundation ID
+
         if (foundationId) {
           document.getElementById('designWizardLink').href = `/wizard.html?foundation=${foundationId}`;
           document.getElementById('savedFoundationId').textContent = foundationId;
         }
-        
+
         hideLoading();
         goToStep(5);
       } catch (error) {
@@ -1157,15 +1038,11 @@ Focus on our IT services and ITSM processes. We're a managed services provider s
       }
     }
 
-    // Loading helpers
-    function showLoading(text) {
-      document.getElementById('loadingText').textContent = text;
-      document.getElementById('loadingOverlay').classList.remove('hidden');
-    }
-
-    function hideLoading() {
-      document.getElementById('loadingOverlay').classList.add('hidden');
-    }
+    // ===== HELPERS =====
+    function showLoading(text) { document.getElementById('loadingText').textContent = text; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function escapeAttr(s) { return s.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   </script>
 </body>
 </html>

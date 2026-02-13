@@ -815,8 +815,6 @@
       font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
       font-size: 0.75rem;
       line-height: 1.5;
-      max-height: 400px;
-      overflow-y: auto;
     }
     
     /* Integration List */
@@ -1298,10 +1296,10 @@
       <div class="detail-tabs" style="margin-bottom:0.75rem;">
         <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
         <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
-        <button class="detail-tab workspace-tab" data-tab="skills" onclick="showWorkspaceTab('skills')">🛠️ Skills</button>
+        <button class="detail-tab workspace-tab" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">🔄 Flow</button>
         <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
+        <button class="detail-tab workspace-tab" data-tab="skills" onclick="showWorkspaceTab('skills')">🛠️ Skills</button>
         <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🔧 Tools</button>
-        <button class="detail-tab workspace-tab" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">🔄 BPMN</button>
         <button class="detail-tab workspace-tab" data-tab="a2a-card" onclick="showWorkspaceTab('a2a-card')">🤖 A2A Card</button>
       </div>
 
@@ -1479,6 +1477,20 @@
 
       <!-- Integrations Tab -->
       <section class="workspace-panel" id="workspace-integrations">
+        <!-- Search & Add Tools -->
+        <div style="margin-bottom: 1rem;">
+          <div style="position: relative;">
+            <input type="text" id="tool-search-input" placeholder="Search tools database..." 
+                   oninput="searchTools(this.value)"
+                   style="width: 100%; padding: 0.6rem 0.75rem 0.6rem 2.25rem; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 0.85rem; outline: none; transition: border-color 0.2s;"
+                   onfocus="this.style.borderColor='#6366f1'; showToolSearchResults()" onblur="setTimeout(() => hideToolSearchResults(), 200)">
+            <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 0.85rem;">🔍</span>
+          </div>
+          <div id="tool-search-results" style="display: none; background: #1e293b; border: 1px solid #334155; border-radius: 8px; margin-top: 0.25rem; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+            <!-- Search results rendered here -->
+          </div>
+        </div>
+
         <div class="info-card">
           <h4>🔧 Suggested Tools</h4>
           <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">Click to add a tool/integration to this agent</p>
@@ -1546,6 +1558,20 @@
             <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
               <small style="color: #64748b;">Powered by <a href="https://bpmn.io" target="_blank" style="color: #60a5fa;">bpmn.io</a></small>
               <small style="color: #64748b;" id="bpmn-stats"></small>
+            </div>
+
+            <!-- Human Checkpoints Panel -->
+            <div id="hitl-checkpoints-panel" style="margin-top: 1rem; display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h4 style="color: #f59e0b; font-size: 0.85rem;">👥 Human Checkpoints</h4>
+                <button class="btn btn-sm" style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: #334155;" onclick="extractHumanCheckpoints()">🔄 Refresh from Flow</button>
+              </div>
+              <p style="font-size: 0.7rem; color: #64748b; margin-bottom: 0.5rem;">Human tasks detected in the flow. Configure approver and timeout per checkpoint.</p>
+              <div id="hitl-checkpoints-empty" style="padding: 1rem; text-align: center; color: #64748b; font-size: 0.85rem; background: #0f172a; border-radius: 6px;">
+                No human tasks found in this flow
+              </div>
+              <div id="hitl-checkpoints-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+              <button class="btn btn-primary" id="save-checkpoints-btn" style="width: 100%; margin-top: 0.5rem; display: none; font-size: 0.85rem;" onclick="saveHitlCheckpoints()">💾 Save Checkpoints</button>
             </div>
           </div>
         </div>
@@ -1717,38 +1743,7 @@
             <input type="text" id="agent-outputs-config" placeholder="analysis report, recommendations">
           </div>
 
-          <!-- 2. Data Store Configuration -->
-          <div class="section-header">💾 Data Store Configuration</div>
-          <div class="form-group">
-            <label>Database Name</label>
-            <input type="text" id="agent-db-name-config" placeholder="flowgrid-agents" value="flowgrid-agents">
-          </div>
-          <div class="form-group">
-            <label>Collections</label>
-            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
-                <input type="checkbox" id="col-memory" checked> 💭 memory
-              </label>
-              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
-                <input type="checkbox" id="col-state" checked> 📊 state
-              </label>
-              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
-                <input type="checkbox" id="col-tasks" checked> 📋 tasks
-              </label>
-              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
-                <input type="checkbox" id="col-decisions" checked> ⚖️ decisions
-              </label>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Partition Key</label>
-            <input type="text" id="agent-partition-key-config" placeholder="/tenantId" value="/tenantId">
-          </div>
-          <div class="info-card" style="padding: 0.5rem; font-size: 0.75rem; color: #94a3b8;">
-            ℹ️ CosmosDB collections are auto-provisioned on deploy
-          </div>
-
-          <!-- 3. Model Configuration -->
+          <!-- 2. Model Configuration -->
           <div class="section-header">🤖 Model Configuration</div>
           <div id="model-recommendation" class="info-card" style="padding: 0.5rem; font-size: 0.75rem; color: #f59e0b; display: none;">
             💡 <span id="model-rec-text"></span>
@@ -1768,8 +1763,11 @@
             <datalist id="model-suggestions"></datalist>
           </div>
           <div class="form-group">
-            <label>System Prompt</label>
-            <textarea id="agent-system-prompt-config" rows="3" placeholder="Pre-filled from agent purpose..." style="width:100%;padding:0.5rem;border:1px solid #334155;border-radius:6px;background:#0f172a;color:#e2e8f0;font-family:inherit;font-size:0.85rem;resize:vertical;"></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <label style="margin-bottom: 0;">System Prompt</label>
+              <button class="btn btn-sm" id="generate-sysprompt-btn" onclick="generateSystemPrompt()" style="font-size: 0.7rem; padding: 0.2rem 0.6rem; background: #334155; border: 1px solid #475569; color: #e2e8f0;">🤖 Generate</button>
+            </div>
+            <textarea id="agent-system-prompt-config" rows="6" placeholder="Click Generate to create a system prompt from agent purpose, skills and pattern..." style="width:100%;padding:0.5rem;border:1px solid #334155;border-radius:6px;background:#0f172a;color:#e2e8f0;font-family:inherit;font-size:0.85rem;resize:vertical;"></textarea>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div class="form-group" style="margin-bottom: 0;">
@@ -1782,33 +1780,23 @@
             </div>
           </div>
 
-          <!-- 4. HITL Configuration -->
-          <div class="section-header">🙋 HITL Configuration</div>
+          <!-- 4. Autonomy Level -->
+          <div class="section-header">🙋 Autonomy Level</div>
           <div class="form-group">
-            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-              <input type="checkbox" id="agent-hitl-required" onchange="document.getElementById('hitl-details').style.display = this.checked ? 'block' : 'none'"> Approval Required
-            </label>
+            <select id="agent-autonomy-config">
+              <option value="autonomous">Autonomous — acts independently</option>
+              <option value="supervised" selected>Supervised — reports actions, can be overridden</option>
+              <option value="human-in-loop">Human-in-the-Loop — requires approval for key decisions</option>
+            </select>
+            <p style="font-size: 0.7rem; color: #64748b; margin-top: 0.35rem;">
+              Specific approval checkpoints are configured per flow step on the Flow tab → Human Checkpoints
+            </p>
           </div>
-          <div id="hitl-details" style="display: none;">
-            <div class="form-group">
-              <label>Approval Threshold</label>
-              <select id="agent-hitl-threshold">
-                <option value="all-decisions">All Decisions</option>
-                <option value="high-risk-only">High Risk Only</option>
-                <option value="cost-above-threshold">Cost Above Threshold</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Escalation Target</label>
-              <select id="agent-hitl-escalation">
-                <option value="">-- Select Agent --</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Timeout (minutes)</label>
-              <input type="number" id="agent-hitl-timeout" value="60" min="1" max="1440">
-            </div>
-          </div>
+          <!-- Hidden compat elements for save functions -->
+          <input type="hidden" id="agent-hitl-required" value="false">
+          <input type="hidden" id="agent-hitl-threshold" value="high-risk-only">
+          <input type="hidden" id="agent-hitl-escalation" value="">
+          <input type="hidden" id="agent-hitl-timeout" value="60">
 
           <!-- 5. Tools -->
           <div class="section-header">🔧 Tools</div>
@@ -1851,45 +1839,54 @@
 
         <!-- Code Tab -->
         <div id="tab-code" class="tab-content">
-          <!-- 1. Agent Manifest -->
-          <div class="section-header">📋 Agent Manifest</div>
-          <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.75rem; line-height: 1.4;">
-            The manifest is a deployment descriptor that tells the runtime everything about this agent — its messaging topics, model configuration, data store, and HITL rules. Generate it from the Configure tab settings, then export for deployment.
-          </p>
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <button class="btn btn-success" style="flex: 1;" onclick="generateManifest(selectedAgentId)">📋 Generate Manifest</button>
+          <!-- Code type selector -->
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <select id="code-view-selector" onchange="switchCodeView(this.value)" style="flex: 1; padding: 0.5rem 0.75rem; background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 0.85rem; cursor: pointer;">
+              <option value="manifest">📋 Agent Manifest</option>
+              <option value="function-app">💻 Function App Code</option>
+              <option value="bicep">🏗️ Bicep (Infrastructure as Code)</option>
+            </select>
+          </div>
+
+          <!-- Action bar (changes per view) -->
+          <div id="code-actions-manifest" class="code-actions-bar" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <button class="btn btn-success" style="flex: 1;" onclick="generateManifest(selectedAgentId)">🤖 Generate</button>
             <button class="btn btn-secondary" onclick="copyManifest()">📋 Copy</button>
             <button class="btn btn-secondary" onclick="downloadManifest()">⬇️</button>
           </div>
-          <div id="manifest-validation-bar" style="padding: 0.35rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem; display: none;"></div>
-          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <label style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-              <input type="checkbox" id="manifest-edit-toggle" onchange="toggleManifestEdit(this.checked)"> Edit mode
-            </label>
-            <span id="manifest-timestamp" style="font-size: 0.7rem; color: #64748b; margin-left: auto;"></span>
-          </div>
-          <div class="code-container" style="max-height: 300px;">
-            <pre id="manifest-display" contenteditable="false" style="font-size: 0.7rem; line-height: 1.4; outline: none;">// Click "Generate Manifest" to assemble from Description + Design + Configure tabs</pre>
-          </div>
-
-          <!-- 2. Code Scaffolding -->
-          <div class="section-header" style="margin-top: 1rem;">💻 Code Scaffolding</div>
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <button class="btn btn-success" style="flex: 1;" onclick="generateCode()">🤖 Generate Function App Code</button>
+          <div id="code-actions-function-app" class="code-actions-bar" style="display: none; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <button class="btn btn-success" style="flex: 1;" onclick="generateCode()">🤖 Generate</button>
             <button class="btn btn-primary" id="save-code-btn" onclick="saveGeneratedCode()">💾 Save</button>
             <button class="btn btn-secondary" onclick="copyCode()">📋 Copy</button>
           </div>
-          <p style="font-size: 0.7rem; color: #64748b; margin-bottom: 0.5rem;">Generates Azure Functions scaffolding based on manifest</p>
-          <div class="code-container" style="max-height: 300px;">
-            <pre id="agent-code" style="font-size: 0.7rem; line-height: 1.4;">// Generate manifest first, then generate Function App code</pre>
+          <div id="code-actions-bicep" class="code-actions-bar" style="display: none; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <button class="btn btn-success" style="flex: 1;" onclick="generateBicepCode()">🤖 Generate</button>
+            <button class="btn btn-secondary" onclick="copyBicep()">📋 Copy</button>
+            <button class="btn btn-secondary" style="flex: 1;" onclick="downloadManifestPackage(selectedAgentId)">📦 Package</button>
           </div>
-          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-            <button class="btn btn-secondary" style="flex: 1;" onclick="generateBicepCode()">🏗️ Generate Bicep</button>
-            <button class="btn btn-secondary" style="flex: 1;" onclick="downloadManifestPackage(selectedAgentId)">📦 Download Package</button>
+
+          <!-- Validation bar (manifest only) -->
+          <div id="manifest-validation-bar" style="padding: 0.35rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem; display: none;"></div>
+
+          <!-- Info line -->
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span id="code-view-hint" style="font-size: 0.7rem; color: #64748b;">Deployment descriptor assembled from Configure tab</span>
+            <span style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
+              <label id="edit-mode-label" style="font-size: 0.7rem; color: #94a3b8; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                <input type="checkbox" id="manifest-edit-toggle" onchange="toggleManifestEdit(this.checked)"> Edit
+              </label>
+              <span id="manifest-timestamp" style="font-size: 0.7rem; color: #64748b;"></span>
+            </span>
           </div>
-          <div class="code-container" style="max-height: 200px; margin-top: 0.5rem; display: none;" id="bicep-container">
-            <pre id="bicep-code" style="font-size: 0.7rem; line-height: 1.4;"></pre>
+
+          <!-- Single code window -->
+          <div class="code-container" style="max-height: calc(100vh - 420px); min-height: 200px;">
+            <pre id="manifest-display" contenteditable="false" style="font-size: 0.7rem; line-height: 1.4; outline: none; display: block;">// Select a view and click Generate</pre>
+            <pre id="agent-code" style="font-size: 0.7rem; line-height: 1.4; display: none;"></pre>
+            <pre id="bicep-code" style="font-size: 0.7rem; line-height: 1.4; display: none;"></pre>
           </div>
+          <!-- Hidden container for backward compat -->
+          <div id="bicep-container" style="display: none;"></div>
         </div>
 
         <!-- Deploy Tab -->
@@ -2317,10 +2314,10 @@
           processes.map(p => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
       }
       
-      // Reset filters and apply
+      // Reset filters and populate all sub-processes
       selectedProcessFilter = '';
       selectedSubprocessFilter = '';
-      document.getElementById('subprocess-filter').innerHTML = '<option value="">All Sub-processes</option>';
+      populateSubprocessFilter('');
       applyAgentFilters();
     }
     
@@ -2336,22 +2333,12 @@
     function populateSubprocessFilter(processName) {
       const select = document.getElementById('subprocess-filter');
       
-      if (!processName) {
-        select.innerHTML = '<option value="">All Sub-processes</option>';
-        return;
-      }
-      
-      // Get unique sub-processes from agents matching this process
+      // Always show all sub-processes; filter by process if one is selected
       const subprocesses = [...new Set(
         agents
-          .filter(a => a.config?.processName === processName && a.config?.subProcessName)
+          .filter(a => a.config?.subProcessName && (!processName || a.config?.processName === processName))
           .map(a => a.config.subProcessName)
       )].sort();
-      
-      if (subprocesses.length === 0) {
-        select.innerHTML = '<option value="">All Sub-processes</option>';
-        return;
-      }
       
       select.innerHTML = '<option value="">All Sub-processes</option>' +
         subprocesses.map(sp => `<option value="${escapeHtml(sp)}">${escapeHtml(sp)}</option>`).join('');
@@ -2496,6 +2483,8 @@
         }));
 
         renderElementList();
+        // Re-populate subprocess filter now that agents are loaded
+        populateSubprocessFilter(selectedProcessFilter);
       } catch (error) {
         console.error('[loadAgents] Error:', error);
         agents = [];
@@ -2984,16 +2973,14 @@
       tagData['publish-topics'] = [...defaultPublishTopics];
       renderTags('listen-topics');
       renderTags('publish-topics');
-      document.getElementById('agent-message-types-config').value = (config.messageTypes || []).join(', ');
-      
-      // Data store
-      const ds = config.dataStore || {};
-      document.getElementById('agent-db-name-config').value = ds.database || 'flowgrid-agents';
-      document.getElementById('col-memory').checked = ds.collections?.memory ?? true;
-      document.getElementById('col-state').checked = ds.collections?.state ?? true;
-      document.getElementById('col-tasks').checked = ds.collections?.tasks ?? true;
-      document.getElementById('col-decisions').checked = ds.collections?.decisions ?? true;
-      document.getElementById('agent-partition-key-config').value = ds.partitionKey || '/tenantId';
+      // Auto-derive message types from triggers + outputs if not set
+      let messageTypes = config.messageTypes || [];
+      if (messageTypes.length === 0 && (triggers.length || outputs.length)) {
+        messageTypes = [...triggers, ...outputs].map(t =>
+          t.replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '')
+        ).filter((v, i, a) => a.indexOf(v) === i); // dedupe
+      }
+      document.getElementById('agent-message-types-config').value = messageTypes.join(', ');
       
       // Model config
       const mc = config.modelConfig || {};
@@ -3007,16 +2994,14 @@
       showModelRecommendation(config.pattern);
       
       // HITL — derive from wizard data if not manually configured
-      const hitl = config.hitl || {};
-      const wizEscalation = wizInteractions.escalation || config.escalationPath || '';
-      const isHitl = hitl.approvalRequired ?? ((config.autonomyLevel || '').includes('human') || !!wizEscalation);
-      document.getElementById('agent-hitl-required').checked = isHitl;
-      document.getElementById('hitl-details').style.display = isHitl ? 'block' : 'none';
-      document.getElementById('agent-hitl-threshold').value = hitl.approvalThreshold || 'high-risk-only';
-      document.getElementById('agent-hitl-timeout').value = hitl.timeoutMinutes || 60;
-      populateEscalationTargets();
-      const escalationVal = hitl.escalationTarget || wizEscalation;
-      if (escalationVal) document.getElementById('agent-hitl-escalation').value = escalationVal;
+      // Autonomy level
+      const autonomy = config.autonomyLevel || 'supervised';
+      const autonomySelect = document.getElementById('agent-autonomy-config');
+      if (autonomySelect) {
+        if (autonomy.includes('human') || autonomy === 'human-in-loop') autonomySelect.value = 'human-in-loop';
+        else if (autonomy === 'autonomous') autonomySelect.value = 'autonomous';
+        else autonomySelect.value = 'supervised';
+      }
       
       // Config integrations list
       const configIntList = document.getElementById('config-integrations-list');
@@ -4086,6 +4071,49 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       }
     }
     
+    async function generateSystemPrompt() {
+      if (!selectedAgentId) return alert('Select an agent first');
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
+
+      const btn = document.getElementById('generate-sysprompt-btn');
+      const textarea = document.getElementById('agent-system-prompt-config');
+      const origText = btn.innerHTML;
+      btn.innerHTML = '⏳ Generating...';
+      btn.disabled = true;
+
+      try {
+        const config = agent.config || {};
+        const response = await fetch('/api/wizard/generate-system-prompt', {
+          method: 'POST',
+          headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agentName: agent.name,
+            purpose: agent.purpose || agent.description || '',
+            pattern: agent.pattern || config.pattern || 'specialist',
+            autonomyLevel: config.autonomyLevel || 'supervised',
+            skills: agent.skills || [],
+            triggers: config.triggers || config.interactions?.triggers || [],
+            outputs: config.outputs || config.interactions?.outputs || [],
+            escalationPath: config.escalationPath || config.interactions?.escalation || '',
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success && data.systemPrompt) {
+          textarea.value = data.systemPrompt;
+          btn.innerHTML = '✅ Done!';
+          setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000);
+        } else {
+          throw new Error(data.error || 'Failed to generate');
+        }
+      } catch (err) {
+        console.error('System prompt generation failed:', err);
+        btn.innerHTML = '❌ Failed';
+        setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000);
+      }
+    }
+
     async function generateSkillsWithAI() {
       if (!selectedAgentId) return;
       const agent = agents.find(a => a.id === selectedAgentId);
@@ -4242,6 +4270,35 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
         window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
       } else {
         console.warn('[design-studio] auth-ui.js not loaded; continuing with local token fallback');
+      }
+
+      // Detail panel resize
+      const detailHandle = document.getElementById('detail-resize');
+      const detailPanel = document.querySelector('.detail-panel');
+      if (detailHandle && detailPanel) {
+        let resizing = false;
+        detailHandle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          resizing = true;
+          detailHandle.classList.add('active');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+        });
+        document.addEventListener('mousemove', (e) => {
+          if (!resizing) return;
+          const newWidth = window.innerWidth - e.clientX;
+          if (newWidth >= 280 && newWidth <= 800) {
+            detailPanel.style.width = newWidth + 'px';
+          }
+        });
+        document.addEventListener('mouseup', () => {
+          if (resizing) {
+            resizing = false;
+            detailHandle.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+          }
+        });
       }
 
       init();
@@ -4432,8 +4489,13 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
     // Save current BPMN from editor to database
     async function saveCurrentBPMN() {
       const processId = selectedProcessId || selectedAgentId;
-      if (!processId || !window.bpmnViewer) {
-        alert('No BPMN to save');
+      if (!processId) {
+        alert('No agent selected');
+        return;
+      }
+      const editor = bpmnModeler || window.bpmnViewer;
+      if (!editor) {
+        alert('No flow editor loaded — try switching to the Flow tab first');
         return;
       }
       
@@ -4445,7 +4507,7 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       
       try {
         // Export current BPMN XML from the editor
-        const { xml } = await window.bpmnViewer.saveXML({ format: true });
+        const { xml } = await editor.saveXML({ format: true });
         
         if (xml) {
           await saveBpmnToAgent(processId, xml, 'User edited');
@@ -4732,6 +4794,9 @@ ${gatewayShapes}
         setTimeout(fitCanvas, 150);
         setTimeout(fitCanvas, 300);
         
+        // Extract human checkpoints from this BPMN
+        setTimeout(extractHumanCheckpoints, 200);
+        
         // Update stats
         const statsEl = document.getElementById('bpmn-stats');
         const taskCount = (bpmnXml.match(/<bpmn:(service|user)Task/g) || []).length;
@@ -4782,6 +4847,152 @@ ${gatewayShapes}
       }
     }
 
+    // ========================================================================
+    // Human Checkpoints (HITL per flow step)
+    // ========================================================================
+    let currentCheckpoints = [];
+
+    function extractHumanCheckpoints() {
+      const panel = document.getElementById('hitl-checkpoints-panel');
+      const emptyEl = document.getElementById('hitl-checkpoints-empty');
+      const listEl = document.getElementById('hitl-checkpoints-list');
+      const saveBtn = document.getElementById('save-checkpoints-btn');
+
+      // Get current BPMN XML
+      const agentId = selectedProcessId || selectedAgentId;
+      const bpmnXml = agentBpmnCache[agentId] || agents.find(a => a.id === agentId)?.config?.bpmnXml;
+      if (!bpmnXml) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      panel.style.display = 'block';
+
+      // Parse BPMN XML for human tasks
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(bpmnXml, 'text/xml');
+      const tasks = [];
+
+      // Find userTask, manualTask, and tasks in human/reviewer lanes
+      const userTasks = doc.querySelectorAll('userTask, bpmn\\:userTask, bpmn2\\:userTask');
+      const manualTasks = doc.querySelectorAll('manualTask, bpmn\\:manualTask, bpmn2\\:manualTask');
+
+      [...userTasks, ...manualTasks].forEach(task => {
+        tasks.push({
+          taskId: task.getAttribute('id') || '',
+          taskName: task.getAttribute('name') || 'Unnamed Task',
+          taskType: task.tagName.includes('manual') ? 'manual' : 'user',
+        });
+      });
+
+      // Also look for tasks inside lanes that contain "human" or "reviewer"
+      const lanes = doc.querySelectorAll('lane, bpmn\\:lane, bpmn2\\:lane');
+      lanes.forEach(lane => {
+        const laneName = (lane.getAttribute('name') || '').toLowerCase();
+        if (laneName.includes('human') || laneName.includes('reviewer') || laneName.includes('approver') || laneName.includes('manager')) {
+          const flowNodeRefs = lane.querySelectorAll('flowNodeRef, bpmn\\:flowNodeRef, bpmn2\\:flowNodeRef');
+          flowNodeRefs.forEach(ref => {
+            const refId = ref.textContent?.trim();
+            if (!refId) return;
+            // Check if this task is already found
+            if (tasks.some(t => t.taskId === refId)) return;
+            // Find the task element
+            const taskEl = doc.querySelector(`[id="${refId}"]`);
+            if (taskEl && (taskEl.tagName.includes('ask') || taskEl.tagName.includes('Task'))) {
+              tasks.push({
+                taskId: refId,
+                taskName: taskEl.getAttribute('name') || 'Unnamed Task',
+                taskType: 'human-lane',
+              });
+            }
+          });
+        }
+      });
+
+      // Load existing checkpoint configs
+      const agent = agents.find(a => a.id === agentId);
+      const savedCheckpoints = agent?.config?.hitlCheckpoints || [];
+
+      currentCheckpoints = tasks.map(task => {
+        const saved = savedCheckpoints.find(c => c.taskId === task.taskId);
+        return {
+          taskId: task.taskId,
+          taskName: task.taskName,
+          taskType: task.taskType,
+          hitlType: saved?.hitlType || 'hitl',
+          approver: saved?.approver || '',
+          timeoutMinutes: saved?.timeoutMinutes || 60,
+        };
+      });
+
+      if (currentCheckpoints.length === 0) {
+        emptyEl.style.display = 'block';
+        listEl.innerHTML = '';
+        saveBtn.style.display = 'none';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      saveBtn.style.display = 'block';
+      listEl.innerHTML = currentCheckpoints.map((cp, i) => `
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.85rem;">🙋</span>
+            <strong style="color: #e2e8f0; font-size: 0.85rem; flex: 1;">${escapeHtml(cp.taskName)}</strong>
+            <span style="font-size: 0.65rem; color: #64748b; background: #1e293b; padding: 0.15rem 0.4rem; border-radius: 3px;">${cp.taskType}</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.65rem; color: #64748b; display: block; margin-bottom: 0.2rem;">Type</label>
+              <select id="cp-type-${i}" style="width: 100%; padding: 0.35rem; background: #1e293b; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 0.8rem;">
+                <option value="hitl" ${cp.hitlType === 'hitl' ? 'selected' : ''}>HITL — Must approve</option>
+                <option value="hotl" ${cp.hitlType === 'hotl' ? 'selected' : ''}>HOTL — Can intervene</option>
+                <option value="hitm" ${cp.hitlType === 'hitm' ? 'selected' : ''}>HITM — Co-decides</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.65rem; color: #64748b; display: block; margin-bottom: 0.2rem;">Approver</label>
+              <input type="text" id="cp-approver-${i}" value="${escapeHtml(cp.approver)}" placeholder="Role or person" style="width: 100%; padding: 0.35rem; background: #1e293b; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 0.8rem;">
+            </div>
+            <div>
+              <label style="font-size: 0.65rem; color: #64748b; display: block; margin-bottom: 0.2rem;">Timeout (min)</label>
+              <input type="number" id="cp-timeout-${i}" value="${cp.timeoutMinutes}" min="1" max="10080" style="width: 100%; padding: 0.35rem; background: #1e293b; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; font-size: 0.8rem;">
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function saveHitlCheckpoints() {
+      const agentId = selectedProcessId || selectedAgentId;
+      if (!agentId) return;
+
+      const checkpoints = currentCheckpoints.map((cp, i) => ({
+        taskId: cp.taskId,
+        taskName: cp.taskName,
+        taskType: cp.taskType,
+        hitlType: document.getElementById(`cp-type-${i}`)?.value || 'hitl',
+        approver: document.getElementById(`cp-approver-${i}`)?.value || '',
+        timeoutMinutes: parseInt(document.getElementById(`cp-timeout-${i}`)?.value) || 60,
+      }));
+
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+
+      agent.config = agent.config || {};
+      agent.config.hitlCheckpoints = checkpoints;
+
+      try {
+        await saveAgentToAPI(agentId, { config: agent.config });
+        const btn = document.getElementById('save-checkpoints-btn');
+        btn.textContent = '✅ Saved!';
+        setTimeout(() => { btn.textContent = '💾 Save Checkpoints'; }, 1500);
+      } catch (err) {
+        console.error('Failed to save checkpoints:', err);
+        alert('Failed to save checkpoints');
+      }
+    }
+
     function exportProcessBPMN() {
       if (!currentBpmnXml || !selectedProcessId) {
         showNotification('Select a process first', 'warning');
@@ -4807,6 +5018,10 @@ ${gatewayShapes}
       if (originalShowWorkspaceTab) originalShowWorkspaceTab(tabName);
       if (tabName === 'bpmn') {
         renderBpmnProcessList();
+        // Auto-select current agent's BPMN if not already selected
+        if (selectedAgentId && selectedProcessId !== selectedAgentId) {
+          selectBpmnProcess(selectedAgentId);
+        }
       }
     };
 
@@ -5049,6 +5264,76 @@ ${gatewayShapes}
     async function addIntegration(agentId, integrationName) {
       openIntegrationModal(agentId, integrationName, null);
     }
+
+    // ========================================================================
+    // Tool Search (searches integration catalog + future tools database)
+    // ========================================================================
+    function searchTools(query) {
+      const resultsEl = document.getElementById('tool-search-results');
+      if (!query || query.length < 2) {
+        resultsEl.style.display = 'none';
+        return;
+      }
+
+      const q = query.toLowerCase();
+      const matches = integrationCatalog.filter(t =>
+        (t.name || '').toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q) ||
+        (t.type || '').toLowerCase().includes(q) ||
+        (t.category || '').toLowerCase().includes(q)
+      ).slice(0, 10);
+
+      if (matches.length === 0) {
+        resultsEl.innerHTML = `
+          <div style="padding: 0.75rem; color: #64748b; font-size: 0.85rem; text-align: center;">
+            No tools found for "${escapeHtml(query)}"
+            <div style="margin-top: 0.5rem;">
+              <button class="btn btn-sm btn-secondary" style="font-size: 0.75rem;" onclick="addCustomTool()">+ Add Custom Tool</button>
+            </div>
+          </div>`;
+      } else {
+        const agent = agents.find(a => a.id === selectedAgentId);
+        const existingNames = (agent?.integrations || []).map(i => i.integration_name);
+        resultsEl.innerHTML = matches.map(t => {
+          const isAdded = existingNames.includes(t.name);
+          return `
+            <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; cursor: ${isAdded ? 'default' : 'pointer'}; border-bottom: 1px solid #0f172a; transition: background 0.15s; opacity: ${isAdded ? '0.5' : '1'};"
+                 onmouseover="this.style.background='#334155'" onmouseout="this.style.background='transparent'"
+                 onclick="${isAdded ? '' : `addToolFromSearch('${escapeHtml(t.name)}')`}">
+              <span style="font-size: 1.1rem;">${t.icon || '🔌'}</span>
+              <div style="flex: 1; min-width: 0;">
+                <div style="color: #e2e8f0; font-size: 0.85rem; font-weight: 500;">${escapeHtml(t.name)}</div>
+                <div style="color: #64748b; font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(t.description || t.type || '')}</div>
+              </div>
+              ${isAdded ? '<span style="color: #10b981; font-size: 0.7rem;">✓ Added</span>' : '<span style="color: #6366f1; font-size: 0.75rem;">+ Add</span>'}
+            </div>`;
+        }).join('');
+      }
+      resultsEl.style.display = 'block';
+    }
+
+    function showToolSearchResults() {
+      const val = document.getElementById('tool-search-input').value;
+      if (val && val.length >= 2) searchTools(val);
+    }
+
+    function hideToolSearchResults() {
+      document.getElementById('tool-search-results').style.display = 'none';
+    }
+
+    function addToolFromSearch(toolName) {
+      if (!selectedAgentId) return;
+      document.getElementById('tool-search-input').value = '';
+      document.getElementById('tool-search-results').style.display = 'none';
+      addIntegration(selectedAgentId, toolName);
+    }
+
+    function addCustomTool() {
+      if (!selectedAgentId) return;
+      document.getElementById('tool-search-input').value = '';
+      document.getElementById('tool-search-results').style.display = 'none';
+      openIntegrationModal(selectedAgentId, '', null);
+    }
     
     // Open integration configuration modal
     function openIntegrationModal(agentId, integrationName, integrationId) {
@@ -5255,16 +5540,6 @@ ${gatewayShapes}
           listenTopics: [...tagData['listen-topics']],
           publishTopics: [...tagData['publish-topics']],
           messageTypes: document.getElementById('agent-message-types-config').value.split(',').map(s => s.trim()).filter(Boolean),
-          dataStore: {
-            database: document.getElementById('agent-db-name-config').value,
-            collections: {
-              memory: document.getElementById('col-memory').checked,
-              state: document.getElementById('col-state').checked,
-              tasks: document.getElementById('col-tasks').checked,
-              decisions: document.getElementById('col-decisions').checked,
-            },
-            partitionKey: document.getElementById('agent-partition-key-config').value,
-          },
           modelConfig: {
             provider: document.getElementById('agent-model-provider').value,
             deployment: document.getElementById('agent-model-config').value,
@@ -5272,12 +5547,7 @@ ${gatewayShapes}
             maxTokens: parseInt(document.getElementById('agent-max-tokens-config').value) || 4096,
             temperature: parseFloat(document.getElementById('agent-temperature-config').value) || 0.3,
           },
-          hitl: {
-            approvalRequired: document.getElementById('agent-hitl-required').checked,
-            approvalThreshold: document.getElementById('agent-hitl-threshold').value,
-            escalationTarget: document.getElementById('agent-hitl-escalation').value,
-            timeoutMinutes: parseInt(document.getElementById('agent-hitl-timeout').value) || 60,
-          },
+          autonomyLevel: document.getElementById('agent-autonomy-config').value,
         };
         
         await saveAgentToAPI(selectedAgentId, { config });
@@ -5399,16 +5669,6 @@ ${gatewayShapes}
           messageTypes: (document.getElementById('agent-message-types-config')?.value || '').split(',').map(s => s.trim()).filter(Boolean),
           interactionPattern: document.getElementById('agent-interaction-config')?.value || 'event-driven',
         },
-        dataStore: {
-          database: document.getElementById('agent-db-name-config')?.value || 'flowgrid-agents',
-          collections: {
-            memory: document.getElementById('col-memory')?.checked ?? true,
-            state: document.getElementById('col-state')?.checked ?? true,
-            tasks: document.getElementById('col-tasks')?.checked ?? true,
-            decisions: document.getElementById('col-decisions')?.checked ?? true,
-          },
-          partitionKey: document.getElementById('agent-partition-key-config')?.value || '/tenantId',
-        },
         model: {
           provider: document.getElementById('agent-model-provider')?.value || 'azure-openai',
           deployment: document.getElementById('agent-model-config')?.value || 'gpt-4o',
@@ -5492,6 +5752,35 @@ ${gatewayShapes}
       document.getElementById('manifest-display').style.border = enabled ? '1px solid #f59e0b' : 'none';
     }
     
+    function switchCodeView(view) {
+      // Toggle pre elements
+      document.getElementById('manifest-display').style.display = view === 'manifest' ? 'block' : 'none';
+      document.getElementById('agent-code').style.display = view === 'function-app' ? 'block' : 'none';
+      document.getElementById('bicep-code').style.display = view === 'bicep' ? 'block' : 'none';
+
+      // Toggle action bars
+      document.querySelectorAll('.code-actions-bar').forEach(el => el.style.display = 'none');
+      const bar = document.getElementById(`code-actions-${view}`);
+      if (bar) bar.style.display = 'flex';
+
+      // Toggle edit mode label (manifest only)
+      document.getElementById('edit-mode-label').style.display = view === 'manifest' ? 'flex' : 'none';
+
+      // Update hint text
+      const hints = {
+        'manifest': 'Deployment descriptor assembled from Configure tab',
+        'function-app': 'Azure Functions scaffolding based on manifest',
+        'bicep': 'Infrastructure as Code for Azure resource provisioning',
+      };
+      document.getElementById('code-view-hint').textContent = hints[view] || '';
+    }
+
+    function copyBicep() {
+      const text = document.getElementById('bicep-code')?.textContent || '';
+      if (!text) return alert('No Bicep code to copy');
+      navigator.clipboard.writeText(text);
+    }
+
     function copyManifest() {
       const text = document.getElementById('manifest-display').textContent;
       navigator.clipboard.writeText(text);
@@ -5579,7 +5868,9 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
       if (!manifest) return alert('Generate manifest first');
       const bicep = generateBicep(manifest);
       document.getElementById('bicep-code').textContent = bicep;
-      document.getElementById('bicep-container').style.display = 'block';
+      // Auto-switch to bicep view
+      document.getElementById('code-view-selector').value = 'bicep';
+      switchCodeView('bicep');
     }
     
     function downloadManifestPackage(agentId) {
@@ -5656,12 +5947,7 @@ ${agent.config.generatedCode ? `--- src/index.js ---\n${agent.config.generatedCo
     }
     
     function populateEscalationTargets() {
-      const select = document.getElementById('agent-hitl-escalation');
-      if (!select) return;
-      const currentId = selectedAgentId;
-      select.innerHTML = '<option value="">-- Select Agent --</option>' +
-        agents.filter(a => a.id !== currentId && (a.elementType === 'Agent' || !a.elementType))
-          .map(a => `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)}</option>`).join('');
+      // No longer needed — escalation target is now a free-text field for human roles/persons
     }
     
     function showModelRecommendation(pattern) {

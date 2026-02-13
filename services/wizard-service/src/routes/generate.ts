@@ -770,4 +770,63 @@ Generate 3-5 skills as a JSON array with this structure:
   }
 });
 
+// POST /api/wizard/generate-system-prompt
+// Generate a proper system prompt from agent metadata
+// ============================================================================
+router.post('/generate-system-prompt', async (req: Request, res: Response) => {
+  try {
+    const { agentName, purpose, pattern, skills, triggers, outputs, escalationPath, autonomyLevel } = req.body;
+
+    if (!agentName || !purpose) {
+      return res.status(400).json({ error: 'agentName and purpose are required' });
+    }
+
+    const prompt = `You are a prompt engineer. Generate a system prompt for an AI agent.
+
+AGENT METADATA:
+- Name: ${agentName}
+- Purpose: ${purpose}
+- Pattern: ${pattern || 'specialist'}
+- Autonomy: ${autonomyLevel || 'supervised'}
+${skills?.length ? `- Skills: ${skills.map((s: any) => s.display_name || s.name).join(', ')}` : ''}
+${triggers?.length ? `- Triggers (what activates this agent): ${triggers.join(', ')}` : ''}
+${outputs?.length ? `- Outputs (what this agent produces): ${outputs.join(', ')}` : ''}
+${escalationPath ? `- Escalation path: ${escalationPath}` : ''}
+
+SYSTEM PROMPT REQUIREMENTS:
+1. Start with "You are the [Agent Name]..." establishing identity and role
+2. Include a **Your role** section (1-2 sentences)
+3. Include a **Your capabilities** section (bullet list of what it can do, derived from skills/purpose)
+4. Include a **Your constraints** section (bullet list of guardrails, escalation rules, when to ask for help)
+5. Include **Your input** and **Your output** sections (one line each, derived from triggers/outputs)
+6. Be specific and actionable — avoid vague instructions
+7. Keep it under 300 words
+8. Use markdown formatting (bold headers, bullet lists)
+9. Do NOT wrap in code blocks or quotes — return the prompt text directly
+
+Generate ONLY the system prompt text, nothing else.`;
+
+    const anthropic = new (await import('@anthropic-ai/sdk')).default();
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      temperature: 0.3,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const systemPrompt = (message.content[0] as any).text?.trim() || '';
+
+    res.json({
+      success: true,
+      systemPrompt,
+      agentName,
+      generatedAt: new Date().toISOString(),
+    });
+
+  } catch (error: any) {
+    console.error(`[${SERVICE_NAME}] Generate system prompt error:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

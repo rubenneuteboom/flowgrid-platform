@@ -1307,15 +1307,19 @@ router.post('/sessions/:id/apply', async (req: Request, res: Response) => {
       if (agentSkillsEntry?.skills) {
         for (const skill of agentSkillsEntry.skills) {
           await client.query(
-            `INSERT INTO agent_skills (agent_id, skill_id, name, description, input_schema, output_schema)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
+            `INSERT INTO agent_skills (agent_id, tenant_id, skill_id, name, display_name, description, input_schema, output_schema, tags, examples)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
             [
               realId,
+              tenantId,
               skill.skillId,
               skill.name,
+              skill.name.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()), // Generate display_name from skill name
               skill.description,
               JSON.stringify(skill.inputSchema || {}),
               JSON.stringify(skill.outputSchema || {}),
+              skill.tags || [],
+              JSON.stringify(skill.examples || []),
             ]
           );
         }

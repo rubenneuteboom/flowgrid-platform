@@ -105,6 +105,15 @@
             padding-top: 0.8rem;
         }
 
+        .sign-out-link {
+            color: var(--text-muted);
+        }
+        .sign-out-link:hover {
+            color: var(--danger) !important;
+            border-color: rgba(239, 68, 68, 0.3) !important;
+            background: rgba(239, 68, 68, 0.08) !important;
+        }
+
         .content {
             flex: 1;
             display: flex;
@@ -126,6 +135,14 @@
         }
 
         #active-title { color: var(--text-primary); font-weight: 600; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
 
         .frame-wrap {
             flex: 1;
@@ -187,13 +204,17 @@
             <div class="sidebar-footer nav-group">
                 <div class="nav-label">Account</div>
                 <button class="nav-link" data-url="/profile.html" data-title="Profile">👤 Profile</button>
-                <button class="nav-link" data-url="/configuration.html" data-title="Configuration">⚙️ Configuration</button>
+                <button class="nav-link" data-url="/configuration.html" data-title="Configuration">⚙️ Settings</button>
+                <button class="nav-link sign-out-link" id="shell-sign-out">🚪 Sign Out</button>
             </div>
         </aside>
 
         <section class="content">
             <div class="content-header">
                 <span id="active-title">Flowgrid</span>
+                <div class="user-info">
+                    <span id="user-display-name"></span>
+                </div>
             </div>
             <div class="frame-wrap">
                 <iframe id="module-frame" title="Flowgrid Module"></iframe>
@@ -207,7 +228,7 @@
       const bootEl = document.getElementById('boot');
       const frameEl = document.getElementById('module-frame');
       const titleEl = document.getElementById('active-title');
-      const navLinks = Array.from(document.querySelectorAll('.nav-link'));
+      const navLinks = Array.from(document.querySelectorAll('.nav-link[data-url]'));
 
       function getAuthHeaders(extra = {}) {
         const token = window.FlowgridAuthUI.getAuthToken();
@@ -215,8 +236,6 @@
       }
 
       async function isTenantPopulated() {
-        // Check if the tenant has any foundations (wizard completions)
-        // If no foundations exist, the user needs to run the Foundation Wizard first
         const cacheBuster = `_t=${Date.now()}`;
         const response = await fetch(`/api/wizard/foundations?limit=1&${cacheBuster}`, {
           headers: getAuthHeaders(),
@@ -224,29 +243,19 @@
           cache: 'no-store'
         });
 
-        if (response.status === 401 || response.status === 403) {
-          const target = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.replace(`/login.html?redirect=${target}`);
-          return null;
-        }
+        if (response.status === 401 || response.status === 403) return null;
 
         if (!response.ok) {
-          // If foundations API fails (e.g. table not yet created), treat as empty
           console.warn('[bootstrap] Foundations check failed, treating as empty');
           return false;
         }
 
         const contentType = response.headers.get('content-type') || '';
-        if (!contentType.includes('application/json')) {
-          return false;
-        }
+        if (!contentType.includes('application/json')) return false;
 
         const payload = await response.json();
-        // Handle {success: false} from API errors gracefully
         if (payload?.success === false) return false;
-        // API returns { success: true, foundations: [...] }
         if (Array.isArray(payload?.foundations)) return payload.foundations.length > 0;
-        // Fallback: check common pagination formats
         const total = payload?.meta?.total ?? payload?.total;
         return Number.isFinite(total) ? total > 0 : Array.isArray(payload?.data) && payload.data.length > 0;
       }
@@ -264,8 +273,7 @@
         activateNav(button);
       }
 
-      // Expose function for iframe to call (e.g., after wizard completion)
-      window.loadModuleByUrl = function(url, title) {
+      function loadModuleByUrl(url, title) {
         const matchingButton = navLinks.find(btn => btn.dataset.url === url);
         if (matchingButton) {
           loadModule(matchingButton);
@@ -274,40 +282,93 @@
           titleEl.textContent = title || 'Flowgrid';
           navLinks.forEach(btn => btn.classList.remove('active'));
         }
-      };
+      }
+
+      // Expose for iframes (e.g., wizard completion → navigate to design)
+      window.loadModuleByUrl = loadModuleByUrl;
+
+      function showShell() {
+        bootEl.style.display = 'none';
+        shellEl.style.display = 'flex';
+      }
+
+      function setupNav() {
+        navLinks.forEach(button => {
+          button.addEventListener('click', () => loadModule(button));
+        });
+      }
+
+      function setupSignOut() {
+        const btn = document.getElementById('shell-sign-out');
+        if (btn && window.FlowgridAuthUI) {
+          btn.addEventListener('click', () => {
+            window.FlowgridAuthUI.signOut();
+          });
+        }
+      }
+
+      function showUserInfo() {
+        try {
+          const token = window.FlowgridAuthUI.getAuthToken();
+          if (!token) return;
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const nameEl = document.getElementById('user-display-name');
+          if (nameEl && payload.name) {
+            nameEl.textContent = `👤 ${payload.name}`;
+          } else if (nameEl && payload.email) {
+            nameEl.textContent = `👤 ${payload.email}`;
+          }
+        } catch (e) { /* ignore */ }
+      }
 
       async function bootstrap() {
-        // Check auth BEFORE any API calls - initPage redirects but doesn't stop execution
+        // Check auth
         if (!window.FlowgridAuthUI.isAuthenticated()) {
           window.FlowgridAuthUI.initPage({ requireAuth: true });
           return;
         }
-        
-        window.FlowgridAuthUI.initPage({ requireAuth: true });
+
+        window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
 
         try {
           const populated = await isTenantPopulated();
-          if (populated === null) return;
 
-          if (!populated) {
-            window.location.replace('/wizard.html?onboarding=true');
+          if (populated === null) {
+            // Auth failed — redirect to login
+            const target = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.replace(`/login.html?redirect=${target}`);
             return;
           }
 
-          bootEl.style.display = 'none';
-          shellEl.style.display = 'flex';
+          // Always show the shell — never redirect away
+          showShell();
+          setupNav();
+          setupSignOut();
+          showUserInfo();
 
-          navLinks.forEach((button) => {
-            button.addEventListener('click', () => loadModule(button));
-          });
-
-          const defaultButton = navLinks.find((btn) => btn.dataset.url === '/design/') || navLinks[0];
-          if (defaultButton) {
-            loadModule(defaultButton);
+          if (!populated) {
+            // No foundations yet — load wizard inside the iframe
+            const wizardButton = navLinks.find(btn => btn.dataset.url === '/wizard.html');
+            if (wizardButton) {
+              wizardButton.dataset.url = '/wizard.html?onboarding=true';
+              loadModule(wizardButton);
+              wizardButton.dataset.url = '/wizard.html'; // reset for future clicks
+            } else {
+              frameEl.src = '/wizard.html?onboarding=true';
+              titleEl.textContent = 'Onboarding Wizard';
+            }
+          } else {
+            // Load Design Studio by default
+            const defaultButton = navLinks.find(btn => btn.dataset.url === '/design/') || navLinks[0];
+            if (defaultButton) loadModule(defaultButton);
           }
         } catch (error) {
           console.error('[index-shell] bootstrap failed', error);
-          bootEl.innerHTML = '<p class="error">Failed to load workspace. Please refresh.</p>';
+          // Still show the shell with an error state rather than a blank page
+          showShell();
+          setupNav();
+          setupSignOut();
+          frameEl.srcdoc = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-family:sans-serif;"><p>Failed to load workspace. Please refresh.</p></div>';
         }
       }
 
