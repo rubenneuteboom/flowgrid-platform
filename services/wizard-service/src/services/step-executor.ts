@@ -10,6 +10,7 @@ import {
   ExtractCapabilitiesOutput,
   ClassifyElementsOutput,
   ProposeAgentsOutput,
+  OptimizeAgentsOutput,
   AssignPatternsOutput,
   DefineSkillsOutput,
   RelationshipsOutput,
@@ -24,6 +25,7 @@ export interface StepResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+  metadata?: Record<string, any>;
   usage?: {
     inputTokens: number;
     outputTokens: number;
@@ -182,6 +184,7 @@ export async function executeStep3(input: Step3Input): Promise<StepResult<Propos
   console.log('[step-executor] Step 3: Proposing agents...');
 
   try {
+    // Phase 1: Propose initial agents
     const result = await executePrompt<
       { elements: ClassifyElementsOutput['elements']; targetAgentCount?: number },
       ProposeAgentsOutput
@@ -198,12 +201,90 @@ export async function executeStep3(input: Step3Input): Promise<StepResult<Propos
       };
     }
 
+    // Phase 2: Optimize — review and refine agent proposals
+    console.log('[step-executor] Step 3b: Optimizing agents...');
+    const optimizeResult = await executePrompt<
+      { proposedAgents: ProposeAgentsOutput; elements: ClassifyElementsOutput['elements']; organizationContext?: string },
+      OptimizeAgentsOutput
+    >('step3.optimize-agents', {
+      proposedAgents: result.data,
+      elements: input.elements,
+    });
+
+    if (!optimizeResult.success || !optimizeResult.data) {
+      // Optimization failed — return unoptimized result (graceful degradation)
+      console.warn('[step-executor] Agent optimization failed, using unoptimized agents:', optimizeResult.error);
+      return {
+        success: true,
+        data: result.data,
+        usage: {
+          inputTokens: result.usage?.inputTokens || 0,
+          outputTokens: result.usage?.outputTokens || 0,
+        },
+        executionTimeMs: Date.now() - startTime,
+      };
+    }
+
+    // Map optimized agents back to ProposeAgentsOutput format
+    const optimizedData: ProposeAgentsOutput = {
+      agents: optimizeResult.data.optimizedAgents
+        .filter(a => a.status === 'keep' || a.status === 'merge' || a.status === 'new')
+        .map(a => ({
+          id: a.id,
+          name: a.name,
+          purpose: a.purpose,
+          shortDescription: a.shortDescription,
+          detailedPurpose: a.detailedPurpose,
+          businessValue: a.businessValue,
+          keyResponsibilities: a.keyResponsibilities,
+          successCriteria: a.successCriteria,
+          suggestedPattern: a.suggestedPattern || 'specialist',
+          suggestedAutonomy: a.suggestedAutonomy || 'supervised',
+          decisionAuthority: a.decisionAuthority,
+          valueStream: a.valueStream,
+          capabilityGroup: a.capabilityGroup,
+          objectives: a.objectives,
+          kpis: a.kpis,
+          interactionPattern: a.interactionPattern,
+          triggers: a.triggers,
+          outputs: a.outputs,
+          escalationPath: a.escalationPath,
+          responsibilities: a.responsibilities,
+          ownedElements: a.ownedElements || [],
+          boundaries: a.boundaries || { internal: [], delegates: [], escalates: [] },
+          isOrchestrator: a.isOrchestrator,
+          needsInternalBpmn: a.needsInternalBpmn,
+        })),
+      orphanedElements: result.data.orphanedElements || [],
+    };
+
+    // Inject demoted tools onto owning agents
+    const demotedTools = optimizeResult.data.demotedToTools || [];
+    for (const agent of optimizedData.agents) {
+      (agent as any).tools = demotedTools
+        .filter(t => t.assignedToAgentId === agent.id)
+        .map(t => ({ name: t.toolName, description: t.toolDescription, source: 'demoted' as const, originalAgent: t.originalAgentName }));
+    }
+
+    console.log(`[step-executor] Optimization: ${result.data.agents.length} agents → ${optimizedData.agents.length} agents. ${optimizeResult.data.demotedToTools?.length || 0} demoted to tools. Summary: ${optimizeResult.data.optimizationSummary}`);
+
     return {
       success: true,
-      data: result.data,
+      data: optimizedData,
+      metadata: {
+        optimization: {
+          originalAgentCount: result.data.agents.length,
+          optimizedAgentCount: optimizedData.agents.length,
+          demotedToTools: optimizeResult.data.demotedToTools || [],
+          movedToAsync: optimizeResult.data.movedToAsync || [],
+          mergedAgents: optimizeResult.data.mergedAgents || [],
+          addedHitlPoints: optimizeResult.data.addedHitlPoints || [],
+          summary: optimizeResult.data.optimizationSummary,
+        },
+      },
       usage: {
-        inputTokens: result.usage?.inputTokens || 0,
-        outputTokens: result.usage?.outputTokens || 0,
+        inputTokens: (result.usage?.inputTokens || 0) + (optimizeResult.usage?.inputTokens || 0),
+        outputTokens: (result.usage?.outputTokens || 0) + (optimizeResult.usage?.outputTokens || 0),
       },
       executionTimeMs: Date.now() - startTime,
     };

@@ -21,7 +21,9 @@ export const AgenticPattern = z.enum([
   'gateway',
   'monitor',
   'executor',
-  'analyzer'
+  'analyzer',
+  'validator',
+  'router'
 ]);
 export type AgenticPattern = z.infer<typeof AgenticPattern>;
 
@@ -112,10 +114,84 @@ export const ProposeAgentsOutputSchema = z.object({
     // Orchestration & BPMN fields (new)
     isOrchestrator: z.boolean().optional(), // True if this agent coordinates other agents
     needsInternalBpmn: z.boolean().optional(), // True = always generate internal BPMN
+    tools: z.array(z.object({
+      name: z.string().max(80),
+      description: z.string().max(200),
+      source: z.enum(['demoted', 'manual']).optional(),
+      originalAgent: z.string().max(80).optional(),
+    })).optional(),
   })),
   orphanedElements: z.array(z.string()),
 });
 export type ProposeAgentsOutput = z.infer<typeof ProposeAgentsOutputSchema>;
+
+/** 3x: Optimize agents — review and refine proposals */
+export const OptimizeAgentsOutputSchema = z.object({
+  optimizedAgents: z.array(z.object({
+    id: z.string(),
+    name: z.string().max(80),
+    purpose: z.string().max(500),
+    status: z.enum(['keep', 'merge', 'demote-to-tool', 'move-to-async', 'new']),
+    reasoning: z.string().max(500),
+    // Description fields
+    shortDescription: z.string().max(100).optional(),
+    detailedPurpose: z.string().max(500).optional(),
+    businessValue: z.string().max(300).optional(),
+    keyResponsibilities: z.array(z.string()).max(6).optional(),
+    successCriteria: z.string().max(300).optional(),
+    // Design fields
+    suggestedPattern: AgenticPattern.optional(),
+    suggestedAutonomy: AutonomyLevel.optional(),
+    decisionAuthority: z.enum(['propose-only', 'propose-and-execute', 'autonomous-low-risk', 'fully-autonomous']).optional(),
+    valueStream: z.string().max(100).optional(),
+    capabilityGroup: z.string().max(100).optional(),
+    objectives: z.array(z.string()).max(5).optional(),
+    kpis: z.array(z.string()).max(5).optional(),
+    // Interaction fields
+    interactionPattern: z.enum(['request-response', 'event-driven', 'publish-subscribe', 'orchestrated', 'collaborative']).optional(),
+    triggers: z.array(z.string()).max(5).optional(),
+    outputs: z.array(z.string()).max(5).optional(),
+    escalationPath: z.string().max(150).optional(),
+    // Ownership fields
+    responsibilities: z.array(z.string()).optional(),
+    ownedElements: z.array(z.string()).optional(),
+    boundaries: z.object({
+      internal: z.array(z.string()),
+      delegates: z.array(z.string()),
+      escalates: z.array(z.string()),
+    }).optional(),
+    isOrchestrator: z.boolean().optional(),
+    needsInternalBpmn: z.boolean().optional(),
+  })),
+  demotedToTools: z.array(z.object({
+    originalAgentId: z.string(),
+    originalAgentName: z.string(),
+    toolName: z.string().max(80),
+    toolDescription: z.string().max(200),
+    assignedToAgentId: z.string(),
+    reasoning: z.string().max(300),
+  })),
+  movedToAsync: z.array(z.object({
+    originalAgentId: z.string(),
+    originalAgentName: z.string(),
+    asyncFlowName: z.string().max(100),
+    schedule: z.string().max(100),
+    reasoning: z.string().max(300),
+  })),
+  mergedAgents: z.array(z.object({
+    originalAgentIds: z.array(z.string()),
+    originalAgentNames: z.array(z.string()),
+    mergedIntoAgentId: z.string(),
+    reasoning: z.string().max(300),
+  })),
+  addedHitlPoints: z.array(z.object({
+    location: z.string().max(200),
+    type: z.enum(['HITL', 'HOTL', 'HITM']),
+    reason: z.string().max(300),
+  })).optional(),
+  optimizationSummary: z.string(),
+});
+export type OptimizeAgentsOutput = z.infer<typeof OptimizeAgentsOutputSchema>;
 
 /** 3b: Assign patterns with A2A metadata */
 export const AssignPatternsOutputSchema = z.object({

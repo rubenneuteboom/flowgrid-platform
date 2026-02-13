@@ -122,16 +122,62 @@ export async function executePrompt<TInput, TOutput>(
     // Build the user message
     const userMessage = prompt.buildUserMessage(input);
     
-    // Call Anthropic
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: maxTokens,
-      temperature,
-      system: prompt.systemPrompt,
-      messages: [
-        { role: 'user', content: userMessage }
-      ],
-    });
+    // Call Anthropic (use streaming for large token requests to avoid SDK timeout warnings)
+    const useStreaming = maxTokens > 8192;
+    let response: Anthropic.Messages.Message;
+    
+    if (useStreaming) {
+      response = await anthropic.messages.create({
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        system: prompt.systemPrompt,
+        messages: [
+          { role: 'user', content: userMessage }
+        ],
+        stream: true,
+      }).then(async (stream) => {
+        // Collect streamed response into a full message
+        let text = '';
+        let inputTokens = 0;
+        let outputTokens = 0;
+        let messageId = '';
+        let messageModel = model;
+        
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            text += event.delta.text;
+          } else if (event.type === 'message_start') {
+            inputTokens = event.message.usage?.input_tokens || 0;
+            messageId = event.message.id;
+            messageModel = event.message.model;
+          } else if (event.type === 'message_delta') {
+            outputTokens = (event as any).usage?.output_tokens || 0;
+          }
+        }
+        
+        return {
+          id: messageId,
+          type: 'message' as const,
+          role: 'assistant' as const,
+          model: messageModel,
+          content: [{ type: 'text' as const, text }],
+          usage: { input_tokens: inputTokens, output_tokens: outputTokens },
+          stop_reason: 'end_turn' as const,
+          stop_sequence: null,
+        } as Anthropic.Messages.Message;
+      });
+    } else {
+      response = await anthropic.messages.create({
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        system: prompt.systemPrompt,
+        messages: [
+          { role: 'user', content: userMessage }
+        ],
+      });
+    }
 
     // Extract text content
     const textContent = response.content.find(c => c.type === 'text');
@@ -286,6 +332,7 @@ import './step1/classify';
 
 // Step 3: Agent Design
 import './step3/propose-agents';
+import './step3/optimize-agents';
 import './step3/assign-patterns';
 import './step3/define-skills';
 
