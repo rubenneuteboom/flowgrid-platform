@@ -170,12 +170,39 @@
     document.body.appendChild(button);
   }
 
+  /**
+   * Check if the current access token is expired or about to expire (within 60s).
+   * If so, proactively refresh it before any API calls happen.
+   */
+  async function ensureFreshToken() {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      // Decode JWT payload (no verification, just check exp)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiresAt = payload.exp * 1000;
+      const now = Date.now();
+
+      // If token expires within 60 seconds, refresh proactively
+      if (expiresAt - now < 60000) {
+        await refreshAccessToken();
+      }
+    } catch (_) {
+      // If we can't decode, try refreshing anyway
+      await refreshAccessToken();
+    }
+  }
+
   function initPage(options = {}) {
     const requireAuth = options.requireAuth !== false;
     const showSignOut = options.showSignOut !== false;
 
     // Install auto-refresh interceptor once
     installAutoRefresh();
+
+    // Proactively refresh token if it's about to expire
+    ensureFreshToken();
 
     if (requireAuth && !isAuthenticated()) {
       redirectToLogin();
