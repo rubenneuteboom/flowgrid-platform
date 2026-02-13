@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FlowGrid Agent Manifest",
+  "description": "Deployment descriptor bridging FlowGrid Design to Runtime",
+  "type": "object",
+  "properties": {
+    "manifestVersion": { "const": "1.0.0" },
+    "agentId": { "type": "string" },
+    "agentName": { "type": "string" },
+    "pattern": { "enum": ["orchestrator", "specialist", "coordinator", "gatekeeper", "validator", "router"] },
+    "autonomy": { "enum": ["autonomous", "supervised", "human-in-loop"] },
+    "purpose": { "type": "string" },
+    "messaging": {
+      "type": "object",
+      "properties": {
+        "listenTopics": { "type": "array", "items": { "type": "string" } },
+        "publishTopics": { "type": "array", "items": { "type": "string" } },
+        "messageTypes": { "type": "array", "items": { "type": "string" } },
+        "interactionPattern": { "enum": ["request-response", "event-driven", "publish-subscribe", "orchestrated"] }
+      }
+    },
+    "dataStore": {
+      "type": "object",
+      "properties": {
+        "database": { "type": "string" },
+        "collections": { "type": "object" },
+        "partitionKey": { "type": "string", "default": "/tenantId" }
+      }
+    },
+    "model": {
+      "type": "object",
+      "properties": {
+        "provider": { "enum": ["azure-openai", "anthropic", "openai"] },
+        "deployment": { "type": "string" },
+        "systemPrompt": { "type": "string" },
+        "maxTokens": { "type": "integer" },
+        "temperature": { "type": "number" }
+      }
+    },
+    "capabilities": { "type": "array", "items": { "type": "string" } },
+    "tools": { "type": "array", "items": { "type": "string" } },
+    "bpmn": {
+      "type": "object",
+      "properties": {
+        "internalFlow": { "type": "string" },
+        "orchestratorRef": { "type": "string" }
+      }
+    },
+    "hitl": {
+      "type": "object",
+      "properties": {
+        "approvalRequired": { "type": "boolean" },
+        "approvalThreshold": { "type": "string" },
+        "escalationTarget": { "type": "string" },
+        "timeoutMinutes": { "type": "integer", "default": 60 }
+      }
+    },
+    "relationships": {
+      "type": "object",
+      "properties": {
+        "reportsTo": { "type": "string" },
+        "handsOffTo": { "type": "array", "items": { "type": "string" } },
+        "receivesFrom": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "target": { "enum": ["azure-functions", "container-apps", "local-docker"] },
+        "subscription": { "type": "string" },
+        "resourceGroup": { "type": "string" },
+        "region": { "type": "string" },
+        "functionAppName": { "type": "string" }
+      }
+    }
+  },
+  "required": ["manifestVersion", "agentId", "agentName", "pattern", "autonomy", "messaging", "model"]
+}

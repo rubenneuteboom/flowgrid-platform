@@ -429,10 +429,14 @@
           return;
         }
 
-        // Store token and redirect (delay for Safari localStorage timing)
+        // Store tokens and redirect (delay for Safari localStorage timing)
         if (data.accessToken) {
           localStorage.setItem('flowgrid_access_token', data.accessToken);
           sessionStorage.setItem('flowgrid_access_token', data.accessToken);
+        }
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+          sessionStorage.setItem('refreshToken', data.refreshToken);
         }
 
         await new Promise(r => setTimeout(r, 50));
@@ -467,10 +471,14 @@
           throw new Error(data.message || data.error || 'Verification failed');
         }
 
-        // Store token and redirect (delay for Safari localStorage timing)
+        // Store tokens and redirect (delay for Safari localStorage timing)
         if (data.accessToken) {
           localStorage.setItem('flowgrid_access_token', data.accessToken);
           sessionStorage.setItem('flowgrid_access_token', data.accessToken);
+        }
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+          sessionStorage.setItem('refreshToken', data.refreshToken);
         }
 
         await new Promise(r => setTimeout(r, 50));

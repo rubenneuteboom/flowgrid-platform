@@ -3,6 +3,9 @@
   const STORAGE_KEYS_TO_CLEAR = ['accessToken', 'flowgrid_access_token', 'refreshToken', 'user', 'tenant', 'oauthState'];
   const COOKIE_KEYS_TO_CLEAR = ['accessToken', 'flowgrid_access_token', 'refreshToken', 'session', 'sessionId'];
 
+  // Prevent concurrent refresh attempts
+  let _refreshPromise = null;
+
   function getAuthToken() {
     // Check localStorage first, then sessionStorage (Safari timing fallback)
     for (const key of ACCESS_KEYS) {
@@ -10,6 +13,15 @@
       if (value) return value;
     }
     return null;
+  }
+
+  function getRefreshToken() {
+    return localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
+  }
+
+  function storeAccessToken(token) {
+    localStorage.setItem('flowgrid_access_token', token);
+    sessionStorage.setItem('flowgrid_access_token', token);
   }
 
   function isAuthenticated() {
@@ -25,6 +37,74 @@
     COOKIE_KEYS_TO_CLEAR.forEach((name) => {
       document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
     });
+  }
+
+  /**
+   * Attempt to refresh the access token using the stored refresh token.
+   * Returns the new access token on success, null on failure.
+   * Deduplicates concurrent calls (only one refresh in-flight at a time).
+   */
+  async function refreshAccessToken() {
+    if (_refreshPromise) return _refreshPromise;
+
+    _refreshPromise = (async () => {
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) return null;
+
+      try {
+        const res = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        if (data.accessToken) {
+          storeAccessToken(data.accessToken);
+          return data.accessToken;
+        }
+        return null;
+      } catch (_) {
+        return null;
+      } finally {
+        _refreshPromise = null;
+      }
+    })();
+
+    return _refreshPromise;
+  }
+
+  /**
+   * Install a global fetch wrapper that automatically retries 401s
+   * after refreshing the access token. Call once on page load.
+   */
+  function installAutoRefresh() {
+    const _originalFetch = window.fetch;
+
+    window.fetch = async function (...args) {
+      const response = await _originalFetch.apply(this, args);
+
+      if (response.status !== 401) return response;
+
+      // Don't try to refresh the refresh call itself
+      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+      if (url.includes('/api/auth/refresh') || url.includes('/api/auth/login')) {
+        return response;
+      }
+
+      // Attempt token refresh
+      const newToken = await refreshAccessToken();
+      if (!newToken) return response; // refresh failed — return original 401
+
+      // Retry the original request with the new token
+      const [input, init = {}] = args;
+      const headers = new Headers(init.headers || {});
+      headers.set('Authorization', `Bearer ${newToken}`);
+      return _originalFetch.call(this, input, { ...init, headers });
+    };
   }
 
   async function signOut(options = {}) {
@@ -94,6 +174,9 @@
     const requireAuth = options.requireAuth !== false;
     const showSignOut = options.showSignOut !== false;
 
+    // Install auto-refresh interceptor once
+    installAutoRefresh();
+
     if (requireAuth && !isAuthenticated()) {
       redirectToLogin();
       return;
@@ -109,6 +192,8 @@
     signOut,
     isAuthenticated,
     getAuthToken,
+    getRefreshToken,
     clearAuthState,
+    refreshAccessToken,
   };
 })();

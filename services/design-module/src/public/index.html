@@ -105,6 +105,35 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
+    /* Tag Input */
+    .tag-input-container {
+      display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.35rem;
+      border: 1px solid #334155; border-radius: 6px; background: #0f172a; min-height: 36px; align-items: center;
+    }
+    .tag-input-container .tag-item {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      background: #1e40af; color: #93c5fd; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;
+    }
+    .tag-input-container .tag-item .tag-remove {
+      cursor: pointer; font-size: 0.65rem; opacity: 0.7; margin-left: 0.15rem;
+    }
+    .tag-input-container .tag-item .tag-remove:hover { opacity: 1; }
+    .tag-input-container .tag-input {
+      border: none; background: transparent; color: #e2e8f0; outline: none;
+      flex: 1; min-width: 80px; padding: 0.15rem; font-size: 0.8rem;
+    }
+    .tag-suggestions {
+      background: #1e293b; border: 1px solid #334155; border-radius: 4px; margin-top: 0.25rem; max-height: 120px; overflow-y: auto;
+    }
+    .tag-suggestions .suggestion-item {
+      padding: 0.35rem 0.5rem; font-size: 0.8rem; cursor: pointer; color: #94a3b8;
+    }
+    .tag-suggestions .suggestion-item:hover { background: #334155; color: #e2e8f0; }
+    
+    /* Manifest validation bar */
+    .manifest-valid { background: #064e3b; color: #34d399; }
+    .manifest-invalid { background: #7f1d1d; color: #fca5a5; }
+    
     body { 
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
       background: #0f172a; 
@@ -1672,7 +1701,8 @@
 
         <!-- Configure Tab -->
         <div id="tab-configure" class="tab-content">
-          <div class="section-header">🔗 Interactions</div>
+          <!-- 1. Messaging Configuration -->
+          <div class="section-header">📡 Messaging Configuration</div>
           <div class="form-group">
             <label>Interaction Pattern</label>
             <select id="agent-interaction-config">
@@ -1681,43 +1711,136 @@
               <option value="event-driven">Event-Driven</option>
               <option value="publish-subscribe">Publish-Subscribe</option>
               <option value="orchestrated">Orchestrated</option>
-              <option value="collaborative">Collaborative</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Triggers (comma-separated)</label>
+            <label>Listen Topics</label>
+            <div class="tag-input-container" id="listen-topics-container">
+              <div class="tag-list" id="listen-topics-tags"></div>
+              <input type="text" id="listen-topics-input" class="tag-input" placeholder="Type topic and press Enter" onkeydown="handleTagInput(event, 'listen-topics')">
+            </div>
+            <div id="listen-topics-suggestions" class="tag-suggestions" style="display:none;"></div>
+          </div>
+          <div class="form-group">
+            <label>Publish Topics</label>
+            <div class="tag-input-container" id="publish-topics-container">
+              <div class="tag-list" id="publish-topics-tags"></div>
+              <input type="text" id="publish-topics-input" class="tag-input" placeholder="Type topic and press Enter" onkeydown="handleTagInput(event, 'publish-topics')">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Message Types (comma-separated)</label>
+            <input type="text" id="agent-message-types-config" placeholder="TaskRequest, StatusUpdate, ResultReport">
+          </div>
+          <div class="form-group">
+            <label>Inbound Triggers (comma-separated)</label>
             <input type="text" id="agent-triggers-config" placeholder="incident created, change requested">
           </div>
           <div class="form-group">
-            <label>Outputs (comma-separated)</label>
+            <label>Outbound Events (comma-separated)</label>
             <input type="text" id="agent-outputs-config" placeholder="analysis report, recommendations">
           </div>
+
+          <!-- 2. Data Store Configuration -->
+          <div class="section-header">💾 Data Store Configuration</div>
           <div class="form-group">
-            <label>Escalation Path</label>
-            <input type="text" id="agent-escalation-config" placeholder="IT Manager, Service Owner">
+            <label>Database Name</label>
+            <input type="text" id="agent-db-name-config" placeholder="flowgrid-agents" value="flowgrid-agents">
           </div>
-          
+          <div class="form-group">
+            <label>Collections</label>
+            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="col-memory" checked> 💭 memory
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="col-state" checked> 📊 state
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="col-tasks" checked> 📋 tasks
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="col-decisions" checked> ⚖️ decisions
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Partition Key</label>
+            <input type="text" id="agent-partition-key-config" placeholder="/tenantId" value="/tenantId">
+          </div>
+          <div class="info-card" style="padding: 0.5rem; font-size: 0.75rem; color: #94a3b8;">
+            ℹ️ CosmosDB collections are auto-provisioned on deploy
+          </div>
+
+          <!-- 3. Model Configuration -->
+          <div class="section-header">🤖 Model Configuration</div>
+          <div id="model-recommendation" class="info-card" style="padding: 0.5rem; font-size: 0.75rem; color: #f59e0b; display: none;">
+            💡 <span id="model-rec-text"></span>
+          </div>
+          <div class="form-group">
+            <label>Provider</label>
+            <select id="agent-model-provider" onchange="updateModelSuggestions()">
+              <option value="">-- Select --</option>
+              <option value="azure-openai" selected>Azure OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Model / Deployment</label>
+            <input type="text" id="agent-model-config" placeholder="gpt-4o" list="model-suggestions">
+            <datalist id="model-suggestions"></datalist>
+          </div>
+          <div class="form-group">
+            <label>System Prompt</label>
+            <textarea id="agent-system-prompt-config" rows="3" placeholder="Pre-filled from agent purpose..." style="width:100%;padding:0.5rem;border:1px solid #334155;border-radius:6px;background:#0f172a;color:#e2e8f0;font-family:inherit;font-size:0.85rem;resize:vertical;"></textarea>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>Max Tokens</label>
+              <input type="number" id="agent-max-tokens-config" value="4096" min="256" max="128000">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>Temperature: <span id="temp-value">0.3</span></label>
+              <input type="range" id="agent-temperature-config" min="0" max="1" step="0.05" value="0.3" oninput="document.getElementById('temp-value').textContent = this.value" style="width:100%;accent-color:#f59e0b;">
+            </div>
+          </div>
+
+          <!-- 4. HITL Configuration -->
+          <div class="section-header">🙋 HITL Configuration</div>
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="agent-hitl-required" onchange="document.getElementById('hitl-details').style.display = this.checked ? 'block' : 'none'"> Approval Required
+            </label>
+          </div>
+          <div id="hitl-details" style="display: none;">
+            <div class="form-group">
+              <label>Approval Threshold</label>
+              <select id="agent-hitl-threshold">
+                <option value="all-decisions">All Decisions</option>
+                <option value="high-risk-only">High Risk Only</option>
+                <option value="cost-above-threshold">Cost Above Threshold</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Escalation Target</label>
+              <select id="agent-hitl-escalation">
+                <option value="">-- Select Agent --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Timeout (minutes)</label>
+              <input type="number" id="agent-hitl-timeout" value="60" min="1" max="1440">
+            </div>
+          </div>
+
+          <!-- 5. Tools -->
           <div class="section-header">🔧 Tools</div>
           <div id="config-integrations-list" style="margin-bottom: 0.75rem;">
             <p style="color: #64748b; font-size: 0.85rem;">No tools configured</p>
           </div>
           <button class="btn btn-secondary" style="width: 100%;" onclick="showWorkspaceTab('integrations')">Manage Tools →</button>
-          
-          <!-- LLM Configuration hidden - all agents use same model for now -->
-          <div style="display: none;">
-            <div class="section-header">🤖 LLM Configuration</div>
-            <div class="form-group">
-              <label>Default Model</label>
-              <select id="agent-model-config">
-                <option value="">-- Select --</option>
-                <option value="claude-sonnet">Claude Sonnet</option>
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                <option value="gemini-pro">Gemini Pro</option>
-              </select>
-            </div>
-          </div>
-          
+
           <button class="btn btn-success" onclick="saveAgentConfig()" style="width: 100%; margin-top: 1rem;">💾 Save Configuration</button>
         </div>
 
@@ -1752,26 +1875,67 @@
 
         <!-- Code Tab -->
         <div id="tab-code" class="tab-content">
-          <div class="section-header">💻 Generated Azure Functions Code</div>
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-            <button class="btn btn-success" style="flex: 1;" onclick="generateCode()">🤖 Generate with AI</button>
+          <!-- 1. Agent Manifest -->
+          <div class="section-header">📋 Agent Manifest</div>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <button class="btn btn-success" style="flex: 1;" onclick="generateManifest(selectedAgentId)">📋 Generate Manifest</button>
+            <button class="btn btn-secondary" onclick="copyManifest()">📋 Copy</button>
+            <button class="btn btn-secondary" onclick="downloadManifest()">⬇️</button>
+          </div>
+          <div id="manifest-validation-bar" style="padding: 0.35rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem; display: none;"></div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <label style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+              <input type="checkbox" id="manifest-edit-toggle" onchange="toggleManifestEdit(this.checked)"> Edit mode
+            </label>
+            <span id="manifest-timestamp" style="font-size: 0.7rem; color: #64748b; margin-left: auto;"></span>
+          </div>
+          <div class="code-container" style="max-height: 300px;">
+            <pre id="manifest-display" contenteditable="false" style="font-size: 0.7rem; line-height: 1.4; outline: none;">// Click "Generate Manifest" to assemble from Description + Design + Configure tabs</pre>
+          </div>
+
+          <!-- 2. Code Scaffolding -->
+          <div class="section-header" style="margin-top: 1rem;">💻 Code Scaffolding</div>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <button class="btn btn-success" style="flex: 1;" onclick="generateCode()">🤖 Generate Function App Code</button>
             <button class="btn btn-primary" id="save-code-btn" onclick="saveGeneratedCode()">💾 Save</button>
             <button class="btn btn-secondary" onclick="copyCode()">📋 Copy</button>
           </div>
-          <div class="code-container" style="max-height: 500px;">
-            <pre id="agent-code" style="font-size: 0.7rem; line-height: 1.4;">// Click "Generate with AI" to create Azure Functions code for this agent
-
-// The generated code will include:
-// - Azure Functions v4 entry point
-// - Service Bus message handling
-// - Agent logic based on pattern
-// - Integration stubs
-// - Error handling & logging</pre>
+          <p style="font-size: 0.7rem; color: #64748b; margin-bottom: 0.5rem;">Generates Azure Functions scaffolding based on manifest</p>
+          <div class="code-container" style="max-height: 300px;">
+            <pre id="agent-code" style="font-size: 0.7rem; line-height: 1.4;">// Generate manifest first, then generate Function App code</pre>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <button class="btn btn-secondary" style="flex: 1;" onclick="generateBicepCode()">🏗️ Generate Bicep</button>
+            <button class="btn btn-secondary" style="flex: 1;" onclick="downloadManifestPackage(selectedAgentId)">📦 Download Package</button>
+          </div>
+          <div class="code-container" style="max-height: 200px; margin-top: 0.5rem; display: none;" id="bicep-container">
+            <pre id="bicep-code" style="font-size: 0.7rem; line-height: 1.4;"></pre>
           </div>
         </div>
 
         <!-- Deploy Tab -->
         <div id="tab-deploy" class="tab-content">
+          <!-- Manifest Status -->
+          <div class="section-header">📋 Manifest Status</div>
+          <div class="info-card" id="deploy-manifest-status" style="padding: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+              <span id="deploy-manifest-badge" class="status-badge warning">⚠️ Not Generated</span>
+              <span id="deploy-manifest-version" style="font-size: 0.7rem; color: #64748b;"></span>
+            </div>
+            <p id="deploy-manifest-text" style="font-size: 0.8rem; color: #94a3b8;">
+              <a href="#" onclick="showDetailTab('code'); return false;" style="color: #60a5fa;">Generate manifest</a> in the Code tab first.
+            </p>
+          </div>
+
+          <!-- Infrastructure Requirements -->
+          <div class="section-header">🏗️ Infrastructure Requirements</div>
+          <div class="info-card" id="deploy-infra-requirements" style="padding: 0.75rem;">
+            <p style="color: #64748b; font-size: 0.85rem;">Generate manifest to detect requirements.</p>
+          </div>
+          <button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem; opacity: 0.5; cursor: not-allowed;" disabled title="Coming in Level 3">
+            🏗️ Provision Infrastructure (Level 3)
+          </button>
+
           <!-- Deployment Target -->
           <div class="section-header">🎯 Deployment Target</div>
           <div class="form-group">
@@ -2814,8 +2978,42 @@
       document.getElementById('agent-interaction-config').value = config.interactionPattern || '';
       document.getElementById('agent-triggers-config').value = (config.triggers || []).join(', ');
       document.getElementById('agent-outputs-config').value = (config.outputs || []).join(', ');
-      document.getElementById('agent-escalation-config').value = config.escalationPath || '';
-      document.getElementById('agent-model-config').value = config.llm?.defaultModel || '';
+      
+      // Tag fields
+      tagData['listen-topics'] = [...(config.listenTopics || [])];
+      tagData['publish-topics'] = [...(config.publishTopics || [])];
+      renderTags('listen-topics');
+      renderTags('publish-topics');
+      document.getElementById('agent-message-types-config').value = (config.messageTypes || []).join(', ');
+      
+      // Data store
+      const ds = config.dataStore || {};
+      document.getElementById('agent-db-name-config').value = ds.database || 'flowgrid-agents';
+      document.getElementById('col-memory').checked = ds.collections?.memory ?? true;
+      document.getElementById('col-state').checked = ds.collections?.state ?? true;
+      document.getElementById('col-tasks').checked = ds.collections?.tasks ?? true;
+      document.getElementById('col-decisions').checked = ds.collections?.decisions ?? true;
+      document.getElementById('agent-partition-key-config').value = ds.partitionKey || '/tenantId';
+      
+      // Model config
+      const mc = config.modelConfig || {};
+      document.getElementById('agent-model-provider').value = mc.provider || 'azure-openai';
+      document.getElementById('agent-model-config').value = mc.deployment || config.llm?.defaultModel || '';
+      document.getElementById('agent-system-prompt-config').value = mc.systemPrompt || config.detailedPurpose || agent.description || '';
+      document.getElementById('agent-max-tokens-config').value = mc.maxTokens || 4096;
+      document.getElementById('agent-temperature-config').value = mc.temperature ?? 0.3;
+      document.getElementById('temp-value').textContent = mc.temperature ?? 0.3;
+      updateModelSuggestions();
+      showModelRecommendation(config.pattern);
+      
+      // HITL
+      const hitl = config.hitl || {};
+      document.getElementById('agent-hitl-required').checked = hitl.approvalRequired || false;
+      document.getElementById('hitl-details').style.display = hitl.approvalRequired ? 'block' : 'none';
+      document.getElementById('agent-hitl-threshold').value = hitl.approvalThreshold || 'high-risk-only';
+      document.getElementById('agent-hitl-timeout').value = hitl.timeoutMinutes || 60;
+      populateEscalationTargets();
+      if (hitl.escalationTarget) document.getElementById('agent-hitl-escalation').value = hitl.escalationTarget;
       
       // Config integrations list
       const configIntList = document.getElementById('config-integrations-list');
@@ -2832,20 +3030,31 @@
       updateDeployStatus(agent);
 
       // === CODE TAB ===
-      // Load saved code if exists, otherwise show placeholder
+      // Load manifest if exists
+      if (config.manifest) {
+        renderManifest(config.manifest);
+        const validation = validateManifest(config.manifest);
+        renderManifestValidation(validation);
+      } else {
+        document.getElementById('manifest-display').textContent = '// Click "Generate Manifest" to assemble from Description + Design + Configure tabs';
+        document.getElementById('manifest-validation-bar').style.display = 'none';
+        document.getElementById('manifest-timestamp').textContent = '';
+      }
+      document.getElementById('manifest-edit-toggle').checked = false;
+      document.getElementById('manifest-display').contentEditable = 'false';
+      document.getElementById('bicep-container').style.display = 'none';
+      
+      // Load saved code if exists
       const codeEl = document.getElementById('agent-code');
       if (config.generatedCode) {
         codeEl.textContent = config.generatedCode;
       } else {
-        codeEl.textContent = `// Click "Generate with AI" to create Azure Functions code for this agent
-
-// The generated code will include:
-// - Azure Functions v4 entry point
-// - Service Bus message handling
-// - Agent logic based on pattern
-// - Integration stubs
-// - Error handling & logging`;
+        codeEl.textContent = '// Generate manifest first, then generate Function App code';
       }
+      
+      // Deploy tab manifest status
+      updateDeployManifestStatus(agent);
+      if (config.manifest) updateDeployInfraRequirements(config.manifest);
       
       // === BPMN TAB ===
       // If BPMN tab is active, refresh to show the selected agent's BPMN
@@ -3203,6 +3412,26 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
         content.classList.remove('active');
       });
       document.getElementById(`tab-${tabName}`)?.classList.add('active');
+      
+      // Refresh manifest status when switching to Code or Deploy
+      if ((tabName === 'code' || tabName === 'deploy') && selectedAgentId) {
+        const agent = agents.find(a => a.id === selectedAgentId);
+        if (agent) {
+          updateDeployManifestStatus(agent);
+          if (agent.config?.manifest) {
+            updateDeployInfraRequirements(agent.config.manifest);
+            if (tabName === 'code') renderManifest(agent.config.manifest);
+          }
+        }
+      }
+      // Populate escalation targets when switching to Configure
+      if (tabName === 'configure') {
+        populateEscalationTargets();
+        if (selectedAgentId) {
+          const agent = agents.find(a => a.id === selectedAgentId);
+          showModelRecommendation(agent?.config?.pattern);
+        }
+      }
     }
 
     function showWorkspaceTab(tabName) {
@@ -4006,23 +4235,9 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       if (file) importDesignBundle(file);
     });
     
-    // Global 401 interceptor — redirect to login on auth failure
-    (function() {
-      const originalFetch = window.fetch;
-      window.fetch = async function(...args) {
-        const response = await originalFetch.apply(this, args);
-        if (response.status === 401) {
-          console.warn('[auth] 401 received, redirecting to login');
-          if (window.FlowgridAuthUI?.clearAuthState) {
-            window.FlowgridAuthUI.clearAuthState();
-          }
-          const target = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.href = `/login.html?redirect=${target}&expired=true`;
-          return response;
-        }
-        return response;
-      };
-    })();
+    // 401 handling is now done by auth-ui.js installAutoRefresh() —
+    // it automatically refreshes the token and retries the request.
+    // Only redirect to login if refresh also fails (handled in initPage).
 
     // Initialize on load
     document.addEventListener('DOMContentLoaded', () => {
@@ -5052,8 +5267,32 @@ ${gatewayShapes}
           interactionPattern: document.getElementById('agent-interaction-config').value,
           triggers: document.getElementById('agent-triggers-config').value.split(',').map(s => s.trim()).filter(s => s),
           outputs: document.getElementById('agent-outputs-config').value.split(',').map(s => s.trim()).filter(s => s),
-          escalationPath: document.getElementById('agent-escalation-config').value,
-          llm: { defaultModel: document.getElementById('agent-model-config').value },
+          listenTopics: [...tagData['listen-topics']],
+          publishTopics: [...tagData['publish-topics']],
+          messageTypes: document.getElementById('agent-message-types-config').value.split(',').map(s => s.trim()).filter(Boolean),
+          dataStore: {
+            database: document.getElementById('agent-db-name-config').value,
+            collections: {
+              memory: document.getElementById('col-memory').checked,
+              state: document.getElementById('col-state').checked,
+              tasks: document.getElementById('col-tasks').checked,
+              decisions: document.getElementById('col-decisions').checked,
+            },
+            partitionKey: document.getElementById('agent-partition-key-config').value,
+          },
+          modelConfig: {
+            provider: document.getElementById('agent-model-provider').value,
+            deployment: document.getElementById('agent-model-config').value,
+            systemPrompt: document.getElementById('agent-system-prompt-config').value,
+            maxTokens: parseInt(document.getElementById('agent-max-tokens-config').value) || 4096,
+            temperature: parseFloat(document.getElementById('agent-temperature-config').value) || 0.3,
+          },
+          hitl: {
+            approvalRequired: document.getElementById('agent-hitl-required').checked,
+            approvalThreshold: document.getElementById('agent-hitl-threshold').value,
+            escalationTarget: document.getElementById('agent-hitl-escalation').value,
+            timeoutMinutes: parseInt(document.getElementById('agent-hitl-timeout').value) || 60,
+          },
         };
         
         await saveAgentToAPI(selectedAgentId, { config });
@@ -5086,6 +5325,372 @@ ${gatewayShapes}
       return response.json();
     }
     
+    // ==========================================
+    // Manifest & Tag Input Functions
+    // ==========================================
+    
+    // Tag input state
+    const tagData = { 'listen-topics': [], 'publish-topics': [] };
+    
+    function handleTagInput(event, field) {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const input = event.target;
+      const value = input.value.trim();
+      if (!value || tagData[field].includes(value)) { input.value = ''; return; }
+      tagData[field].push(value);
+      input.value = '';
+      renderTags(field);
+    }
+    
+    function renderTags(field) {
+      const container = document.getElementById(`${field}-tags`);
+      container.innerHTML = tagData[field].map((tag, i) =>
+        `<span class="tag-item">${escapeHtml(tag)}<span class="tag-remove" onclick="removeTag('${field}', ${i})">×</span></span>`
+      ).join('');
+    }
+    
+    function removeTag(field, index) {
+      tagData[field].splice(index, 1);
+      renderTags(field);
+    }
+    
+    function getRecommendedModel(pattern) {
+      const recs = {
+        'orchestrator': { model: 'gpt-4o', temp: 0.1, reason: 'GPT-4o for complex orchestration & planning' },
+        'specialist': { model: 'gpt-4o', temp: 0.3, reason: 'GPT-4o for domain-specific expertise' },
+        'coordinator': { model: 'gpt-4o-mini', temp: 0.2, reason: 'GPT-4o Mini for efficient coordination' },
+        'gatekeeper': { model: 'gpt-4o-mini', temp: 0.1, reason: 'GPT-4o Mini for rule-based gatekeeping' },
+        'validator': { model: 'gpt-4o-mini', temp: 0.0, reason: 'GPT-4o Mini for deterministic validation' },
+        'router': { model: 'gpt-4o-mini', temp: 0.1, reason: 'GPT-4o Mini for fast routing decisions' },
+      };
+      return recs[pattern] || { model: 'gpt-4o', temp: 0.3, reason: 'GPT-4o as general-purpose default' };
+    }
+    
+    function updateModelSuggestions() {
+      const provider = document.getElementById('agent-model-provider').value;
+      const datalist = document.getElementById('model-suggestions');
+      const suggestions = {
+        'azure-openai': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-35-turbo'],
+        'anthropic': ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', 'claude-opus-4-20250514'],
+        'openai': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o1-preview'],
+      };
+      datalist.innerHTML = (suggestions[provider] || []).map(m => `<option value="${m}">`).join('');
+    }
+    
+    function getTopicSuggestions(agentId) {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return [];
+      const related = relationships.filter(r => r.sourceId === agentId || r.targetId === agentId);
+      const topics = new Set();
+      related.forEach(r => {
+        const other = agents.find(a => a.id === (r.sourceId === agentId ? r.targetId : r.sourceId));
+        if (other) {
+          const name = (other.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          topics.add(`flowgrid-${name}`);
+        }
+      });
+      // Add common Service Bus topics
+      ['flowgrid-s2p', 'flowgrid-r2d', 'flowgrid-r2f', 'flowgrid-d2c'].forEach(t => topics.add(t));
+      return [...topics];
+    }
+    
+    function generateManifest(agentId) {
+      if (!agentId) return alert('No agent selected');
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+      const config = agent.config || {};
+      
+      const manifest = {
+        manifestVersion: '1.0.0',
+        agentId: agent.id,
+        agentName: agent.name,
+        pattern: config.pattern || 'specialist',
+        autonomy: config.autonomyLevel || 'supervised',
+        purpose: config.detailedPurpose || agent.description || '',
+        messaging: {
+          listenTopics: tagData['listen-topics'] || [],
+          publishTopics: tagData['publish-topics'] || [],
+          messageTypes: (document.getElementById('agent-message-types-config')?.value || '').split(',').map(s => s.trim()).filter(Boolean),
+          interactionPattern: document.getElementById('agent-interaction-config')?.value || 'event-driven',
+        },
+        dataStore: {
+          database: document.getElementById('agent-db-name-config')?.value || 'flowgrid-agents',
+          collections: {
+            memory: document.getElementById('col-memory')?.checked ?? true,
+            state: document.getElementById('col-state')?.checked ?? true,
+            tasks: document.getElementById('col-tasks')?.checked ?? true,
+            decisions: document.getElementById('col-decisions')?.checked ?? true,
+          },
+          partitionKey: document.getElementById('agent-partition-key-config')?.value || '/tenantId',
+        },
+        model: {
+          provider: document.getElementById('agent-model-provider')?.value || 'azure-openai',
+          deployment: document.getElementById('agent-model-config')?.value || 'gpt-4o',
+          systemPrompt: document.getElementById('agent-system-prompt-config')?.value || '',
+          maxTokens: parseInt(document.getElementById('agent-max-tokens-config')?.value) || 4096,
+          temperature: parseFloat(document.getElementById('agent-temperature-config')?.value) || 0.3,
+        },
+        capabilities: (agent.capabilities || []).map(c => c.capability_name || c.name || c),
+        tools: [...(agent.integrations || []).map(i => i.integration_name || i.integration_type), ...(agent.tools || []).map(t => t.name)],
+        hitl: {
+          approvalRequired: document.getElementById('agent-hitl-required')?.checked || false,
+          approvalThreshold: document.getElementById('agent-hitl-threshold')?.value || 'high-risk-only',
+          escalationTarget: document.getElementById('agent-hitl-escalation')?.value || '',
+          timeoutMinutes: parseInt(document.getElementById('agent-hitl-timeout')?.value) || 60,
+        },
+        relationships: {
+          reportsTo: (() => {
+            const incoming = relationships.filter(r => r.targetId === agentId && r.type === 'delegates');
+            return incoming.length ? agents.find(a => a.id === incoming[0].sourceId)?.name || '' : '';
+          })(),
+          handsOffTo: relationships.filter(r => r.sourceId === agentId).map(r => agents.find(a => a.id === r.targetId)?.name).filter(Boolean),
+          receivesFrom: relationships.filter(r => r.targetId === agentId).map(r => agents.find(a => a.id === r.sourceId)?.name).filter(Boolean),
+        },
+        runtime: {
+          target: document.getElementById('deploy-target')?.value || 'azure-functions',
+          subscription: document.getElementById('deploy-subscription')?.value || 'mcpp',
+          resourceGroup: document.getElementById('deploy-resource-group')?.value || 'rg-flowgrid-dev',
+          region: document.getElementById('deploy-region')?.value || 'westeurope',
+          functionAppName: document.getElementById('deploy-func-name')?.value || `func-${(agent.name || 'agent').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        },
+      };
+      
+      // Store manifest on agent config
+      agent.config = { ...(agent.config || {}), manifest, manifestGeneratedAt: new Date().toISOString() };
+      
+      // Validate & render
+      const validation = validateManifest(manifest);
+      renderManifest(manifest);
+      renderManifestValidation(validation);
+      updateDeployManifestStatus(agent);
+      updateDeployInfraRequirements(manifest);
+      
+      return manifest;
+    }
+    
+    function validateManifest(manifest) {
+      const errors = [];
+      const required = ['manifestVersion', 'agentId', 'agentName', 'pattern', 'autonomy'];
+      required.forEach(field => { if (!manifest[field]) errors.push(`Missing: ${field}`); });
+      if (!manifest.messaging?.listenTopics?.length) errors.push('Missing: messaging.listenTopics');
+      if (!manifest.model?.deployment) errors.push('Missing: model.deployment');
+      // Cross-reference agents
+      if (manifest.hitl?.escalationTarget) {
+        const exists = agents.find(a => a.name === manifest.hitl.escalationTarget);
+        if (!exists) errors.push(`Escalation target "${manifest.hitl.escalationTarget}" not found in network`);
+      }
+      return { valid: errors.length === 0, errors };
+    }
+    
+    function renderManifest(manifest) {
+      const el = document.getElementById('manifest-display');
+      el.textContent = JSON.stringify(manifest, null, 2);
+      const ts = document.getElementById('manifest-timestamp');
+      ts.textContent = `Generated: ${new Date().toLocaleTimeString()}`;
+    }
+    
+    function renderManifestValidation(validation) {
+      const bar = document.getElementById('manifest-validation-bar');
+      bar.style.display = 'block';
+      if (validation.valid) {
+        bar.className = 'manifest-valid';
+        bar.textContent = '✅ Manifest valid';
+      } else {
+        bar.className = 'manifest-invalid';
+        bar.textContent = '❌ ' + validation.errors.join(', ');
+      }
+    }
+    
+    function toggleManifestEdit(enabled) {
+      document.getElementById('manifest-display').contentEditable = enabled ? 'true' : 'false';
+      document.getElementById('manifest-display').style.border = enabled ? '1px solid #f59e0b' : 'none';
+    }
+    
+    function copyManifest() {
+      const text = document.getElementById('manifest-display').textContent;
+      navigator.clipboard.writeText(text);
+    }
+    
+    function downloadManifest() {
+      const text = document.getElementById('manifest-display').textContent;
+      const agent = agents.find(a => a.id === selectedAgentId);
+      const name = (agent?.name || 'agent').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      downloadFile(`${name}-manifest.json`, text, 'application/json');
+    }
+    
+    function downloadFile(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    
+    function generateBicep(manifest) {
+      const name = (manifest.agentName || 'agent').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const collections = Object.entries(manifest.dataStore?.collections || {}).filter(([,v]) => v).map(([k]) => k);
+      const topics = [...new Set([...(manifest.messaging?.listenTopics || []), ...(manifest.messaging?.publishTopics || [])])];
+      
+      return `// Bicep template for ${manifest.agentName}
+// Generated by FlowGrid Design Module
+
+param location string = '${manifest.runtime?.region || 'westeurope'}'
+param environment string = 'dev'
+
+// Service Bus Topics
+resource serviceBusNamespace 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' existing = {
+  name: 'sb-flowgrid-\${environment}'
+}
+
+${topics.map(t => `resource topic_${t.replace(/[^a-zA-Z0-9]/g, '_')} 'Microsoft.ServiceBus/namespaces/topics@2022-10-01-preview' = {
+  parent: serviceBusNamespace
+  name: '${t}'
+  properties: { maxSizeInMegabytes: 1024 }
+}
+`).join('\n')}
+// CosmosDB
+resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2023-11-15' existing = {
+  name: 'cosmos-flowgrid-\${environment}'
+}
+
+resource database 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = {
+  parent: cosmosAccount
+  name: '${manifest.dataStore?.database || 'flowgrid-agents'}'
+  properties: { resource: { id: '${manifest.dataStore?.database || 'flowgrid-agents'}' } }
+}
+
+${collections.map(c => `resource container_${c} 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-11-15' = {
+  parent: database
+  name: '${c}'
+  properties: {
+    resource: { id: '${c}', partitionKey: { paths: ['${manifest.dataStore?.partitionKey || '/tenantId'}'], kind: 'Hash' } }
+  }
+}
+`).join('\n')}
+// Function App
+resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
+  name: '${manifest.runtime?.functionAppName || `func-${name}`}'
+  location: location
+  kind: 'functionapp'
+  properties: {
+    siteConfig: {
+      appSettings: [
+        { name: 'COSMOS_DATABASE', value: '${manifest.dataStore?.database || 'flowgrid-agents'}' }
+        { name: 'SERVICE_BUS_CONNECTION', value: '@Microsoft.KeyVault(SecretUri=...)' }
+        { name: 'OPENAI_DEPLOYMENT', value: '${manifest.model?.deployment || 'gpt-4o'}' }
+      ]
+    }
+  }
+}
+`;
+    }
+    
+    function generateBicepCode() {
+      if (!selectedAgentId) return alert('No agent selected');
+      const agent = agents.find(a => a.id === selectedAgentId);
+      const manifest = agent?.config?.manifest;
+      if (!manifest) return alert('Generate manifest first');
+      const bicep = generateBicep(manifest);
+      document.getElementById('bicep-code').textContent = bicep;
+      document.getElementById('bicep-container').style.display = 'block';
+    }
+    
+    function downloadManifestPackage(agentId) {
+      if (!agentId) return alert('No agent selected');
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent?.config?.manifest) return alert('Generate manifest first');
+      const manifest = agent.config.manifest;
+      const name = (agent.name || 'agent').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      
+      // Build a text representation of the package structure
+      const pkg = `📦 ${name}-package/
+├── manifest.json
+├── src/
+│   └── index.js (${agent.config.generatedCode ? 'generated' : 'not yet generated'})
+└── infra/
+    └── main.bicep
+
+--- manifest.json ---
+${JSON.stringify(manifest, null, 2)}
+
+--- infra/main.bicep ---
+${generateBicep(manifest)}
+
+${agent.config.generatedCode ? `--- src/index.js ---\n${agent.config.generatedCode}` : '// Generate Function App Code first'}`;
+      
+      downloadFile(`${name}-package.txt`, pkg, 'text/plain');
+    }
+    
+    function checkInfraRequirements(manifest) {
+      // Stub - returns mock status data
+      const topics = [...new Set([...(manifest.messaging?.listenTopics || []), ...(manifest.messaging?.publishTopics || [])])];
+      const results = [];
+      topics.forEach(t => results.push({ type: 'Service Bus Topic', name: t, status: Math.random() > 0.5 ? 'exists' : 'needs-creation' }));
+      results.push({ type: 'CosmosDB Database', name: manifest.dataStore?.database || 'flowgrid-agents', status: 'exists' });
+      results.push({ type: 'Azure OpenAI', name: manifest.model?.deployment || 'gpt-4o', status: 'exists' });
+      return results;
+    }
+    
+    function updateDeployManifestStatus(agent) {
+      const manifest = agent?.config?.manifest;
+      const badge = document.getElementById('deploy-manifest-badge');
+      const version = document.getElementById('deploy-manifest-version');
+      const text = document.getElementById('deploy-manifest-text');
+      if (!badge) return;
+      
+      if (manifest) {
+        const validation = validateManifest(manifest);
+        badge.className = `status-badge ${validation.valid ? 'success' : 'warning'}`;
+        badge.textContent = validation.valid ? '✅ Valid' : '⚠️ Has Issues';
+        version.textContent = `v${manifest.manifestVersion} • ${new Date(agent.config.manifestGeneratedAt).toLocaleTimeString()}`;
+        text.innerHTML = validation.valid 
+          ? 'Manifest ready for deployment.' 
+          : `Issues: ${validation.errors.join(', ')}. <a href="#" onclick="showDetailTab('code'); return false;" style="color:#60a5fa;">Fix in Code tab</a>`;
+      } else {
+        badge.className = 'status-badge warning';
+        badge.textContent = '⚠️ Not Generated';
+        version.textContent = '';
+        text.innerHTML = '<a href="#" onclick="showDetailTab(\'code\'); return false;" style="color:#60a5fa;">Generate manifest</a> in the Code tab first.';
+      }
+    }
+    
+    function updateDeployInfraRequirements(manifest) {
+      const container = document.getElementById('deploy-infra-requirements');
+      if (!container || !manifest) return;
+      const reqs = checkInfraRequirements(manifest);
+      container.innerHTML = `<div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">This agent requires:</div>` +
+        reqs.map(r => {
+          const icon = r.status === 'exists' ? '✅' : '⚠️';
+          return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;font-size:0.8rem;">
+            <span>${icon}</span><span style="color:#64748b;">${r.type}:</span><span style="color:#e2e8f0;">${escapeHtml(r.name)}</span>
+            <span style="font-size:0.7rem;color:${r.status === 'exists' ? '#34d399' : '#fbbf24'};">${r.status === 'exists' ? 'exists' : 'needs creation'}</span>
+          </div>`;
+        }).join('');
+    }
+    
+    function populateEscalationTargets() {
+      const select = document.getElementById('agent-hitl-escalation');
+      if (!select) return;
+      const currentId = selectedAgentId;
+      select.innerHTML = '<option value="">-- Select Agent --</option>' +
+        agents.filter(a => a.id !== currentId && (a.elementType === 'Agent' || !a.elementType))
+          .map(a => `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)}</option>`).join('');
+    }
+    
+    function showModelRecommendation(pattern) {
+      const rec = getRecommendedModel(pattern);
+      const recDiv = document.getElementById('model-recommendation');
+      const recText = document.getElementById('model-rec-text');
+      if (pattern && recDiv) {
+        recDiv.style.display = 'block';
+        recText.textContent = `Recommended: ${rec.reason}`;
+      } else if (recDiv) {
+        recDiv.style.display = 'none';
+      }
+    }
+
     // ==========================================
     // Verify Functions
     // ==========================================
