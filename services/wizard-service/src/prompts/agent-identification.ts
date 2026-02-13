@@ -40,14 +40,14 @@ const InteractionPatternEnum = z.enum(['request-response', 'event-driven', 'publ
 // Shared agent fields
 const AgentBaseSchema = z.object({
   name: z.string().max(80),
-  purpose: z.string().max(300),
-  shortDescription: z.string().max(100).describe('One-sentence summary of the agent'),
+  purpose: z.string().max(500),
+  shortDescription: z.string().max(150).describe('One-sentence summary of the agent'),
   decisionAuthority: DecisionAuthorityEnum,
   autonomyLevel: AutonomyLevelEnum,
   interactionPattern: InteractionPatternEnum,
   triggers: z.array(z.string()).min(1).max(5).describe('Events that trigger this agent'),
   outputs: z.array(z.string()).min(1).max(5).describe('What this agent produces'),
-  escalationPath: z.string().max(100).describe('Who to escalate to when needed'),
+  escalationPath: z.string().max(150).describe('Who to escalate to when needed'),
 });
 
 export const AgentIdentificationOutputSchema = z.object({

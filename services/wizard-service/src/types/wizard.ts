@@ -65,6 +65,19 @@ export interface ExtractedCapability {
 // Agent Types
 // ============================================================================
 
+/**
+ * AgenticPattern — Extended wizard-internal pattern taxonomy (17 values).
+ * This is a superset of the shared AgentPattern (6 values in shared/types/index.ts).
+ *
+ * Core Platform Patterns (9): Used during wizard design to give finer-grained role
+ * classification. When agents are persisted via applyWizardSession(), these map to the
+ * closest shared AgentPattern (e.g., Coordinator→Orchestrator, Analyzer→Analyst).
+ *
+ * Anthropic Patterns (8): Represent implementation-level agentic design patterns from
+ * Anthropic's building blocks (routing, planning, tool-use, etc.). These describe *how*
+ * an agent operates rather than *what role* it plays, and are stored in agent config
+ * metadata rather than as the top-level pattern.
+ */
 export type AgenticPattern = 
   // Core Platform Patterns
   | 'Orchestrator'

@@ -36,6 +36,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 
 // Services
 import { checkDatabaseHealth, pool } from './services/database';
@@ -186,6 +187,25 @@ app.get('/api/wizard/csrf-token', getCsrfTokenEndpoint);
 // ============================================================================
 // API Routes (protected by auth + CSRF)
 // ============================================================================
+
+// Rate limiting for expensive AI endpoints
+const aiRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many AI requests, please try again later.' },
+});
+
+const aiEndpoints = [
+  '/api/wizard/analyze-text',
+  '/api/wizard/upload-image',
+  '/api/wizard/identify-agents',
+  '/api/wizard/suggest-subprocess',
+  '/api/wizard/generate-orchestrator-bpmn',
+  '/api/wizard/generate-bpmn',
+];
+aiEndpoints.forEach(endpoint => app.use(endpoint, aiRateLimit));
 
 // Apply authentication to all wizard API routes
 app.use('/api/wizard', requireAuth);

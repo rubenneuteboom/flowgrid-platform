@@ -332,17 +332,27 @@ router.post('/generate-orchestrator-bpmn', async (req: Request, res: Response) =
     }
 
     console.log(`[${SERVICE_NAME}] Generating orchestrator BPMN for: ${orchestratorAgent.name}`);
+    console.log(`[${SERVICE_NAME}] Orchestrator skills:`, orchestratorAgent.skills?.length || 0);
+    console.log(`[${SERVICE_NAME}] Participants:`, participantAgents?.length || 0);
 
     // Use the orchestrator BPMN prompt
     const { executePrompt } = await import('../prompts');
     
-    const result = await executePrompt('step4.generate-orchestrator-bpmn', {
-      orchestratorAgent,
-      participantAgents,
-      processDescription: processDescription || orchestratorAgent.purpose || 'Multi-agent orchestration workflow',
-    });
+    // Map field names to what the prompt expects
+    const promptInput = {
+      orchestrator: orchestratorAgent,
+      participants: participantAgents,
+      processGoal: processDescription || orchestratorAgent.purpose || 'Multi-agent orchestration workflow',
+      processDescription: processDescription,
+    };
+    
+    console.log(`[${SERVICE_NAME}] Calling executePrompt with input keys:`, Object.keys(promptInput));
+    
+    const result = await executePrompt('step4.generate-orchestrator-bpmn', promptInput);
 
+    console.log(`[${SERVICE_NAME}] Prompt result success:`, result.success);
     if (!result.success) {
+      console.error(`[${SERVICE_NAME}] Prompt failed:`, result.error);
       return res.status(500).json({ error: result.error || 'Orchestrator BPMN generation failed' });
     }
 

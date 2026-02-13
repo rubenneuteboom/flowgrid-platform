@@ -21,9 +21,12 @@ import { generateProcessFlow } from './ai';
 // Database Pool (Singleton)
 // ============================================================================
 
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required but not set');
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 
-    'postgres://flowgrid:FlowgridDev2026!@localhost:5432/flowgrid',
+  connectionString: process.env.DATABASE_URL,
 });
 
 export { pool };
@@ -85,6 +88,8 @@ export async function getWizardSession(sessionId: string, tenantId: string): Pro
     analysisResult: row.analysis_result,
     customPrompt: row.custom_prompt,
     status: row.status,
+    step_data: row.step_data,
+    current_step: row.current_step,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     appliedAt: row.applied_at,
@@ -120,14 +125,14 @@ export async function getWizardSessionByTenant(
   };
 }
 
-export async function listWizardSessions(tenantId: string, limit = 50): Promise<WizardSession[]> {
+export async function listWizardSessions(tenantId: string, limit = 50, offset = 0): Promise<WizardSession[]> {
   const result = await pool.query(
     `SELECT id, session_name, source_type, status, created_at, updated_at, applied_at
      FROM wizard_sessions 
      WHERE tenant_id = $1 
      ORDER BY created_at DESC 
-     LIMIT $2`,
-    [tenantId, limit]
+     LIMIT $2 OFFSET $3`,
+    [tenantId, limit, offset]
   );
 
   return result.rows.map(row => ({

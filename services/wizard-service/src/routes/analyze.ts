@@ -12,6 +12,7 @@ import {
   designAgentsFromCapabilities,
   analyzeTextDescription,
   isOpenAIConfigured,
+  complete,
 } from '../services/ai';
 import { executeA2AChain, executeQuickAnalysis } from '../services/ai-chain';
 import { createWizardSession } from '../services/database';
@@ -48,6 +49,20 @@ const uploadXml = multer({
       cb(null, true);
     } else {
       cb(new Error('Only XML/ArchiMate files are allowed'));
+    }
+  }
+});
+
+const uploadData = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB max for data files
+  fileFilter: (req, file, cb) => {
+    const allowedExtensions = ['.csv', '.xlsx', '.xls'];
+    const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
+    if (allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV and Excel files are allowed'));
     }
   }
 });
@@ -312,6 +327,232 @@ router.post('/upload-xml', uploadXml.single('file'), async (req: Request, res: R
 });
 
 // ============================================================================
+// POST /api/wizard/upload-data
+// Upload and analyze CSV or Excel files
+// ============================================================================
+
+router.post('/upload-data', uploadData.single('file'), async (req: Request, res: Response) => {
+  console.log(`[${SERVICE_NAME}] Data file upload started`);
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const tid = req.tenantId;
+    if (!tid) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const fileName = req.file.originalname.toLowerCase();
+    const context = req.body.context || '';
+    let textContent = '';
+
+    if (fileName.endsWith('.csv')) {
+      // Parse CSV
+      textContent = req.file.buffer.toString('utf-8');
+    } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      return res.status(400).json({
+        error: 'Excel files (.xlsx/.xls) are not supported. Please convert to CSV first.',
+        details: 'Excel binary formats require specialized parsing. Export your spreadsheet as CSV (File → Save As → CSV) and re-upload.',
+        suggestion: 'csv',
+      });
+    }
+
+    console.log(`[${SERVICE_NAME}] Processing data file: ${fileName} (${textContent.length} chars)`);
+
+    // Build prompt for AI analysis
+    const prompt = `Analyze this data file and extract IT/business capabilities and processes.
+
+File: ${req.file.originalname}
+${context ? `\nContext: ${context}` : ''}
+
+Data Content:
+${textContent.slice(0, 15000)}
+
+Extract:
+1. Business capabilities (what functions/services are represented)
+2. Data objects (key entities and data types)
+3. Processes (workflows and procedures implied by the data)
+
+Focus on IT service management, technology, and operational aspects.`;
+
+    // Use text analysis
+    const analysis = await analyzeTextDescription(prompt);
+
+    // Create wizard session
+    const sessionId = await createWizardSession(tid, 'data-upload', 'text', { 
+      fileName: req.file.originalname, 
+      context 
+    }, analysis);
+
+    res.json({
+      success: true,
+      sessionId,
+      analysis,
+      source: 'data',
+      fileName: req.file.originalname,
+    });
+
+  } catch (error: any) {
+    console.error(`[${SERVICE_NAME}] Data file processing error:`, error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to process data file'
+    });
+  }
+});
+
+// ============================================================================
+// POST /api/wizard/analyze-website
+// Analyze a company website to extract capabilities and processes
+// ============================================================================
+
+router.post('/analyze-website', async (req: Request, res: Response) => {
+  try {
+    const { url, context } = req.body;
+    const tid = req.tenantId;
+
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+    if (!tid) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // --- SSRF Protection ---
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    // 1. Validate scheme
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ error: 'Only http and https URLs are allowed' });
+    }
+
+    // 2. Block localhost and internal hostnames
+    const blockedHostnames = [
+      'localhost',
+      'metadata.google.internal',
+      'metadata',
+      'kubernetes.default',
+      'kubernetes.default.svc',
+    ];
+    const hostname = parsedUrl.hostname.toLowerCase();
+    if (blockedHostnames.includes(hostname) || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+      return res.status(400).json({ error: 'URLs pointing to internal/local hosts are not allowed' });
+    }
+
+    // 3. Block private/reserved IP ranges
+    const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (ipv4Match) {
+      const [, a, b, c, d] = ipv4Match.map(Number);
+      const isPrivate =
+        a === 10 ||                                      // 10.0.0.0/8
+        (a === 172 && b >= 16 && b <= 31) ||             // 172.16.0.0/12
+        (a === 192 && b === 168) ||                      // 192.168.0.0/16
+        a === 127 ||                                     // 127.0.0.0/8
+        (a === 169 && b === 254) ||                      // 169.254.0.0/16 (link-local)
+        a === 0 ||                                       // 0.0.0.0/8
+        (a === 100 && b >= 64 && b <= 127) ||            // 100.64.0.0/10 (CGN)
+        (a === 198 && (b === 18 || b === 19));           // 198.18.0.0/15 (benchmarking)
+      if (isPrivate) {
+        return res.status(400).json({ error: 'URLs pointing to private/reserved IP addresses are not allowed' });
+      }
+    }
+
+    // Block IPv6 loopback/private (basic check for bracket notation)
+    if (hostname === '[::1]' || hostname.startsWith('[fc') || hostname.startsWith('[fd') || hostname.startsWith('[fe80')) {
+      return res.status(400).json({ error: 'URLs pointing to private/reserved IP addresses are not allowed' });
+    }
+
+    console.log(`[${SERVICE_NAME}] Analyzing website: ${url}`);
+
+    // Fetch website content
+    let websiteContent = '';
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'FlowGrid Discovery Bot/1.0 (+https://flowgrid.io)',
+          'Accept': 'text/html,application/xhtml+xml'
+        },
+        redirect: 'manual', // Don't follow redirects automatically (prevent redirect-based SSRF)
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      // Handle redirects safely - validate redirect target
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        return res.status(400).json({ 
+          error: 'URL redirects are not followed for security reasons. Please provide the final URL.',
+          details: `Received HTTP ${response.status} redirect`
+        });
+      }
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const html = await response.text();
+      
+      // Extract text content (simple approach - strip HTML tags)
+      websiteContent = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 15000); // Limit to ~15k chars
+    } catch (fetchError: any) {
+      console.error(`[${SERVICE_NAME}] Failed to fetch website:`, fetchError.message);
+      return res.status(400).json({ 
+        error: 'Failed to fetch website',
+        details: fetchError.message 
+      });
+    }
+
+    // Build prompt for AI analysis
+    const prompt = `Analyze this company website content and extract their IT/business capabilities and processes.
+
+Website URL: ${url}
+${context ? `\nAdditional Context: ${context}` : ''}
+
+Website Content:
+${websiteContent}
+
+Extract:
+1. Business capabilities (what the company does)
+2. Data objects (key data they work with)
+3. Processes (workflows and procedures)
+
+Focus on IT service management, technology, and operational processes where visible.`;
+
+    // Use text analysis
+    const analysis = await analyzeTextDescription(prompt);
+
+    // Create wizard session
+    const sessionId = await createWizardSession(tid, 'website-analysis', 'text', { url, context }, analysis);
+
+    res.json({
+      success: true,
+      sessionId,
+      analysis,
+      source: 'website',
+      url,
+    });
+
+  } catch (error: any) {
+    console.error(`[${SERVICE_NAME}] Website analysis error:`, error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to analyze website'
+    });
+  }
+});
+
+// ============================================================================
 // ArchiMate XML Parser
 // ============================================================================
 
@@ -571,84 +812,6 @@ function normalizeRelationType(type: string): string {
   return typeMap[normalized] || type.replace(/Relationship$/i, '');
 }
 
-function convertArchiMateToAnalysis(parsed: ParsedArchiMate): AnalysisResult {
-  // Group elements by type for summary
-  const typeCounts: Record<string, number> = {};
-  parsed.elements.forEach(e => {
-    typeCounts[e.type] = (typeCounts[e.type] || 0) + 1;
-  });
-
-  // Build element ID to name map for relationship resolution
-  const idToElement = new Map(parsed.elements.map(e => [e.id, e]));
-
-  // Convert elements to agents format
-  const agents = parsed.elements.map((el, idx) => ({
-    id: `agent-${idx + 1}`,
-    originalId: el.id,
-    name: el.name,
-    elementType: el.type as ElementType,
-    purpose: el.documentation || `${el.type} element from ArchiMate model`,
-    description: `Imported from ArchiMate: ${el.type}`,
-    capabilities: [] as string[],
-    pattern: mapTypeToPattern(el.type) as AgenticPattern,
-    patternRationale: `Derived from ArchiMate ${el.type}`,
-    autonomyLevel: 'supervised' as 'autonomous' | 'supervised' | 'human-in-loop',
-    riskAppetite: 'medium' as 'low' | 'medium' | 'high',
-    triggers: [] as string[],
-    outputs: [] as string[],
-  }));
-
-  // Build ID mapping for relationships
-  const originalToNewId = new Map(agents.map(a => [a.originalId, a.id]));
-
-  // Convert relationships
-  const agentRelationships = parsed.relationships
-    .filter(r => originalToNewId.has(r.sourceId) && originalToNewId.has(r.targetId))
-    .map(r => ({
-      sourceAgentId: originalToNewId.get(r.sourceId)!,
-      targetAgentId: originalToNewId.get(r.targetId)!,
-      messageType: r.type,
-      description: `${r.type} relationship`,
-    }));
-
-  // Extract capabilities from elements of type Capability/Function
-  const extractedCapabilities = parsed.elements
-    .filter(e => ['Capability', 'ApplicationFunction', 'BusinessFunction'].includes(e.type))
-    .map(e => ({
-      name: e.name,
-      level: 1 as 0 | 1 | 2,
-      description: e.documentation || `${e.type} capability`,
-      automationPotential: 'medium' as 'low' | 'medium' | 'high',
-    }));
-
-  return {
-    summary: {
-      totalCapabilities: extractedCapabilities.length,
-      recommendedAgents: agents.length,
-      complexity: (agents.length > 20 ? 'high' : agents.length > 10 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
-      overview: `Imported ${parsed.elements.length} elements and ${parsed.relationships.length} relationships from ArchiMate model${parsed.modelName ? ` "${parsed.modelName}"` : ''}`,
-    },
-    extractedCapabilities,
-    agents: agents.map(({ originalId, ...rest }) => rest), // Remove originalId from output
-    agentRelationships,
-    integrations: [],
-  };
-}
-
-function mapTypeToPattern(type: string): string {
-  const patternMap: Record<string, string> = {
-    'ApplicationFunction': 'Executor',
-    'ApplicationService': 'Gateway',
-    'Agent': 'Orchestrator',
-    'Process': 'orchestration',
-    'Capability': 'Specialist',
-    'DataObject': 'Aggregator',
-    'Requirement': 'Monitor',
-    'Resource': 'Executor',
-  };
-  return patternMap[type] || 'Specialist';
-}
-
 // ============================================================================
 // PER-STEP WIZARD ENDPOINTS
 // ============================================================================
@@ -861,15 +1024,17 @@ router.post('/sessions/:id/step3', async (req: Request, res: Response) => {
     return res.status(500).json({ error: result.error });
   }
 
-  // Save to session
+  // Save to session (include optimization metadata)
   await updateSessionStepData(sessionId, tenantId, 'step3', {
     proposedAgents: result.data,
+    optimization: result.metadata?.optimization || null,
     userAdjustments,
   }, 3);
 
   res.json({
     success: true,
     data: result.data,
+    optimization: result.metadata?.optimization || null,
     executionTimeMs: result.executionTimeMs,
   });
 });
@@ -1249,6 +1414,68 @@ router.get('/sessions/:id/state', async (req: Request, res: Response) => {
     stepData: result.rows[0].step_data,
     status: result.rows[0].status,
   });
+});
+
+// ============================================================================
+// POST /api/wizard/suggest-subprocess
+// AI-powered sub-process suggestion based on process name
+// ============================================================================
+
+router.post('/suggest-subprocess', async (req: Request, res: Response) => {
+  console.log(`[${SERVICE_NAME}] Suggest sub-process request`);
+
+  try {
+    const { processName, foundationContext } = req.body;
+
+    if (!processName) {
+      return res.status(400).json({ error: 'Process name is required' });
+    }
+
+    const prompt = `You are an IT service management expert. Given a process, suggest ONE specific sub-process that would benefit most from AI agent automation.
+
+Process: ${processName}
+${foundationContext ? `\nOrganization context: ${foundationContext}` : ''}
+
+Respond in JSON format only (no markdown, no explanation):
+{
+  "name": "Sub-process name (specific and actionable)",
+  "description": "Detailed description of what should be automated, including inputs, steps, and expected behavior (2-3 sentences)",
+  "expectedOutcome": "Measurable success criteria with specific metrics where possible",
+  "constraints": "Key constraints, integrations needed, or approval requirements"
+}
+
+Focus on high-impact, feasible automation opportunities. Be specific and practical.`;
+
+    const response = await complete({
+      userPrompt: prompt,
+      systemPrompt: 'You are an IT service management expert. Respond only with valid JSON.',
+      maxTokens: 1024
+    });
+    
+    // Parse JSON from response
+    let suggestion;
+    try {
+      // Extract JSON from response (may be wrapped in markdown code blocks)
+      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        suggestion = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found in response');
+      }
+    } catch (parseError) {
+      console.error(`[${SERVICE_NAME}] Failed to parse AI response:`, response.content);
+      return res.status(500).json({ error: 'Failed to parse AI suggestion' });
+    }
+
+    res.json({
+      success: true,
+      suggestion
+    });
+
+  } catch (error: any) {
+    console.error(`[${SERVICE_NAME}] Suggest sub-process error:`, error);
+    res.status(500).json({ error: error.message || 'Failed to generate suggestion' });
+  }
 });
 
 export default router;

@@ -362,6 +362,10 @@
       display: none;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
     .spinner {
       width: 50px;
       height: 50px;
@@ -463,6 +467,7 @@
   <header class="header">
     <h1>🔍 <span>Discovery</span> Wizard</h1>
     <div class="header-actions">
+      <a href="/design/" class="btn btn-primary">⚡ Design Module</a>
       <a href="/" class="btn btn-secondary">← Back to Home</a>
     </div>
   </header>
@@ -498,34 +503,59 @@
     <div class="step-content active" data-step="1">
       <div class="wizard-card">
         <h2>📤 Upload Materials</h2>
-        <p class="subtitle">Upload documents, images, or describe your domain to extract capabilities and processes.</p>
+        <p class="subtitle">Choose how you want to provide information about your domain.</p>
         
         <div class="tabs">
-          <div class="tab active" data-tab="upload">Upload Files</div>
-          <div class="tab" data-tab="describe">Describe Domain</div>
+          <div class="tab active" data-tab="image">🖼️ Image</div>
+          <div class="tab" data-tab="data">📄 Data File</div>
+          <div class="tab" data-tab="website">🌐 Website</div>
         </div>
 
-        <div class="tab-content" data-tab="upload">
-          <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📁</div>
-            <p><strong>Drop files here</strong> or click to browse</p>
-            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Supports: PDF, DOCX, images (PNG, JPG), Visio, ArchiMate XML</p>
-            <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.xml,.vsdx">
+        <div class="tab-content" data-tab="image">
+          <div class="upload-area" id="uploadAreaImage">
+            <div class="upload-icon">🖼️</div>
+            <p><strong>Drop image here</strong> or click to browse</p>
+            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Supports: PNG, JPG, GIF, WebP</p>
+            <input type="file" id="fileInputImage" accept=".png,.jpg,.jpeg,.gif,.webp">
           </div>
-          <div id="fileList" style="margin-top: 1rem;"></div>
-        </div>
-
-        <div class="tab-content hidden" data-tab="describe">
-          <div class="form-group">
-            <label>Domain Description</label>
-            <textarea id="domainDescription" placeholder="Describe your business domain, processes, and capabilities...
+          <div id="fileListImage" style="margin-top: 1rem;"></div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label>Additional Context <span style="color: var(--text-secondary); font-weight: normal;">(optional)</span></label>
+            <textarea id="imageContext" placeholder="Provide any additional context about the image...
 
 Example:
-Our IT Service Desk handles incident management, service requests, and change management. Key processes include:
-- Incident triage and classification
-- SLA monitoring and escalation
-- Knowledge article creation
-- Change approval workflows"></textarea>
+This is our IT4IT value stream diagram showing the Request to Fulfill process." rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="tab-content hidden" data-tab="data">
+          <div class="upload-area" id="uploadAreaData">
+            <div class="upload-icon">📄</div>
+            <p><strong>Drop data file here</strong> or click to browse</p>
+            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Supports: XML, ArchiMate, CSV, Excel (.xlsx)</p>
+            <input type="file" id="fileInputData" accept=".xml,.archimate,.csv,.xlsx,.xls">
+          </div>
+          <div id="fileListData" style="margin-top: 1rem;"></div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label>Additional Context <span style="color: var(--text-secondary); font-weight: normal;">(optional)</span></label>
+            <textarea id="dataContext" placeholder="Describe what this data represents...
+
+Example:
+This is our service catalog export containing all IT services and their capabilities." rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="tab-content hidden" data-tab="website">
+          <div class="form-group">
+            <label>Company Website URL</label>
+            <input type="url" id="websiteUrl" placeholder="https://example.com" style="width: 100%; padding: 0.75rem; background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 1rem;">
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label>Additional Context <span style="color: var(--text-secondary); font-weight: normal;">(optional)</span></label>
+            <textarea id="websiteContext" placeholder="Tell us what to focus on...
+
+Example:
+Focus on our IT services and ITSM processes. We're a managed services provider specializing in cloud infrastructure." rows="3"></textarea>
           </div>
         </div>
 
@@ -687,7 +717,7 @@ Our IT Service Desk handles incident management, service requests, and change ma
   <script>
     // State
     let currentStep = 1;
-    let uploadedFiles = [];
+    // File state managed by imageFile and xmlFile variables
     let extractedData = {
       capabilities: [],
       dataObjects: [],
@@ -698,8 +728,8 @@ Our IT Service Desk handles incident management, service requests, and change ma
 
     // Initialize
     document.addEventListener('DOMContentLoaded', async () => {
-      // Check auth
-      const token = localStorage.getItem('flowgrid_access_token');
+      // Check auth (try both storage types)
+      const token = localStorage.getItem('flowgrid_access_token') || sessionStorage.getItem('flowgrid_access_token');
       if (!token) {
         window.location.href = '/login.html?redirect=/discovery/';
         return;
@@ -710,6 +740,13 @@ Our IT Service Desk handles incident management, service requests, and change ma
         const res = await fetch('/api/wizard/csrf-token', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (res.status === 401) {
+          // Token expired, redirect to login
+          localStorage.removeItem('flowgrid_access_token');
+          sessionStorage.removeItem('flowgrid_access_token');
+          window.location.href = '/login.html?redirect=/discovery/';
+          return;
+        }
         const data = await res.json();
         csrfToken = data.csrfToken;
       } catch (e) {
@@ -745,75 +782,103 @@ Our IT Service Desk handles incident management, service requests, and change ma
       });
     }
 
-    // File upload
+    // File upload - separate handlers for image and data files
+    let imageFile = null;
+    let dataFile = null;
+
     function initUpload() {
-      const uploadArea = document.getElementById('uploadArea');
-      const fileInput = document.getElementById('fileInput');
+      // Image upload
+      const uploadAreaImage = document.getElementById('uploadAreaImage');
+      const fileInputImage = document.getElementById('fileInputImage');
 
-      uploadArea.addEventListener('click', () => fileInput.click());
-      
-      uploadArea.addEventListener('dragover', (e) => {
+      uploadAreaImage.addEventListener('click', () => fileInputImage.click());
+      uploadAreaImage.addEventListener('dragover', (e) => { e.preventDefault(); uploadAreaImage.classList.add('dragover'); });
+      uploadAreaImage.addEventListener('dragleave', () => uploadAreaImage.classList.remove('dragover'));
+      uploadAreaImage.addEventListener('drop', (e) => {
         e.preventDefault();
-        uploadArea.classList.add('dragover');
+        uploadAreaImage.classList.remove('dragover');
+        handleImageFile(e.dataTransfer.files[0]);
       });
+      fileInputImage.addEventListener('change', (e) => handleImageFile(e.target.files[0]));
 
-      uploadArea.addEventListener('dragleave', () => {
-        uploadArea.classList.remove('dragover');
-      });
+      // Data file upload (XML, CSV, XLSX)
+      const uploadAreaData = document.getElementById('uploadAreaData');
+      const fileInputData = document.getElementById('fileInputData');
 
-      uploadArea.addEventListener('drop', (e) => {
+      uploadAreaData.addEventListener('click', () => fileInputData.click());
+      uploadAreaData.addEventListener('dragover', (e) => { e.preventDefault(); uploadAreaData.classList.add('dragover'); });
+      uploadAreaData.addEventListener('dragleave', () => uploadAreaData.classList.remove('dragover'));
+      uploadAreaData.addEventListener('drop', (e) => {
         e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        handleFiles(e.dataTransfer.files);
+        uploadAreaData.classList.remove('dragover');
+        handleDataFile(e.dataTransfer.files[0]);
       });
+      fileInputData.addEventListener('change', (e) => handleDataFile(e.target.files[0]));
 
-      fileInput.addEventListener('change', (e) => {
-        handleFiles(e.target.files);
-      });
-
-      // Text input
-      document.getElementById('domainDescription').addEventListener('input', updateExtractButton);
+      // Context inputs
+      document.getElementById('imageContext').addEventListener('input', updateExtractButton);
+      document.getElementById('dataContext').addEventListener('input', updateExtractButton);
+      document.getElementById('websiteUrl').addEventListener('input', updateExtractButton);
+      document.getElementById('websiteContext').addEventListener('input', updateExtractButton);
     }
 
-    function handleFiles(files) {
-      uploadedFiles = [...uploadedFiles, ...Array.from(files)];
-      renderFileList();
+    function handleImageFile(file) {
+      if (!file) return;
+      imageFile = file;
+      renderFileList('image');
       updateExtractButton();
     }
 
-    function renderFileList() {
-      const list = document.getElementById('fileList');
-      if (uploadedFiles.length === 0) {
+    function handleDataFile(file) {
+      if (!file) return;
+      dataFile = file;
+      renderFileList('data');
+      updateExtractButton();
+    }
+
+    function renderFileList(type) {
+      const file = type === 'image' ? imageFile : dataFile;
+      const list = document.getElementById(type === 'image' ? 'fileListImage' : 'fileListData');
+      
+      if (!file) {
         list.innerHTML = '';
         return;
       }
 
-      list.innerHTML = uploadedFiles.map((f, i) => `
+      const icon = type === 'image' ? '🖼️' : '📄';
+      list.innerHTML = `
         <div class="item-card">
           <div class="item-info">
-            <h4>📄 ${f.name}</h4>
-            <p>${(f.size / 1024).toFixed(1)} KB</p>
+            <h4>${icon} ${file.name}</h4>
+            <p>${(file.size / 1024).toFixed(1)} KB</p>
           </div>
-          <button class="btn btn-secondary" onclick="removeFile(${i})" style="padding: 0.5rem;">✕</button>
+          <button class="btn btn-secondary" onclick="removeFile('${type}')" style="padding: 0.5rem;">✕</button>
         </div>
-      `).join('');
+      `;
     }
 
-    function removeFile(index) {
-      uploadedFiles.splice(index, 1);
-      renderFileList();
+    function removeFile(type) {
+      if (type === 'image') {
+        imageFile = null;
+        document.getElementById('fileInputImage').value = '';
+      } else if (type === 'data') {
+        dataFile = null;
+        document.getElementById('fileInputData').value = '';
+      }
+      renderFileList(type);
       updateExtractButton();
     }
 
     function updateExtractButton() {
-      const hasFiles = uploadedFiles.length > 0;
-      const hasDescription = document.getElementById('domainDescription').value.trim().length > 20;
       const activeTab = document.querySelector('.tab[data-tab].active').dataset.tab;
+      const websiteUrl = document.getElementById('websiteUrl').value.trim();
       
-      document.getElementById('btnExtract').disabled = !(
-        (activeTab === 'upload' && hasFiles) || 
-        (activeTab === 'describe' && hasDescription)
-      );
+      let isValid = false;
+      if (activeTab === 'image' && imageFile) isValid = true;
+      if (activeTab === 'data' && dataFile) isValid = true;
+      if (activeTab === 'website' && websiteUrl.length > 5) isValid = true;
+      
+      document.getElementById('btnExtract').disabled = !isValid;
     }
 
     // Buttons
@@ -852,36 +917,52 @@ Our IT Service Desk handles incident management, service requests, and change ma
     // Extraction
     async function startExtraction() {
       goToStep(2);
-      const token = localStorage.getItem('flowgrid_access_token');
+      const token = localStorage.getItem('flowgrid_access_token') || sessionStorage.getItem('flowgrid_access_token');
       const activeTab = document.querySelector('.tab[data-tab].active').dataset.tab;
+
+      if (!token) {
+        alert('Please log in first');
+        window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
 
       try {
         let response;
         
-        if (activeTab === 'describe') {
-          // Text analysis
-          document.getElementById('extractionStatus').textContent = 'Analyzing text description...';
-          response = await fetch('/api/wizard/analyze-text', {
+        if (activeTab === 'image') {
+          // Image upload with optional context
+          document.getElementById('extractionStatus').textContent = 'Analyzing image...';
+          const formData = new FormData();
+          formData.append('file', imageFile);
+          const context = document.getElementById('imageContext').value.trim();
+          if (context) formData.append('context', context);
+          
+          response = await fetch('/api/wizard/upload-image', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
               'X-CSRF-Token': csrfToken
             },
-            body: JSON.stringify({
-              text: document.getElementById('domainDescription').value
-            })
+            body: formData
           });
-        } else {
-          // File upload - determine endpoint based on file type
-          document.getElementById('extractionStatus').textContent = 'Processing uploaded files...';
+        } else if (activeTab === 'data') {
+          // Data file upload (XML, CSV, XLSX)
+          const fileName = dataFile.name.toLowerCase();
+          const context = document.getElementById('dataContext').value.trim();
           const formData = new FormData();
-          formData.append('file', uploadedFiles[0]);
+          formData.append('file', dataFile);
+          if (context) formData.append('context', context);
           
-          // Use upload-xml for XML/ArchiMate files, upload-image for images
-          const fileName = uploadedFiles[0].name.toLowerCase();
-          const isXml = fileName.endsWith('.xml') || fileName.endsWith('.archimate');
-          const endpoint = isXml ? '/api/wizard/upload-xml' : '/api/wizard/upload-image';
+          let endpoint;
+          if (fileName.endsWith('.xml') || fileName.endsWith('.archimate')) {
+            document.getElementById('extractionStatus').textContent = 'Parsing XML/ArchiMate file...';
+            endpoint = '/api/wizard/upload-xml';
+          } else if (fileName.endsWith('.csv') || fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+            document.getElementById('extractionStatus').textContent = 'Analyzing spreadsheet data...';
+            endpoint = '/api/wizard/upload-data';
+          } else {
+            throw new Error('Unsupported file type');
+          }
           
           response = await fetch(endpoint, {
             method: 'POST',
@@ -890,6 +971,21 @@ Our IT Service Desk handles incident management, service requests, and change ma
               'X-CSRF-Token': csrfToken
             },
             body: formData
+          });
+        } else if (activeTab === 'website') {
+          // Website analysis
+          document.getElementById('extractionStatus').textContent = 'Analyzing website...';
+          const websiteUrl = document.getElementById('websiteUrl').value.trim();
+          const context = document.getElementById('websiteContext').value.trim();
+          
+          response = await fetch('/api/wizard/analyze-website', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ url: websiteUrl, context })
           });
         }
 

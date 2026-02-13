@@ -77,6 +77,18 @@ export interface AuthContext {
 // Agent Types
 // -----------------------------------------------------------------------------
 
+/**
+ * AgentPattern — Shared/public-facing pattern taxonomy (6 values).
+ * These are the high-level, user-visible patterns exposed in the platform UI and API.
+ *
+ * For the full internal taxonomy used by the wizard service (which includes additional
+ * platform-specific patterns like Coordinator/Gateway/Aggregator/Router and Anthropic
+ * agentic patterns like routing/planning/tool-use/etc.), see:
+ *   services/wizard-service/src/types/wizard.ts → AgenticPattern (17 values)
+ *
+ * The wizard's AgenticPattern is a superset: it maps down to AgentPattern when agents
+ * are persisted to the shared agents table via applyWizardSession().
+ */
 export type AgentPattern = 
   | 'Orchestrator'
   | 'Specialist'

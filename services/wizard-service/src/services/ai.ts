@@ -287,7 +287,13 @@ REGELS:
     analysis = jsonMatch[0];
   }
 
-  return JSON.parse(analysis) as AnalysisResult;
+  try {
+    return JSON.parse(analysis) as AnalysisResult;
+  } catch (parseError) {
+    console.error('[AI] Failed to parse designAgentsFromCapabilities response:', parseError);
+    console.error('[AI] Raw response:', analysis.substring(0, 500));
+    throw new Error('AI returned invalid JSON for agent design analysis. Please try again.');
+  }
 }
 
 // ============================================================================
@@ -376,7 +382,14 @@ Return ONLY valid JSON.`;
     analysis = jsonMatch[0];
   }
 
-  const result = JSON.parse(analysis) as AnalysisResult;
+  let result: AnalysisResult;
+  try {
+    result = JSON.parse(analysis) as AnalysisResult;
+  } catch (parseError) {
+    console.error('[AI] Failed to parse analyzeTextDescription response:', parseError);
+    console.error('[AI] Raw response:', analysis.substring(0, 500));
+    throw new Error('AI returned invalid JSON for text analysis. Please try again.');
+  }
   
   // Debug: log elementTypes from AI response
   console.log('[AI Debug] Agents with elementTypes:', JSON.stringify(result.agents?.map(a => ({ name: a.name, elementType: a.elementType }))));

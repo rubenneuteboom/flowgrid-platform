@@ -61,11 +61,15 @@ export function verifyCsrfToken(req: Request, res: Response, next: NextFunction)
     return next();
   }
 
-  // Skip if the request has a valid Authorization header (API clients don't need CSRF)
-  // This is safe because:
-  // 1. Authorization header cannot be set cross-origin without CORS preflight
-  // 2. Attackers cannot steal the JWT to include it
-  if (req.headers.authorization?.startsWith('Bearer ')) {
+  // Skip CSRF for requests with Bearer token authentication.
+  // Security rationale: CSRF protection guards against browser-based attacks where cookies
+  // are automatically attached. Bearer tokens in the Authorization header are immune to CSRF
+  // because: (1) the header cannot be set cross-origin without a CORS preflight approval,
+  // (2) the token must be explicitly read from storage and attached by JavaScript, which
+  // a cross-origin attacker cannot do due to same-origin policy.
+  // Note: the actual JWT signature is verified separately by the auth middleware.
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ') && authHeader.length > 7) {
     return next();
   }
 
@@ -89,7 +93,9 @@ export function verifyCsrfToken(req: Request, res: Response, next: NextFunction)
   }
 
   // Constant-time comparison to prevent timing attacks
-  if (!crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken))) {
+  const cookieBuf = Buffer.from(cookieToken);
+  const headerBuf = Buffer.from(headerToken);
+  if (cookieBuf.length !== headerBuf.length || !crypto.timingSafeEqual(cookieBuf, headerBuf)) {
     return res.status(403).json({
       error: 'Forbidden',
       message: 'CSRF token mismatch',

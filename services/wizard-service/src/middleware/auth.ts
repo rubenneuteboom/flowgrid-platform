@@ -30,7 +30,10 @@ declare global {
 }
 
 // JWT secret from environment (must match auth-service)
-const JWT_SECRET = process.env.JWT_SECRET || 'flowgrid-jwt-secret-change-in-production';
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required but not set');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Verify a JWT token
