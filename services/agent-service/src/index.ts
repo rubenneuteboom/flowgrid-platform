@@ -2579,6 +2579,155 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
+// ============================================================================
+// Approval Requests API (HITL - Human In The Loop)
+// ============================================================================
+
+// GET /api/approvals/stats - Counts by status for badge display
+app.get('/api/approvals/stats', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const result = await pool.query(
+      `SELECT status, COUNT(*)::int as count FROM approval_requests WHERE tenant_id = $1 GROUP BY status`,
+      [tenantId]
+    );
+
+    const stats: Record<string, number> = { pending: 0, approved: 0, rejected: 0, expired: 0, cancelled: 0 };
+    result.rows.forEach((r: any) => { stats[r.status] = r.count; });
+
+    res.json(stats);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Approval stats error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to get approval stats' });
+  }
+});
+
+// GET /api/approvals - List approvals for tenant
+app.get('/api/approvals', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const status = req.query.status as string;
+    const agent_id = req.query.agent_id as string;
+    const foundation_id = req.query.foundation_id as string;
+
+    let query = `SELECT * FROM approval_requests WHERE tenant_id = $1`;
+    const params: any[] = [tenantId];
+    let idx = 2;
+
+    if (status) { query += ` AND status = $${idx++}`; params.push(status); }
+    if (agent_id) { query += ` AND agent_id = $${idx++}`; params.push(agent_id); }
+    if (foundation_id) { query += ` AND foundation_id = $${idx++}`; params.push(foundation_id); }
+
+    query += ` ORDER BY CASE WHEN status = 'pending' THEN 0 ELSE 1 END, requested_at DESC LIMIT $${idx++} OFFSET $${idx++}`;
+    params.push(limit, offset);
+
+    const result = await pool.query(query, params);
+
+    // Count
+    let countQuery = `SELECT COUNT(*)::int FROM approval_requests WHERE tenant_id = $1`;
+    const countParams: any[] = [tenantId];
+    let ci = 2;
+    if (status) { countQuery += ` AND status = $${ci++}`; countParams.push(status); }
+    if (agent_id) { countQuery += ` AND agent_id = $${ci++}`; countParams.push(agent_id); }
+    if (foundation_id) { countQuery += ` AND foundation_id = $${ci++}`; countParams.push(foundation_id); }
+
+    const countResult = await pool.query(countQuery, countParams);
+
+    res.json({ data: result.rows, total: countResult.rows[0].count });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] List approvals error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to list approvals' });
+  }
+});
+
+// GET /api/approvals/:id - Single approval detail
+app.get('/api/approvals/:id', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT * FROM approval_requests WHERE id = $1 AND tenant_id = $2`,
+      [id, tenantId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Not Found', message: 'Approval request not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Get approval error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to get approval' });
+  }
+});
+
+// POST /api/approvals - Create approval request
+app.post('/api/approvals', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { title, description, agent_id, agent_name, flow_instance_id, foundation_id, context, urgency, expires_at } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: 'Bad Request', message: 'title is required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO approval_requests (tenant_id, title, description, agent_id, agent_name, flow_instance_id, foundation_id, context, urgency, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [tenantId, title, description || null, agent_id || null, agent_name || null, flow_instance_id || null, foundation_id || null, context || '{}', urgency || 'normal', expires_at || null]
+    );
+
+    console.log(`[${SERVICE_NAME}] Created approval request: ${result.rows[0].id}`);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Create approval error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to create approval' });
+  }
+});
+
+// POST /api/approvals/:id/decide - Approve or reject
+app.post('/api/approvals/:id/decide', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const userId = req.user?.userId;
+    const userEmail = req.user?.email;
+    const { id } = req.params;
+    const { decision, comment } = req.body;
+
+    if (!decision || !['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({ error: 'Bad Request', message: "decision must be 'approved' or 'rejected'" });
+    }
+
+    const result = await pool.query(
+      `UPDATE approval_requests 
+       SET status = $1, decided_by = $2, decided_by_name = $3, decided_at = NOW(), decision_comment = $4, updated_at = NOW()
+       WHERE id = $5 AND tenant_id = $6 AND status = 'pending'
+       RETURNING *`,
+      [decision, userId, userEmail, comment || null, id, tenantId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Not Found', message: 'Approval request not found or already decided' });
+    }
+
+    console.log(`[${SERVICE_NAME}] Approval ${id} ${decision} by ${userEmail}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Decide approval error:`, error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Failed to decide approval' });
+  }
+});
+
 // 404 handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({

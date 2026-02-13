@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings – Flowgrid</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #0b1220;
+            --border-default: #334155;
+            --accent-primary: #5dd5c0;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #22c55e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 1.5rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border-default);
+            margin-bottom: 1.5rem;
+        }
+        .tab {
+            padding: 0.7rem 1.2rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+        }
+        .tab:hover { color: var(--text-secondary); }
+        .tab.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        /* Tab content */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Status grid */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.8rem;
+        }
+        .status-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-default);
+            border-radius: 10px;
+            padding: 0.9rem;
+        }
+        .status-name {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .status-value {
+            margin-top: 0.35rem;
+            font-size: 1.15rem;
+        }
+        .status-value.ok { color: var(--success); }
+        .status-value.bad { color: var(--danger); }
+        .status-value.checking { color: var(--text-muted); }
+
+        .refresh-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-default);
+            color: var(--text-secondary);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            transition: all 0.15s;
+        }
+        .refresh-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        /* General section style for future tabs */
+        .section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-default);
+            border-radius: 10px;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        .section h3 {
+            font-size: 0.95rem;
+            margin-bottom: 0.6rem;
+            color: var(--accent-primary);
+        }
+        .section p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .page-title {
+            font-size: 1.4rem;
+            margin-bottom: 0.3rem;
+        }
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="page-title">⚙️ Settings</h1>
+    <p class="page-subtitle">Platform configuration and status</p>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="status">📊 Status</button>
+        <!-- Future tabs go here -->
+    </div>
+
+    <!-- Status Tab -->
+    <div class="tab-content active" id="tab-status">
+        <button class="refresh-btn" onclick="runChecks()">🔄 Refresh</button>
+        <div class="status-grid" id="status-grid"></div>
+    </div>
+
+    <script src="/js/auth-ui.js"></script>
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Status checks
+        const checks = [
+            { name: 'Gateway', url: '/health' },
+            { name: 'Auth', url: '/api/auth/health' },
+            { name: 'Agents', url: '/api/agents?limit=1' },
+            { name: 'Wizard', url: '/api/wizard/sessions?limit=1' },
+            { name: 'Approvals', url: '/api/approvals/stats' }
+        ];
+
+        function authHeaders() {
+            const token = window.FlowgridAuthUI?.getAuthToken?.();
+            return token ? { Authorization: `Bearer ${token}` } : {};
+        }
+
+        async function runChecks() {
+            const grid = document.getElementById('status-grid');
+            grid.innerHTML = '';
+
+            for (const check of checks) {
+                const card = document.createElement('div');
+                card.className = 'status-card';
+                card.innerHTML = `<div class="status-name">${check.name}</div><div class="status-value checking">Checking…</div>`;
+                grid.appendChild(card);
+
+                try {
+                    const res = await fetch(check.url, { headers: authHeaders(), credentials: 'include' });
+                    const val = card.querySelector('.status-value');
+                    val.textContent = res.ok ? 'Online' : `Error ${res.status}`;
+                    val.className = `status-value ${res.ok ? 'ok' : 'bad'}`;
+                } catch (_) {
+                    const val = card.querySelector('.status-value');
+                    val.textContent = 'Unavailable';
+                    val.className = 'status-value bad';
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.FlowgridAuthUI) {
+                window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
+                window.FlowgridAuthUI.installAutoRefresh?.();
+            }
+            runChecks();
+        });
+    </script>
+</body>
+</html>

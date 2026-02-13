@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approvals – Flowgrid</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #0b1220;
+            --border-default: #334155;
+            --accent-primary: #5dd5c0;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #22c55e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 1.5rem;
+        }
+        .header { margin-bottom: 1.2rem; }
+        .header h1 { font-size: 1.4rem; margin-bottom: 0.6rem; }
+        .stats-bar {
+            display: flex; gap: 1rem; margin-bottom: 1rem;
+            font-size: 0.82rem; color: var(--text-secondary);
+        }
+        .stats-bar .stat { display: flex; align-items: center; gap: 0.3rem; }
+        .stat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .stat-dot.pending { background: var(--warning); }
+        .stat-dot.approved { background: var(--success); }
+        .stat-dot.rejected { background: var(--danger); }
+        .tabs {
+            display: flex; gap: 0.3rem; margin-bottom: 1.2rem;
+            border-bottom: 1px solid var(--border-default); padding-bottom: 0.5rem;
+        }
+        .tab {
+            background: none; border: 1px solid transparent; color: var(--text-secondary);
+            padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+            transition: all 0.15s;
+        }
+        .tab:hover { background: rgba(93,213,192,0.06); color: var(--text-primary); }
+        .tab.active { border-color: var(--accent-primary); color: var(--accent-primary); background: rgba(93,213,192,0.08); }
+        .cards { display: flex; flex-direction: column; gap: 0.8rem; }
+        .card {
+            background: var(--bg-secondary); border: 1px solid var(--border-default);
+            border-radius: 10px; padding: 1rem 1.2rem; transition: border-color 0.15s;
+        }
+        .card:hover { border-color: #475569; }
+        .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
+        .card-agent { font-size: 0.78rem; color: var(--text-muted); }
+        .card-title { font-weight: 600; font-size: 1rem; margin-bottom: 0.3rem; }
+        .card-desc {
+            font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.6rem;
+            overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            cursor: pointer;
+        }
+        .card-desc.expanded { -webkit-line-clamp: unset; }
+        .urgency {
+            font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+            text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .urgency-low { background: #334155; color: #94a3b8; }
+        .urgency-normal { background: #334155; color: #94a3b8; }
+        .urgency-high { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .urgency-critical { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .card-time { font-size: 0.75rem; color: var(--text-muted); }
+        .card-context {
+            margin-top: 0.5rem; background: var(--bg-primary); border-radius: 6px;
+            padding: 0.6rem; font-size: 0.78rem; font-family: monospace; color: var(--text-secondary);
+            display: none; max-height: 200px; overflow: auto; white-space: pre-wrap;
+        }
+        .card-context.show { display: block; }
+        .context-toggle {
+            background: none; border: none; color: var(--accent-primary); cursor: pointer;
+            font-size: 0.78rem; padding: 0; margin-top: 0.3rem;
+        }
+        .card-actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; align-items: center; }
+        .btn {
+            border: 1px solid var(--border-default); border-radius: 8px; padding: 0.45rem 1rem;
+            font-size: 0.85rem; cursor: pointer; font-weight: 500; transition: all 0.15s;
+        }
+        .btn-approve { background: rgba(34,197,94,0.12); color: var(--success); border-color: rgba(34,197,94,0.3); }
+        .btn-approve:hover { background: rgba(34,197,94,0.25); }
+        .btn-reject { background: rgba(239,68,68,0.1); color: var(--danger); border-color: rgba(239,68,68,0.25); }
+        .btn-reject:hover { background: rgba(239,68,68,0.2); }
+        .btn-comment {
+            background: none; border: none; color: var(--text-muted); cursor: pointer;
+            font-size: 0.78rem; padding: 0;
+        }
+        .comment-box {
+            display: none; margin-top: 0.5rem;
+        }
+        .comment-box.show { display: block; }
+        .comment-box textarea {
+            width: 100%; background: var(--bg-primary); border: 1px solid var(--border-default);
+            border-radius: 6px; color: var(--text-primary); padding: 0.5rem; font-size: 0.82rem;
+            resize: vertical; min-height: 50px; font-family: inherit;
+        }
+        .decided-badge {
+            font-size: 0.78rem; padding: 3px 10px; border-radius: 10px; font-weight: 500;
+        }
+        .decided-approved { background: rgba(34,197,94,0.12); color: var(--success); }
+        .decided-rejected { background: rgba(239,68,68,0.1); color: var(--danger); }
+        .decided-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; }
+        .empty {
+            text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 1rem;
+        }
+        .toast {
+            position: fixed; top: 1rem; right: 1rem; background: var(--bg-secondary);
+            border: 1px solid var(--accent-primary); border-radius: 8px; padding: 0.7rem 1rem;
+            font-size: 0.85rem; color: var(--accent-primary); opacity: 0; transition: opacity 0.3s;
+            pointer-events: none; z-index: 100;
+        }
+        .toast.show { opacity: 1; }
+        .loading { text-align: center; padding: 2rem; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Approvals</h1>
+        <div class="stats-bar" id="stats-bar"></div>
+    </div>
+    <div class="tabs" id="tabs">
+        <button class="tab active" data-filter="">All</button>
+        <button class="tab" data-filter="pending">Pending</button>
+        <button class="tab" data-filter="approved">Approved</button>
+        <button class="tab" data-filter="rejected">Rejected</button>
+    </div>
+    <div class="cards" id="cards">
+        <div class="loading">Loading…</div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script src="/js/auth-ui.js"></script>
+    <script>
+    (function() {
+        const API = '/api/approvals';
+        let currentFilter = '';
+        let knownIds = new Set();
+        let firstLoad = true;
+
+        function token() {
+            return window.FlowgridAuthUI?.getAuthToken?.() || localStorage.getItem('flowgrid_access_token');
+        }
+        function headers() {
+            const t = token();
+            return t ? { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+        }
+
+        function timeAgo(ts) {
+            if (!ts) return '';
+            const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+            if (s < 60) return 'just now';
+            if (s < 3600) return Math.floor(s/60) + 'm ago';
+            if (s < 86400) return Math.floor(s/3600) + 'h ago';
+            return Math.floor(s/86400) + 'd ago';
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        async function loadStats() {
+            try {
+                const r = await fetch(API + '/stats', { headers: headers() });
+                if (!r.ok) return;
+                const s = await r.json();
+                document.getElementById('stats-bar').innerHTML =
+                    `<span class="stat"><span class="stat-dot pending"></span>${s.pending || 0} pending</span>` +
+                    `<span class="stat"><span class="stat-dot approved"></span>${s.approved || 0} approved</span>` +
+                    `<span class="stat"><span class="stat-dot rejected"></span>${s.rejected || 0} rejected</span>`;
+            } catch(e) {}
+        }
+
+        async function loadApprovals() {
+            try {
+                let url = API + '?limit=50';
+                if (currentFilter) url += '&status=' + currentFilter;
+                const r = await fetch(url, { headers: headers() });
+                if (!r.ok) throw new Error('Failed');
+                const { data } = await r.json();
+
+                // Detect new approvals
+                if (!firstLoad) {
+                    const newOnes = data.filter(d => d.status === 'pending' && !knownIds.has(d.id));
+                    if (newOnes.length > 0) showToast(`🔔 ${newOnes.length} new approval${newOnes.length > 1 ? 's' : ''}`);
+                }
+                knownIds = new Set(data.map(d => d.id));
+                firstLoad = false;
+
+                renderCards(data);
+            } catch(e) {
+                document.getElementById('cards').innerHTML = '<div class="empty">Failed to load approvals</div>';
+            }
+        }
+
+        function renderCards(items) {
+            const c = document.getElementById('cards');
+            if (!items.length) {
+                c.innerHTML = '<div class="empty">No pending approvals — your agents are running smoothly 🎯</div>';
+                return;
+            }
+            c.innerHTML = items.map((item, i) => {
+                const isPending = item.status === 'pending';
+                const ctx = item.context && Object.keys(item.context).length > 0;
+                return `<div class="card" data-id="${item.id}">
+                    <div class="card-top">
+                        <span class="card-agent">🤖 ${esc(item.agent_name || 'System')}</span>
+                        <span class="urgency urgency-${item.urgency}">${item.urgency}</span>
+                    </div>
+                    <div class="card-title">${esc(item.title)}</div>
+                    ${item.description ? `<div class="card-desc" onclick="this.classList.toggle('expanded')">${esc(item.description)}</div>` : ''}
+                    <span class="card-time">${timeAgo(item.requested_at)}</span>
+                    ${ctx ? `<button class="context-toggle" onclick="this.nextElementSibling.classList.toggle('show')">Show context ▾</button><div class="card-context">${esc(JSON.stringify(item.context, null, 2))}</div>` : ''}
+                    ${isPending ? `
+                        <div class="comment-box" id="cb-${i}"><textarea placeholder="Optional comment…" id="ct-${i}"></textarea></div>
+                        <div class="card-actions">
+                            <button class="btn btn-approve" onclick="decide('${item.id}',${i},'approved')">✅ Approve</button>
+                            <button class="btn btn-reject" onclick="decide('${item.id}',${i},'rejected')">❌ Reject</button>
+                            <button class="btn-comment" onclick="document.getElementById('cb-${i}').classList.toggle('show')">💬 comment</button>
+                        </div>
+                    ` : `
+                        <div style="margin-top:0.6rem">
+                            <span class="decided-badge decided-${item.status}">${item.status}</span>
+                            ${item.decided_by_name ? `<div class="decided-info">by ${esc(item.decided_by_name)} · ${timeAgo(item.decided_at)}</div>` : ''}
+                            ${item.decision_comment ? `<div class="decided-info" style="font-style:italic">"${esc(item.decision_comment)}"</div>` : ''}
+                        </div>
+                    `}
+                </div>`;
+            }).join('');
+        }
+
+        function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        window.decide = async function(id, idx, decision) {
+            const comment = document.getElementById('ct-' + idx)?.value || '';
+            try {
+                const r = await fetch(API + '/' + id + '/decide', {
+                    method: 'POST',
+                    headers: headers(),
+                    body: JSON.stringify({ decision, comment: comment || undefined })
+                });
+                const body = await r.json().catch(() => null);
+                if (!r.ok) { showToast('Error: ' + (body?.message || 'Failed')); return; }
+                showToast(decision === 'approved' ? '✅ Approved' : '❌ Rejected');
+                // Resume the paused flow run if approval has runtime context
+                const ctx = body?.context;
+                const runId = typeof ctx === 'string' ? (JSON.parse(ctx)?.runId) : ctx?.runId;
+                if (runId) {
+                    try {
+                        await fetch('/api/runtime/runs/' + runId + '/resume', { method: 'POST', headers: headers() });
+                    } catch (e) { /* runtime may not be running */ }
+                }
+                loadApprovals();
+                loadStats();
+            } catch(e) { showToast('Network error'); }
+        };
+
+        // Tab clicks
+        document.getElementById('tabs').addEventListener('click', e => {
+            if (!e.target.classList.contains('tab')) return;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            currentFilter = e.target.dataset.filter;
+            firstLoad = true;
+            loadApprovals();
+        });
+
+        // Init
+        if (window.FlowgridAuthUI) {
+            window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
+            if (window.FlowgridAuthUI.installAutoRefresh) window.FlowgridAuthUI.installAutoRefresh();
+        }
+        loadStats();
+        loadApprovals();
+        setInterval(() => { loadApprovals(); loadStats(); }, 30000);
+    })();
+    </script>
+</body>
+</html>

@@ -34,8 +34,8 @@
         }
 
         .sidebar {
-            width: 230px;
-            min-width: 200px;
+            width: 260px;
+            min-width: 240px;
             background: var(--bg-secondary);
             border-right: 1px solid var(--border-default);
             display: flex;
@@ -196,15 +196,16 @@
 
             <div class="nav-group" id="module-links">
                 <div class="nav-label">Modules</div>
-                <button class="nav-link" data-url="/wizard.html" data-title="Onboarding Wizard">✨ Onboarding Wizard</button>
                 <button class="nav-link" data-url="/design/" data-title="FlowGrid Design Studio">🎨 FlowGrid Design Studio</button>
-                <button class="nav-link" data-url="/status.html" data-title="Status">📊 Status</button>
+                <button class="nav-link" data-url="/runtime.html" data-title="FlowGrid Simulate">🧪 FlowGrid Simulate</button>
             </div>
 
             <div class="sidebar-footer nav-group">
+                <button class="nav-link" data-url="/approvals.html" data-title="Approvals" id="nav-approvals">📋 Approvals <span id="approval-badge" style="display:none;background:var(--accent-primary);color:#0f172a;border-radius:10px;padding:0 6px;font-size:0.72rem;font-weight:700;margin-left:4px"></span></button>
+                <hr style="border:none;border-top:1px solid #334155;margin:0.5rem 0;">
                 <div class="nav-label">Account</div>
                 <button class="nav-link" data-url="/profile.html" data-title="Profile">👤 Profile</button>
-                <button class="nav-link" data-url="/configuration.html" data-title="Configuration">⚙️ Settings</button>
+                <button class="nav-link" data-url="/settings.html" data-title="Settings">⚙️ Settings</button>
                 <button class="nav-link sign-out-link" id="shell-sign-out">🚪 Sign Out</button>
             </div>
         </aside>
@@ -348,15 +349,8 @@
 
           if (!populated) {
             // No foundations yet — load wizard inside the iframe
-            const wizardButton = navLinks.find(btn => btn.dataset.url === '/wizard.html');
-            if (wizardButton) {
-              wizardButton.dataset.url = '/wizard.html?onboarding=true';
-              loadModule(wizardButton);
-              wizardButton.dataset.url = '/wizard.html'; // reset for future clicks
-            } else {
-              frameEl.src = '/wizard.html?onboarding=true';
-              titleEl.textContent = 'Onboarding Wizard';
-            }
+            frameEl.src = '/wizard.html?onboarding=true';
+            titleEl.textContent = 'Foundation Wizard';
           } else {
             // Load Design Studio by default
             const defaultButton = navLinks.find(btn => btn.dataset.url === '/design/') || navLinks[0];
@@ -373,6 +367,28 @@
       }
 
       document.addEventListener('DOMContentLoaded', bootstrap);
+
+      // Approval badge polling
+      async function updateApprovalBadge() {
+        try {
+          const token = window.FlowgridAuthUI?.getAuthToken();
+          if (!token) return;
+          const resp = await fetch('/api/approvals/stats', { headers: { Authorization: `Bearer ${token}` } });
+          if (!resp.ok) return;
+          const stats = await resp.json();
+          const badge = document.getElementById('approval-badge');
+          if (badge) {
+            if (stats.pending > 0) {
+              badge.textContent = stats.pending;
+              badge.style.display = 'inline';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        } catch (e) { /* silent */ }
+      }
+      setInterval(updateApprovalBadge, 30000);
+      setTimeout(updateApprovalBadge, 2000);
     </script>
 </body>
 </html>
