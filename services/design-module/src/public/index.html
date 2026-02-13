@@ -1853,6 +1853,9 @@
         <div id="tab-code" class="tab-content">
           <!-- 1. Agent Manifest -->
           <div class="section-header">📋 Agent Manifest</div>
+          <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.75rem; line-height: 1.4;">
+            The manifest is a deployment descriptor that tells the runtime everything about this agent — its messaging topics, model configuration, data store, and HITL rules. Generate it from the Configure tab settings, then export for deployment.
+          </p>
           <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
             <button class="btn btn-success" style="flex: 1;" onclick="generateManifest(selectedAgentId)">📋 Generate Manifest</button>
             <button class="btn btn-secondary" onclick="copyManifest()">📋 Copy</button>
@@ -2962,13 +2965,23 @@
       document.getElementById('agent-autonomy-design').value = config.autonomyLevel || '';
       
       // === CONFIGURE TAB ===
-      document.getElementById('agent-interaction-config').value = config.interactionPattern || '';
-      document.getElementById('agent-triggers-config').value = (config.triggers || []).join(', ');
-      document.getElementById('agent-outputs-config').value = (config.outputs || []).join(', ');
+      // Interaction pattern: from wizard or derive from agent type
+      const interactionPatterns = { orchestrator: 'orchestrated', specialist: 'request-response', coordinator: 'collaborative', monitor: 'event-driven', router: 'event-driven' };
+      document.getElementById('agent-interaction-config').value = config.interactionPattern || interactionPatterns[(config.pattern || '').toLowerCase()] || '';
       
-      // Tag fields
-      tagData['listen-topics'] = [...(config.listenTopics || [])];
-      tagData['publish-topics'] = [...(config.publishTopics || [])];
+      // Triggers/outputs: from wizard's interactions object or direct config
+      const wizInteractions = config.interactions || {};
+      const triggers = config.triggers?.length ? config.triggers : (wizInteractions.triggers || []);
+      const outputs = config.outputs?.length ? config.outputs : (wizInteractions.outputs || []);
+      document.getElementById('agent-triggers-config').value = (Array.isArray(triggers) ? triggers : []).join(', ');
+      document.getElementById('agent-outputs-config').value = (Array.isArray(outputs) ? outputs : []).join(', ');
+      
+      // Auto-derive topics from agent relationships if not manually set
+      const agentSlug = (agent.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-agent$/, '');
+      const defaultListenTopics = config.listenTopics?.length ? config.listenTopics : [`${agentSlug}-tasks`];
+      const defaultPublishTopics = config.publishTopics?.length ? config.publishTopics : [`${agentSlug}-results`];
+      tagData['listen-topics'] = [...defaultListenTopics];
+      tagData['publish-topics'] = [...defaultPublishTopics];
       renderTags('listen-topics');
       renderTags('publish-topics');
       document.getElementById('agent-message-types-config').value = (config.messageTypes || []).join(', ');
@@ -2993,14 +3006,17 @@
       updateModelSuggestions();
       showModelRecommendation(config.pattern);
       
-      // HITL
+      // HITL — derive from wizard data if not manually configured
       const hitl = config.hitl || {};
-      document.getElementById('agent-hitl-required').checked = hitl.approvalRequired || false;
-      document.getElementById('hitl-details').style.display = hitl.approvalRequired ? 'block' : 'none';
+      const wizEscalation = wizInteractions.escalation || config.escalationPath || '';
+      const isHitl = hitl.approvalRequired ?? ((config.autonomyLevel || '').includes('human') || !!wizEscalation);
+      document.getElementById('agent-hitl-required').checked = isHitl;
+      document.getElementById('hitl-details').style.display = isHitl ? 'block' : 'none';
       document.getElementById('agent-hitl-threshold').value = hitl.approvalThreshold || 'high-risk-only';
       document.getElementById('agent-hitl-timeout').value = hitl.timeoutMinutes || 60;
       populateEscalationTargets();
-      if (hitl.escalationTarget) document.getElementById('agent-hitl-escalation').value = hitl.escalationTarget;
+      const escalationVal = hitl.escalationTarget || wizEscalation;
+      if (escalationVal) document.getElementById('agent-hitl-escalation').value = escalationVal;
       
       // Config integrations list
       const configIntList = document.getElementById('config-integrations-list');
