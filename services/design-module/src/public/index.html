@@ -2980,7 +2980,7 @@
       // Update Capabilities section in Description tab
       const capsContainer = document.getElementById('agent-capabilities-list');
       const caps = agent.capabilities || [];
-      capsContainer.innerHTML = caps.length 
+      if (capsContainer) capsContainer.innerHTML = caps.length 
         ? caps.map(c => `<span class="capability-tag" style="background: #164e63; color: #22d3ee; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(c.capability_name || c.name || c)}</span>`).join('')
         : '<span style="color: #64748b; font-size: 0.85rem;">No capabilities</span>';
       
