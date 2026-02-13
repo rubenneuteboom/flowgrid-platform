@@ -10,6 +10,9 @@
  * 
  * This is the INTRA-agent workflow, complementing the 
  * INTER-agent orchestrator BPMN.
+ * 
+ * Supports data input/output associations for orchestrator integration
+ * and error boundary events on risky steps.
  */
 
 import { z } from 'zod';
@@ -125,6 +128,9 @@ This BPMN shows what happens INSIDE a single agent:
 - How it validates and transforms data
 - Whether it uses reflection/self-correction
 
+This BPMN is typically invoked as a sub-process from the orchestrator BPMN.
+The orchestrator passes input data and expects output data back.
+
 ## Step Types (flowgrid:stepType)
 
 Every activity MUST have a flowgrid:stepType attribute:
@@ -143,6 +149,60 @@ Every activity MUST have a flowgrid:stepType attribute:
 
 5. **validation** - Output validation
    <bpmn:serviceTask flowgrid:stepType="validation">
+
+## Data Input/Output Associations
+
+Model the data this agent receives from and returns to the orchestrator:
+
+<bpmn:dataObject id="DataObject_SkillInput" name="Skill Input">
+  <bpmn:documentation>
+    Source: Orchestrator
+    Schema: (matches skill input schema)
+  </bpmn:documentation>
+</bpmn:dataObject>
+<bpmn:dataObjectReference id="DataObjectRef_SkillInput" dataObjectRef="DataObject_SkillInput" />
+
+<bpmn:dataObject id="DataObject_SkillOutput" name="Skill Output">
+  <bpmn:documentation>
+    Target: Orchestrator
+    Schema: (matches skill output schema)
+  </bpmn:documentation>
+</bpmn:dataObject>
+<bpmn:dataObjectReference id="DataObjectRef_SkillOutput" dataObjectRef="DataObject_SkillOutput" />
+
+On the first task (receiving input):
+<bpmn:dataInputAssociation>
+  <bpmn:sourceRef>DataObjectRef_SkillInput</bpmn:sourceRef>
+</bpmn:dataInputAssociation>
+
+On the final task (producing output):
+<bpmn:dataOutputAssociation>
+  <bpmn:targetRef>DataObjectRef_SkillOutput</bpmn:targetRef>
+</bpmn:dataOutputAssociation>
+
+For intermediate shared state within the agent, add agent-scoped data objects:
+<bpmn:dataObject id="DataObject_WorkingMemory" name="Working Memory">
+  <bpmn:documentation>
+    Scope: agent
+    Schema: { context: object, intermediateResults: array }
+  </bpmn:documentation>
+</bpmn:dataObject>
+
+## Error Boundary Events
+
+Add error boundary events on risky steps — especially tool calls and external API invocations:
+
+<bpmn:boundaryEvent id="BoundaryEvent_ToolError" attachedToRef="Task_CallAPI" cancelActivity="true">
+  <bpmn:errorEventDefinition errorRef="Error_ToolFailed" />
+</bpmn:boundaryEvent>
+
+Define errors at the definitions level:
+<bpmn:error id="Error_ToolFailed" name="ToolCallFailed" errorCode="TOOL_FAIL" />
+
+Connect error boundaries to:
+- Retry logic (loop back with a counter)
+- Fallback paths (alternative tool or LLM-based workaround)
+- Error end events (propagate failure to orchestrator)
 
 ## Common Patterns to Model
 
@@ -168,6 +228,7 @@ Start → Analyze → Reason → Validate → Synthesize → Output → End
 4. Include subprocess for complex loops
 5. Add documentation to each step
 6. Generate bpmndi:BPMNDiagram with coordinates
+7. Include data input/output associations for orchestrator integration
 
 ## Layout Guidelines
 
@@ -228,8 +289,10 @@ ${integrationsList}
 3. Include appropriate LLM calls for reasoning
 4. Include tool calls if integrations are available
 5. ${input.usesReflection ? 'Include a reflection/self-review loop' : 'Keep the flow linear unless validation requires branching'}
-6. Add error handling boundaries
+6. Add error handling boundaries on risky steps (tool calls, external APIs)
 7. Generate valid BPMN 2.0 XML with bpmndi coordinates
+8. Include data input/output associations showing what this agent receives from and returns to the orchestrator
+9. Add agent-scoped data objects for intermediate working state if needed
 
 Return ONLY the JSON object with processId, processName, bpmnXml, stepMapping, and summary.`;
 }
@@ -240,15 +303,15 @@ Return ONLY the JSON object with processId, processName, bpmnXml, stepMapping, a
 
 registerPrompt<GenerateAgentInternalBPMNInput, GenerateAgentInternalBPMNOutput>({
   id: 'step5.generate-agent-internal-bpmn',
-  version: '1.0.0',
-  description: 'Generates internal BPMN showing agent skill execution workflow',
+  version: '2.0.0',
+  description: 'Generates internal BPMN showing agent skill execution workflow with data associations and error handling',
   systemPrompt: SYSTEM_PROMPT,
   buildUserMessage: buildUserPrompt,
   outputSchema: GenerateAgentInternalBPMNOutputSchema,
   modelPreferences: {
     preferredModel: 'claude-sonnet-4-20250514',
-    temperature: 0.3,
-    maxTokens: 8000,
+    temperature: 0.1,
+    maxTokens: 10000, // Larger due to data associations and error handling
   },
 });
 
