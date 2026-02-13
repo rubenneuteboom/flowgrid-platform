@@ -1,440 +1,268 @@
 # FlowGrid Design — User Guide
 
-> **Version:** 1.0 · **Date:** February 2026 · **Audience:** IT Architects, Technical Leads, Solution Designers
+## 1. Quickstart
 
----
+**FlowGrid Design** helps you design AI agent networks for your organization. Describe what you want to automate, and AI designs a team of specialized agents — complete with workflows, skills, and configurations — ready to bring to life.
 
-## Table of Contents
+### Get started in 60 seconds
 
-1. [Quickstart Guide](#1-quickstart-guide)
-2. [Workflow Overview](#2-workflow-overview)
-3. [Objects & Concepts](#3-objects--concepts)
-4. [Step-by-Step Instructions](#4-step-by-step-instructions)
-5. [Current Limitations & Workarounds](#5-current-limitations--workarounds)
-6. [Platform Roadmap & Forward-Looking Statement](#6-platform-roadmap--forward-looking-statement)
+1. **Sign in** to FlowGrid and open the **Design Wizard**
+2. **Select a process** you want to automate (e.g., Incident Management)
+3. **Describe your goal** — what should agents handle, and what does success look like?
+4. **Watch the AI work** — it proposes agents, generates workflows, and configures everything
+5. **Import to Design Studio** — explore, edit, and refine your agent network visually
 
----
-
-## 1. Quickstart Guide
-
-Get FlowGrid Design running locally in under 5 minutes.
-
-### Prerequisites
-
-- **Docker Desktop** (v24+) with Docker Compose v2
-- **Anthropic API Key** — a valid `ANTHROPIC_API_KEY` for Claude Sonnet (the AI engine behind the wizard)
-- A modern browser (Chrome, Firefox, Edge)
-
-### Setup
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/flowgrid-platform.git
-cd flowgrid-platform
-
-# 2. Configure environment
-cp infrastructure/.env.example infrastructure/.env
-# Edit .env and set:
-#   ANTHROPIC_API_KEY=sk-ant-...
-#   JWT_SECRET=<any-random-string>
-
-# 3. Start all services
-cd infrastructure
-docker compose up -d
-```
-
-Docker Compose starts the following services:
-
-| Service | Port | Purpose |
-|---------|------|---------|
-| **nginx** (Gateway) | 8080 | Entry point — serves Wizard UI, routes API calls |
-| **wizard-service** | 3005 | AI-powered design wizard backend |
-| **design-module** | 3006 | Visual network editor (three-panel UI) |
-| **agent-service** | 3001 | Agent CRUD and registry |
-| **auth-service** | 3002 | Authentication & JWT tokens |
-| **design-service** | 3003 | Design storage and management |
-| **integration-service** | 3004 | External system connectors |
-| **postgres** | 5432 | Primary database |
-| **redis** | 6379 | Caching and session state |
-
-### First Run
-
-1. Open **http://localhost:8080** in your browser
-2. Register an account or log in
-3. Navigate to the **Design Wizard** (`/wizard/`)
-4. Follow the 8-step wizard to design your first agent swarm
-5. After import, open the **Design Module** (`/design/`) to visualize and edit your network
-
-> **💡 Tip:** The wizard saves progress to localStorage automatically. If you close the browser, you can resume within 24 hours.
+That's it. You've gone from an idea to a fully designed agent swarm.
 
 ---
 
 ## 2. Workflow Overview
 
-FlowGrid Design follows a **three-phase workflow**:
+FlowGrid follows a guided journey from idea to design:
 
 ```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   AI Wizard      │────▶│  Design Module    │────▶│  Export / Run     │
-│   (8 steps)      │     │  (visual editor)  │     │  (future levels)  │
-└──────────────────┘     └──────────────────┘     └──────────────────┘
+Describe → Identify → Review → Generate Flows → Configure → Import
 ```
 
-### Phase 1: AI Wizard — Design Your Agent Swarm
+There are two main tools:
 
-The wizard guides you through **8 steps** of process-first agent design:
+- **The Design Wizard** walks you through the process step by step. You describe what you want, and AI does the heavy lifting — identifying agents, generating workflows, and creating configurations.
+- **The Design Studio** is your visual workspace. After the wizard imports your agents, you can explore them on a network graph, edit their details, manage skills and integrations, and view their workflows.
 
-| Step | Name | What Happens |
-|------|------|-------------|
-| **1** | **Process** | Select a Discovery Foundation and choose a process to agentize |
-| **2** | **Sub-process** | Describe the specific workflow, expected outcomes, and constraints |
-| **3** | **Agents** | AI identifies agents, applies the Abstraction Test, and optimizes the swarm |
-| **4** | **Review** | Review and edit proposed agents — change names, patterns, autonomy levels |
-| **5** | **Flows** | AI generates BPMN workflows: one orchestrator flow + per-agent internal flows |
-| **6** | **Review Flows** | Inspect generated BPMN diagrams in an interactive viewer |
-| **7** | **Config** | AI generates A2A-compliant configurations, skills, and integration specs |
-| **8** | **Import** | Review summary and import the swarm into the Design Module |
-
-> **🔑 Key Insight:** The wizard uses a *process-first* approach. You start with a business process, and the AI derives the right agents — not the other way around.
-
-### Phase 2: Design Module — Visualize & Edit
-
-After import, the Design Module provides a **three-panel editor**:
-
-- **Left Sidebar** — Element list (agents, capabilities, data objects, processes) with search and filtering
-- **Center Canvas** — Interactive network graph (vis-network) showing agents and their relationships
-- **Right Panel** — Detail view for selected elements: properties, BPMN flows, relationships, skills
-
-### Phase 3: Export / Orchestrate (Future)
-
-- **Level 2** (next): Export agent designs as deployable code (LangGraph, CrewAI, Azure Functions)
-- **Level 3** (target): Live BPMN execution within FlowGrid itself
+They work together: the Wizard creates, the Studio refines.
 
 ---
 
 ## 3. Objects & Concepts
 
-### 3.1 Element Types
+### Agents
 
-FlowGrid designs consist of four element types:
+Agents are the workers in your network. Each agent has a specific role and responsibilities. FlowGrid recognizes several types:
 
-| Type | Icon | Description | Example |
-|------|------|-------------|---------|
-| **Agent** | 🤖 | An autonomous AI worker that can reason, decide, and act | Incident Triage Agent |
-| **Capability** | ⚡ | A skill or ability an agent possesses | "Classify Incidents" |
-| **Data Object** | 📄 | An information store or data entity | Incident Record, CMDB |
-| **Process** | 🔄 | A workflow or sequence of activities | Incident Lifecycle |
+- **Orchestrator** — The coordinator. It delegates tasks to other agents, manages the overall flow, and makes sure everything runs in the right order. Every agent network typically has one orchestrator.
+- **Specialist** — Focused on one job. For example, a "Triage Agent" that classifies incoming incidents, or a "Notification Agent" that sends alerts.
+- **Coordinator** — Manages a subset of agents or a specific phase of the process.
+- **Monitor** — Watches for events, tracks metrics, or raises alerts when something needs attention.
 
-### 3.2 Agentic Patterns
+### Capabilities
 
-Each agent is assigned a **pattern** that defines its role in the swarm:
+Capabilities describe what an agent *can do* — the actions and functions it's equipped to perform. For example, an Incident Triage Agent might have capabilities like "classify incident severity" and "extract affected systems from ticket description."
 
-| Pattern | Description | When to Use |
-|---------|-------------|-------------|
-| **Orchestrator** | Coordinates other agents, manages the overall flow | Central coordination of multi-agent workflows |
-| **Specialist** | Deep expertise in a narrow domain | Focused tasks requiring domain knowledge |
-| **Coordinator** | Facilitates communication between agents | Cross-team or cross-domain coordination |
-| **Gateway** | Entry/exit point, routes requests to the right agent | API facades, request routing |
-| **Monitor** | Observes system state and triggers actions | SLA monitoring, anomaly detection |
-| **Executor** | Performs concrete actions in external systems | ServiceNow ticket creation, deployments |
-| **Analyzer** | Processes data and produces insights | Log analysis, trend detection |
-| **Aggregator** | Combines outputs from multiple agents | Report generation, data consolidation |
-| **Router** | Directs work to the appropriate agent based on rules | Intelligent request distribution |
+### Data Objects
 
-> **📝 Note:** During optimization, the AI also considers **Anthropic agentic patterns** (routing, planning, tool-use, orchestration, human-in-loop, RAG, reflection, guardrails) as implementation-level descriptors stored in agent config metadata.
+Data objects are the pieces of information agents work with. Think of them as the inputs and outputs flowing between agents — things like incident records, approval requests, configuration items, or notification payloads.
 
-### 3.3 Autonomy Levels
+### Processes
 
-Every agent has an autonomy level that governs how much human oversight is required:
+Processes are the workflows that agents follow. FlowGrid generates visual process flows (based on BPMN, an industry-standard notation) that show:
 
-| Level | Description | Example |
-|-------|-------------|---------|
-| **Autonomous** | Acts independently within defined boundaries | Auto-assigning low-priority tickets |
-| **Supervised** | Acts but reports for review | Generating change plans for review |
-| **Human-in-Loop** | Requires explicit human approval before acting | Approving P1 incident escalations |
+- Where the workflow starts and ends
+- What decisions are made along the way
+- Which tasks each agent performs
+- How agents hand off work to each other
 
-### 3.4 Human-in-the-Loop (HITL)
+You don't need to understand BPMN notation — the visual flows are self-explanatory, showing boxes for tasks, diamonds for decisions, and arrows for the flow between them.
 
-FlowGrid supports three HITL variants:
+### Autonomy Levels
 
-- **HITL** (Human-in-the-Loop) — Human must approve before the agent proceeds
-- **HOTL** (Human-on-the-Loop) — Human is notified and can intervene, but the agent proceeds by default
-- **HITM** (Human-in-the-Middle) — Human participates as a step within the workflow
+Each agent can operate with different levels of independence:
 
-The AI optimization step automatically identifies where HITL points should be added, especially around financial decisions, security changes, and compliance-sensitive operations.
+- **Autonomous** — The agent acts on its own, making decisions and executing tasks without waiting for approval.
+- **Supervised** — The agent works independently but its actions are reviewed by humans periodically.
+- **Human-in-the-Loop** — The agent prepares recommendations or does preliminary work, but a human must approve before the action is carried out.
 
-### 3.5 BPMN Flows — Dual Level
+### Human-in-the-Loop
 
-FlowGrid generates BPMN at **two levels**:
+Some decisions are too important — or too sensitive — to fully automate. Human-in-the-loop means a person stays involved at critical points. For example:
 
-#### Orchestrator BPMN (Inter-Agent)
-- Defines **coordination between agents** using swim lanes
-- Each lane represents an agent; service tasks map to agent invocations
-- User tasks represent HITL approval points
-- Gateways handle routing decisions
+- A triage agent classifies an incident as Priority 1 → a human confirms before emergency procedures kick in
+- An agent drafts a change request → a change manager reviews and approves it
 
-#### Agent Internal BPMN (Intra-Agent)
-- Defines the **internal logic within a single agent**
-- Steps → function calls, LLM invocations, tool usage
-- Decision points → conditional gateways
-- Error handling → boundary events
-
-> **🔑 Why two levels?** Orchestration is coordination logic ("first A, then B, if X ask human") — perfect for a BPMN engine. Agent internals are cognitive work ("call LLM, parse response, reason") — better expressed as native code. This split enables independent evolution of coordination and agent logic.
-
-### 3.6 Demoted Tools
-
-Not everything needs to be an agent. The AI optimizer applies the **Abstraction Test**:
-
-- **Does it need to reason?** → Keep as Agent
-- **Just executes rules/lookups?** → Demote to Tool (a function on another agent)
-- **Monitors over time?** → Move to async flow
-
-Demoted tools appear as tools assigned to their parent agent, reducing swarm complexity and cost.
-
-### 3.7 Risk Appetite
-
-Each agent has a risk appetite setting (`low`, `medium`, `high`) that influences how much latitude it has for autonomous decision-making.
+You decide where humans stay involved when you design your agents.
 
 ---
 
 ## 4. Step-by-Step Instructions
 
-### 4.1 Running the AI Wizard
+### The Design Wizard
+
+The wizard is an 8-step guided process. A progress bar at the top shows where you are — you can click any completed step to go back and make changes.
 
 #### Step 1: Select a Process
 
-1. Open the wizard at `http://localhost:8080/wizard/`
-2. Select a **Discovery Foundation** from the dropdown — these are pre-analyzed capability maps of your organization
-3. Browse the available processes within the foundation
-4. Click a process card to select it — you'll see a preview with capability and process counts
-5. Click **Continue →**
+You'll see a dropdown to choose a **Foundation** — this is a pre-existing collection of processes, capabilities, and data objects that describe your organization or domain.
 
-[Screenshot: Wizard Step 1 — Process Selection]
+Once you select a foundation, a list of available processes appears below. Click on the process you want to automate (for example, "Incident Management" or "Change Enablement"). The selected process highlights in blue.
 
-> **💡 Tip:** If no foundations are available, you need to create one first via the Discovery module (`/discovery/`).
+Click **Continue →** to proceed.
 
-#### Step 2: Define Sub-Process
+> **Don't have a foundation yet?** You'll see a link to the Discovery module where you can create one first.
 
-1. Enter a **Sub-process Name** (e.g., "Incident Triage & Assignment")
-2. Describe **what should be automated** — be specific about inputs, steps, and expected behavior
-3. Define the **Expected Outcome** — what does success look like?
-4. Optionally add **Constraints** (e.g., "Must integrate with ServiceNow", "max 3 agents", "human approval for P1")
-5. Click **🤖 Generate Agents**
+#### Step 2: Define Your Sub-Process
 
-[Screenshot: Wizard Step 2 — Sub-Process Definition]
+Now you get specific. Fill in four fields:
 
-> **💡 Tip:** Click **🎲 Surprise Me** to auto-fill with a sample sub-process — useful for exploring the platform.
+- **Sub-process Name** — Give it a short, descriptive name (e.g., "Incident Triage & Assignment")
+- **What should be automated?** — Describe the workflow in your own words. Be specific about what happens, in what order, and who's involved.
+- **Expected Outcome** — What does success look like? (e.g., "Incidents are automatically triaged and assigned to the right team within 5 minutes")
+- **Constraints / Requirements** *(optional)* — Any must-haves, like "human approval needed for P1 incidents" or "maximum 3 agents"
 
-#### Step 3: AI Agent Identification
+**Not sure what to write?** Click the **🎲 Surprise Me** button to have AI generate an example sub-process for your selected process. It's a great way to see what good input looks like.
 
-The AI performs a multi-step analysis:
+Click **🤖 Generate Agents** when you're ready.
 
-1. **Propose Agents** — Identifies candidate agents from your process description
-2. **Optimize** — Applies the Abstraction Test: merges redundant agents, demotes simple ones to tools, identifies missing HITL points
-3. **Assign Patterns** — Selects the best agentic pattern for each agent
+#### Step 3: Review Proposed Agents
 
-A progress bar shows the current phase. This typically takes 15–30 seconds.
+The AI analyzes your description and proposes an agent team. You'll see:
 
-[Screenshot: Wizard Step 3 — AI Identifying Agents]
+- **Summary stats** — How many agents were identified
+- **Agent cards** — Each proposed agent shown as a card with its name, role (orchestrator/specialist), purpose, and key responsibilities
 
-Once complete, you'll see agent cards showing:
-- Agent name and pattern badge
-- Purpose description
-- Key responsibilities
-- Orchestrator agents are highlighted in red
+The orchestrator agent is visually distinct (highlighted in red) so you can immediately see which agent coordinates the others.
 
-#### Step 4: Review & Edit Agents
+Review the proposal. If it looks good, click **Review & Edit Agents →** to fine-tune.
 
-This is your chance to fine-tune before flow generation:
+#### Step 4: Edit Agents
 
-- **Edit** any agent's name, purpose, pattern, or autonomy level
-- **Remove** agents you don't need
-- **Add** new agents with the ➕ button
-- Adjust **responsibilities** and **capabilities**
+This is where you take control. Each agent is shown as an editable card where you can:
 
-[Screenshot: Wizard Step 4 — Editable Agent Cards]
+- Change the agent's **name**
+- Adjust its **purpose** and **responsibilities**
+- Modify its **pattern** (orchestrator, specialist, coordinator, etc.)
 
-Click **📊 Approve & Generate Agent Flows** when satisfied.
+You can also:
 
-#### Step 5: AI BPMN Generation
+- **➕ Add Agent** — Create a new agent from scratch
+- **Remove agents** — Delete any that don't fit
 
-The AI generates BPMN flows:
+Take your time here. The better your agent definitions, the better the generated workflows will be.
 
-1. **Orchestrator BPMN** — The coordination flow with swim lanes for each agent
-2. **Per-agent internal BPMN** — Individual workflow for each agent's internal logic
+When you're happy, click **📊 Approve & Generate Agent Flows**.
 
-Progress updates show which agent flow is being generated. This step takes 30–60 seconds depending on swarm size.
+#### Step 5: Flow Generation
 
-[Screenshot: Wizard Step 5 — Generating Flows]
+The AI generates a workflow (process flow) for each agent, plus an orchestration flow that ties them all together. You'll see a progress bar as each flow is created.
+
+This step is automatic — just wait for it to complete, then click **Review Agent Flows →**.
 
 #### Step 6: Review Agent Flows
 
-Interactive BPMN viewer with tabbed navigation:
+Each agent's workflow is displayed as a visual flow diagram. Use the **tabs** at the top to switch between agents and see each one's workflow.
 
-- **Orchestrator** tab — Shows the full coordination flow with swim lanes
-- **Individual agent** tabs — Each agent's internal workflow
-- Use mouse wheel to zoom, drag to pan
-- BPMN elements are rendered with the bpmn-js viewer
+The flows show:
 
-[Screenshot: Wizard Step 6 — BPMN Flow Review]
+- Start and end events
+- Tasks the agent performs
+- Decision points (gateways)
+- How the flow branches and converges
 
-> **📝 Note:** If a flow looks truncated or incorrect, go back to Step 5 and regenerate. AI output can vary between runs.
+These flows are visual — you can see at a glance what each agent does and in what order.
+
+If something doesn't look right, click **← Regenerate** to go back and create new flows. Otherwise, click **✅ Approve All & Configure**.
 
 #### Step 7: Agent Configuration
 
-The AI generates A2A-compliant configurations:
+The AI generates detailed configurations for each agent, including:
 
-- **Skills** — Each agent's capabilities with input/output schemas and examples
-- **Tools** — Functions available to each agent (including demoted agents)
-- **Interactions** — Relationships, message types, and integration points
+- **Skills** — The specific capabilities each agent exposes (following the A2A protocol)
+- **Tools** — What systems or services the agent can interact with
+- **Interactions** — How agents communicate with each other
 
-Review the config cards for each agent.
+Review the configuration cards. When satisfied, click **✅ Approve & Import**.
 
-[Screenshot: Wizard Step 7 — Agent Configurations]
+#### Step 8: Import to Design Studio
 
-#### Step 8: Import & Create Swarm
+You'll see a final summary showing the total number of agents, flows, and skills about to be created.
 
-1. Review the final summary: agent count, flow count, skill count
-2. Verify the agent list
-3. Click **🚀 Import & Create Swarm**
-4. On success, click **🎨 Open Design Module →** to view your swarm
+Click **🚀 Import & Create Swarm** to import everything into the Design Studio.
 
-[Screenshot: Wizard Step 8 — Import Summary]
+When the import completes, you'll see a success screen with a link to **🎨 Open Design Module** — click it to start exploring your agent network visually.
 
 ---
 
-### 4.2 Using the Design Module
+### The Design Studio
 
-The Design Module (`/design/`) is a three-panel visual editor.
+After importing from the wizard (or when returning to an existing design), the Design Studio is your main workspace.
 
-#### Left Sidebar — Element List
+#### Layout
 
-- Lists all elements (agents, capabilities, data objects, processes)
-- **Search** by name to filter
-- Click any element to select it on the canvas and open its detail panel
-- Element type icons help distinguish agents from capabilities
+The screen is divided into three areas:
 
-#### Center Canvas — Network Graph
+- **Left sidebar** — Filters and agent list
+- **Center workspace** — The main content area with multiple tabs
+- **Header** — Shows stats (number of agents, relationships) and quick links back to the Wizard
 
-- **Interactive vis-network graph** showing agents as nodes and relationships as edges
-- **Orchestrator agents** are displayed larger and in red
-- **Zoom** with mouse wheel, **pan** by dragging the canvas
-- **Click** a node to select and view its details
-- **Drag** nodes to rearrange the layout
-- Relationship lines show message types and interaction patterns
+#### Navigating Your Agents
 
-#### Right Panel — Detail View
+**Filters** at the top of the sidebar let you narrow down what you see:
 
-When an element is selected, the right panel shows:
+- **Foundation** — Select which foundation to view
+- **Process** — Filter by process
+- **Sub-process** — Filter by sub-process
 
-- **Properties** — Name, description, pattern, autonomy level, risk appetite
-- **BPMN Flow** — Embedded bpmn-js viewer showing the agent's workflow (with full modeler capabilities including palette and editing tools)
-- **Relationships** — Connected agents, message schemas, async/sync indicators
-- **Skills** — A2A skill definitions with input/output schemas
-- **Tools** — Available tools and integrations
+Below the filters, the **Agent list** shows all agents matching your filters. Click any agent to select it and see its details in the main workspace.
 
-#### Editing Agents
+The **Progress** section at the bottom of the sidebar shows how many agents are configured, compiled, and deployed.
 
-In the Design Module you can:
+#### Workspace Tabs
 
-- View and inspect all agent properties
-- Browse BPMN flows for each agent
-- See the full relationship network
-- The BPMN modeler includes a palette for adding elements
+When you select an agent, the main workspace offers these tabs:
 
-#### Viewing BPMN Flows
+- **Overview** — A dashboard for the selected agent showing its name, type, description, stats (skills, capabilities, tools, relations), configuration details, and quick action buttons
+- **Graph** — An interactive network visualization showing how agents connect to each other. Nodes represent agents, edges represent relationships. Click any node to select it. Use the legend to toggle different element types on and off.
+- **Skills** — View and manage the agent's skills (A2A protocol capabilities). You can add skills manually or click **🤖 Generate with AI** to have them created automatically.
+- **Relationships** — See all incoming and outgoing connections for the selected agent — who it delegates to, who reports to it, what data it consumes and produces.
+- **Tools** — Manage integrations and external tools the agent connects to (e.g., ServiceNow, email systems, databases). Browse the integration catalog and add what your agent needs.
+- **BPMN** — View and edit the agent's workflow in a full BPMN editor. The flows generated by the wizard appear here, and you can modify them directly.
+- **A2A Card** — View the agent's A2A protocol card — a structured summary of who the agent is, what it can do, and how other agents can interact with it.
 
-- Select an agent → the BPMN viewer loads its internal flow
-- Switch between orchestrator and agent-internal flows via tabs
-- The viewer supports zoom, pan, and element selection
+#### Editing an Agent
+
+Select an agent from the sidebar, then:
+
+1. On the **Overview** tab, click **✏️ Edit Description** to update its description
+2. Click **⚙️ Configure** in the header to open the full configuration modal, where you can change the agent's name, type, autonomy level, decision authority, value stream, and more
+3. Use the **Skills** tab to add, edit, or AI-generate skills
+4. Use the **Tools** tab to add integrations
+
+#### Understanding the Network Graph
+
+The **Graph** tab shows your entire agent network as an interactive diagram:
+
+- **Colored nodes** represent different types of elements (agents, capabilities, data objects)
+- **Edges** (lines between nodes) show relationships — delegation, data flow, dependencies
+- **Click a node** to select it and see its details
+- **Use the legend** to toggle visibility of different element types
+- The graph auto-layouts to minimize clutter, but you can drag nodes to rearrange
+
+#### Saving Your Work
+
+Changes are saved automatically to the FlowGrid platform as you make them. Your progress is tracked in the sidebar's progress section. The wizard also auto-saves your progress locally, so if you close your browser mid-wizard, you can pick up where you left off (state is kept for 24 hours).
 
 ---
 
 ## 5. Current Limitations & Workarounds
 
-FlowGrid Design is a **Level 1 platform** — a design tool. Here's what to expect:
-
-| Limitation | Impact | Workaround |
-|-----------|--------|------------|
-| **AI output inconsistency** | The same input may produce different agent proposals or BPMN flows across runs | Regenerate (go back a step and re-run), or manually edit agents in Step 4 |
-| **Orchestrator BPMN swim lane rendering** | Large flows may truncate or render swim lanes incorrectly | Regenerate the BPMN; review in the Design Module's bpmn-js modeler |
-| **No runtime execution** | Agents cannot actually execute — this is design-only (Level 1) | Use exports (Level 2, coming soon) to generate deployable code |
-| **No Docker sandbox** | No containerized agent execution environment | Planned for Level 3 |
-| **Single AI model** | All prompts use Claude Sonnet — no per-prompt model selection | Planned: per-agent model configuration |
-| **No import/export of designs** | Cannot save designs as files or import from other tools | Use the database-backed design store; file export planned |
-| **BPMN editing** | The Design Module includes bpmn-js with modeler palette, but changes may not persist back to the agent model | Edit agent descriptions in the wizard and regenerate flows |
-| **Foundation dependency** | The wizard requires a Discovery Foundation; you cannot start from scratch without one | Create a foundation via the Discovery module first |
-
-> **💡 Tip:** The AI is good at getting you 80% of the way. Expect to manually review and adjust agent designs, especially for complex processes with many agents.
+- **AI output may vary** — The same input can produce slightly different agent designs each time. If the result doesn't match your expectations, regenerate or edit manually in Step 4.
+- **Generated flows may need tweaking** — Process flows are AI-generated starting points. Review them in Step 6, and refine them in the Design Studio's BPMN editor after import.
+- **Currently a design tool** — FlowGrid Design focuses on designing and configuring agent networks. Runtime execution (actually running the agents) is on the roadmap.
+- **Foundation required** — You need at least one Discovery Foundation before using the Design Wizard. Create one via the Discovery module first.
+- **Browser-based** — FlowGrid runs in your web browser. For the best experience, use a modern browser (Chrome, Firefox, Safari, Edge) on a desktop or laptop.
 
 ---
 
-## 6. Platform Roadmap & Forward-Looking Statement
+## 6. What's Coming Next
 
-### Level 1 (Current) — Design Tool
+FlowGrid Design is actively evolving. The current release focuses on the design and configuration phase of agent networks — giving you powerful tools to go from idea to a fully specified agent swarm.
 
-✅ AI-powered agent network design via 8-step wizard
-✅ Visual Design Module with three-panel editor
-✅ Dual BPMN generation (orchestrator + agent-internal)
-✅ A2A-compliant agent configurations
-✅ Optimization engine (Abstraction Test, HITL detection, tool demotion)
+**Coming soon:**
 
-### Level 2 (Next) — Design + Export
+- **Export & sharing** — Export your agent designs as portable specifications that can be shared across teams or imported into other environments
+- **Runtime orchestration** — Move from design to execution. Your configured agents will be deployable and runnable directly from the platform
+- **Code generation** — Automatically generate implementation code from your agent designs, ready to deploy
 
-- **Code Generation Engine** — Export agent designs as deployable code
-- **Target frameworks:** LangGraph (primary), CrewAI, Azure Functions
-- **Dual export modes:**
-  - *Agent-only mode* — generates agent internal code from BPMN (for users planning to use FlowGrid's own orchestrator at Level 3)
-  - *Standalone mode* — generates both agent code AND orchestrator code (for self-contained deployments)
-- Template-driven, deterministic code generation (no AI in the export path)
-- Static validation of generated code before packaging
-
-### Level 3 (Target) — Design + Orchestrate
-
-- **Live BPMN execution** via `bpmn-engine` (Node.js)
-- FlowGrid becomes the **control plane** for multi-agent systems:
-  - Flow orchestration (BPMN runtime)
-  - State management (shared state store)
-  - Human-in-the-loop approval queues
-  - Event routing (agent-to-agent communication)
-  - Task dispatch with retry and dead-letter queues
-  - Execution traces and observability dashboards
-- Agent execution delegated externally (LLM inference via APIs)
-- Hot-reloadable orchestration flows
-
-### Future Considerations
-
-- **Hybrid BPMN + dynamic agent orchestration** — Combine structured BPMN flows with dynamic LLM-based routing for complex scenarios
-- **Per-agent model configuration** — Choose different LLMs for different agents (Claude, GPT-4, Gemini, local models)
-- **CrewAI integration research** — Evaluate CrewAI as an alternative orchestration backend
-- **Multi-tenant execution** — Isolated agent runtimes per tenant with Azure Service Bus bridging
-- **Agent Registry** — A2A-compliant agent discovery and marketplace
+*Features and timelines described here are forward-looking and may change. They represent our current direction but are not commitments. We'll keep this guide updated as new capabilities ship.*
 
 ---
 
-### Forward-Looking Statement
-
-> *The features and timelines described in the roadmap section represent our current plans and intentions. They are subject to change based on technical feasibility, user feedback, and business priorities. No commitment is made to deliver any specific feature by any specific date. Level 1 (Design Tool) is the current generally available capability.*
-
----
-
-## Appendix: Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    nginx (Gateway :8080)                  │
-│         Wizard UI · Design Module · API Routing          │
-├──────────┬──────────┬──────────┬──────────┬─────────────┤
-│  wizard  │  design  │  agent   │  auth    │ integration │
-│  service │  module  │  service │  service │   service   │
-│  :3005   │  :3006   │  :3001   │  :3002   │   :3004     │
-├──────────┴──────────┴──────────┴──────────┴─────────────┤
-│              PostgreSQL :5432  ·  Redis :6379             │
-└─────────────────────────────────────────────────────────┘
-```
-
-All services communicate over a Docker bridge network (`flowgrid-network`). The nginx gateway handles routing, static file serving, and SSL termination.
-
----
-
-*© 2026 FlowGrid Platform. Built with ❤️ for IT architects who believe in designing agent systems properly.*
+*© 2026 Flowgrid Platform*

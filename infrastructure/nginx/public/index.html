@@ -215,9 +215,10 @@
       }
 
       async function isTenantPopulated() {
-        // Cache-bust to ensure fresh data after wizard completion
+        // Check if the tenant has any foundations (wizard completions)
+        // If no foundations exist, the user needs to run the Foundation Wizard first
         const cacheBuster = `_t=${Date.now()}`;
-        const response = await fetch(`/api/agents?limit=1&${cacheBuster}`, {
+        const response = await fetch(`/api/wizard/foundations?limit=1&${cacheBuster}`, {
           headers: getAuthHeaders(),
           credentials: 'include',
           cache: 'no-store'
@@ -230,26 +231,23 @@
         }
 
         if (!response.ok) {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-          try {
-            if (contentType.includes('application/json')) {
-              const payload = await response.json();
-              detail = payload?.error || payload?.message || '';
-            } else {
-              detail = (await response.text()).slice(0, 120);
-            }
-          } catch (_) {}
-          throw new Error(`Population check failed: ${response.status}${detail ? ` - ${detail}` : ''}`);
+          // If foundations API fails (e.g. table not yet created), treat as empty
+          console.warn('[bootstrap] Foundations check failed, treating as empty');
+          return false;
         }
 
         const contentType = response.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
-          throw new Error('Population check returned non-JSON response');
+          return false;
         }
 
         const payload = await response.json();
-        const total = payload?.meta?.total;
+        // Handle {success: false} from API errors gracefully
+        if (payload?.success === false) return false;
+        // API returns { success: true, foundations: [...] }
+        if (Array.isArray(payload?.foundations)) return payload.foundations.length > 0;
+        // Fallback: check common pagination formats
+        const total = payload?.meta?.total ?? payload?.total;
         return Number.isFinite(total) ? total > 0 : Array.isArray(payload?.data) && payload.data.length > 0;
       }
 
