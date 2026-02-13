@@ -1782,16 +1782,19 @@
                 // Show inline resume prompt instead of confirm()
                 const resumeBanner = document.createElement('div');
                 resumeBanner.id = 'resumeBanner';
-                resumeBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:1500;background:var(--bg-card);border-bottom:2px solid var(--accent-primary);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;';
+                resumeBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2100;background:var(--bg-card);border-bottom:2px solid var(--accent-primary);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;';
+                // Hide sign-out button while banner is visible to prevent overlap
+                const signOutBtn = document.getElementById('flowgrid-signout-btn');
+                if (signOutBtn) signOutBtn.style.display = 'none';
                 resumeBanner.innerHTML = `
                     <span style="color:var(--text-secondary);font-size:0.9rem;">📝 You have a saved wizard session (Step ${savedState.currentStep}). Resume where you left off?</span>
-                    <div style="display:flex;gap:0.5rem;">
+                    <div style="display:flex;gap:0.5rem;flex-shrink:0;">
                         <button id="resumeYes" class="btn btn-primary btn-sm">Resume</button>
                         <button id="resumeNo" class="btn btn-secondary btn-sm">Start Over</button>
                     </div>`;
                 document.body.prepend(resumeBanner);
-                document.getElementById('resumeYes').onclick = () => { resumeBanner.remove(); goToStep(savedState.currentStep); };
-                document.getElementById('resumeNo').onclick = () => { resumeBanner.remove(); clearWizardState(); goToStep(1); };
+                document.getElementById('resumeYes').onclick = () => { resumeBanner.remove(); if (signOutBtn) signOutBtn.style.display = ''; goToStep(savedState.currentStep); };
+                document.getElementById('resumeNo').onclick = () => { resumeBanner.remove(); if (signOutBtn) signOutBtn.style.display = ''; clearWizardState(); goToStep(1); };
                 return;
             }
             
