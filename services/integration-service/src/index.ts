@@ -58,6 +58,14 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+// Public endpoints (no auth required)
+app.get('/api/integrations/catalog', (req: Request, res: Response) => {
+  res.json({
+    integrations: INTEGRATION_CATALOG,
+    count: INTEGRATION_CATALOG.length,
+  });
+});
+
 app.use('/api', requireAuth);
 
 // Health check
@@ -127,13 +135,7 @@ const INTEGRATION_CATALOG = [
   },
 ];
 
-// List available integrations
-app.get('/api/integrations/catalog', (req: Request, res: Response) => {
-  res.json({
-    integrations: INTEGRATION_CATALOG,
-    count: INTEGRATION_CATALOG.length,
-  });
-});
+// Catalog list moved before auth middleware (public endpoint)
 
 // Get integration details
 app.get('/api/integrations/catalog/:name', (req: Request, res: Response) => {
