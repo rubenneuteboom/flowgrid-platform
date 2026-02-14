@@ -693,6 +693,14 @@
       padding-bottom: 0.5rem; 
       flex-wrap: wrap; 
     }
+    /* Standard/Expert mode toggle */
+    .toggle-slider::before {
+      position: absolute; content: ""; height: 14px; width: 14px;
+      left: 3px; bottom: 3px; background: #e2e8f0; border-radius: 50%; transition: .2s;
+    }
+    #explore-mode-toggle:checked + .toggle-slider { background: #3b82f6; }
+    #explore-mode-toggle:checked + .toggle-slider::before { transform: translateX(16px); }
+    .mode-standard .expert-only { display: none !important; }
     .detail-tab { 
       padding: 0.4rem 0.6rem; 
       background: transparent; 
@@ -1292,15 +1300,24 @@
       <div class="agent-explore-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h2>🔎 Agent Explore</h2>
         <button class="btn btn-secondary" onclick="openAgentConfigModal(selectedAgentId)" style="font-size: 0.85rem;">⚙️ Configure</button>
+        <!-- Standard / Expert mode toggle -->
+        <div class="mode-toggle" style="display:inline-flex;align-items:center;gap:0.4rem;margin-left:auto;font-size:0.8rem;color:#94a3b8;">
+          <span id="mode-label-standard" style="cursor:pointer;" onclick="setExploreMode('standard')">Standard</span>
+          <label class="toggle-switch" style="position:relative;display:inline-block;width:36px;height:20px;margin:0;">
+            <input type="checkbox" id="explore-mode-toggle" onchange="setExploreMode(this.checked ? 'expert' : 'standard')" style="opacity:0;width:0;height:0;">
+            <span class="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#475569;border-radius:20px;transition:.2s;"></span>
+          </label>
+          <span id="mode-label-expert" style="cursor:pointer;" onclick="setExploreMode('expert')">Expert</span>
+        </div>
       </div>
       <div class="detail-tabs" style="margin-bottom:0.75rem;">
         <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
         <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
-        <button class="detail-tab workspace-tab" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">🔄 Flow</button>
+        <button class="detail-tab workspace-tab expert-only" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">🔄 Flow</button>
         <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
         <button class="detail-tab workspace-tab" data-tab="skills" onclick="showWorkspaceTab('skills')">🛠️ Skills</button>
         <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🔧 Tools</button>
-        <button class="detail-tab workspace-tab" data-tab="a2a-card" onclick="showWorkspaceTab('a2a-card')">🤖 A2A Card</button>
+        <button class="detail-tab workspace-tab expert-only" data-tab="a2a-card" onclick="showWorkspaceTab('a2a-card')">🤖 A2A Card</button>
       </div>
 
       <!-- Overview Tab - Agent Summary -->
@@ -3412,6 +3429,31 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
         }
       }
     }
+
+    function setExploreMode(mode) {
+      const container = document.querySelector('.main-content') || document.body;
+      const toggle = document.getElementById('explore-mode-toggle');
+      const isExpert = mode === 'expert';
+      container.classList.toggle('mode-standard', !isExpert);
+      container.classList.toggle('mode-expert', isExpert);
+      toggle.checked = isExpert;
+      document.getElementById('mode-label-standard').style.color = isExpert ? '#94a3b8' : '#e2e8f0';
+      document.getElementById('mode-label-expert').style.color = isExpert ? '#e2e8f0' : '#94a3b8';
+      localStorage.setItem('flowgrid_explore_mode', mode);
+      // If current tab is hidden in standard mode, switch to overview
+      if (!isExpert) {
+        const activeTab = document.querySelector('.workspace-tab.active');
+        if (activeTab && activeTab.classList.contains('expert-only')) {
+          showWorkspaceTab('overview');
+        }
+      }
+    }
+
+    // Restore mode on load
+    (function() {
+      const saved = localStorage.getItem('flowgrid_explore_mode') || 'standard';
+      setExploreMode(saved);
+    })();
 
     function showWorkspaceTab(tabName) {
       document.querySelectorAll('.workspace-tab').forEach(tab => {
