@@ -894,7 +894,7 @@
                 const response = await fetch('/api/wizard/foundations', { headers: { 'Authorization': `Bearer ${token}` } });
                 if (!response.ok) return;
                 const data = await response.json();
-                availableFoundations = data.foundations || [];
+                availableFoundations = (data.foundations || []).filter(f => !f.is_archived);
                 const select = document.getElementById('foundationSelect');
                 const noMsg = document.getElementById('noFoundationsMsg');
                 if (availableFoundations.length === 0) {

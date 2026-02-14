@@ -41,7 +41,7 @@ router.get('/', async (req: Request, res: Response) => {
               jsonb_array_length(processes) as process_count,
               created_at, updated_at
        FROM foundations 
-       WHERE tenant_id = $1 
+       WHERE tenant_id = $1 AND (is_archived = false OR is_archived IS NULL)
        ORDER BY updated_at DESC`,
       [tenantId]
     );

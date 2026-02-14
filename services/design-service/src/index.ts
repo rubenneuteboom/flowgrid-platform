@@ -90,6 +90,164 @@ ADDITIONAL PATTERNS (Anthropic's Guide):
 - Routing, Planning, Tool Use, Orchestration, Human-in-Loop, RAG, Reflection, Guardrails`;
 
 // ============================================================================
+// Foundation Management
+// ============================================================================
+
+// List foundations (exclude archived by default)
+app.get('/api/design/foundations', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const includeArchived = req.query.includeArchived === 'true';
+
+    const query = includeArchived
+      ? `SELECT id, name, description, is_archived, archived_at,
+                jsonb_array_length(COALESCE(capabilities, '[]'::jsonb)) as capability_count,
+                jsonb_array_length(COALESCE(processes, '[]'::jsonb)) as process_count,
+                created_at, updated_at
+         FROM foundations WHERE tenant_id = $1 ORDER BY updated_at DESC`
+      : `SELECT id, name, description, is_archived, archived_at,
+                jsonb_array_length(COALESCE(capabilities, '[]'::jsonb)) as capability_count,
+                jsonb_array_length(COALESCE(processes, '[]'::jsonb)) as process_count,
+                created_at, updated_at
+         FROM foundations WHERE tenant_id = $1 AND (is_archived = false OR is_archived IS NULL) ORDER BY updated_at DESC`;
+
+    const result = await pool.query(query, [tenantId]);
+    res.json({ success: true, foundations: result.rows });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] List foundations error:`, error);
+    res.status(500).json({ success: false, error: 'Failed to list foundations' });
+  }
+});
+
+// Update foundation (name, description)
+app.put('/api/design/foundations/:id', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    const updates: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name); }
+    if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+
+    values.push(id, tenantId);
+    const result = await pool.query(
+      `UPDATE foundations SET ${updates.join(', ')} WHERE id = $${idx++} AND tenant_id = $${idx} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Foundation not found' });
+    }
+
+    res.json({ success: true, foundation: result.rows[0] });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Update foundation error:`, error);
+    res.status(500).json({ success: false, error: 'Failed to update foundation' });
+  }
+});
+
+// Archive or hard-delete foundation
+app.delete('/api/design/foundations/:id', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+    const force = req.query.force === 'true';
+
+    if (force) {
+      const result = await pool.query(
+        'DELETE FROM foundations WHERE id = $1 AND tenant_id = $2 RETURNING id',
+        [id, tenantId]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Foundation not found' });
+      }
+      return res.json({ success: true, message: 'Foundation permanently deleted' });
+    }
+
+    // Soft archive
+    const result = await pool.query(
+      `UPDATE foundations SET is_archived = true, archived_at = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING id`,
+      [id, tenantId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Foundation not found' });
+    }
+    res.json({ success: true, message: 'Foundation archived' });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Delete foundation error:`, error);
+    res.status(500).json({ success: false, error: 'Failed to delete foundation' });
+  }
+});
+
+// Restore archived foundation
+app.post('/api/design/foundations/:id/restore', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `UPDATE foundations SET is_archived = false, archived_at = NULL WHERE id = $1 AND tenant_id = $2 RETURNING id, name`,
+      [id, tenantId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Foundation not found' });
+    }
+    res.json({ success: true, message: 'Foundation restored', foundation: result.rows[0] });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Restore foundation error:`, error);
+    res.status(500).json({ success: false, error: 'Failed to restore foundation' });
+  }
+});
+
+// Impact analysis - count dependent resources
+app.get('/api/design/foundations/:id/impact', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+
+    // Check foundation exists
+    const foundation = await pool.query(
+      'SELECT id, name FROM foundations WHERE id = $1 AND tenant_id = $2',
+      [id, tenantId]
+    );
+    if (foundation.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Foundation not found' });
+    }
+
+    // Count dependent approval_requests and flow_runs
+    const approvals = await pool.query(
+      'SELECT COUNT(*) as count FROM approval_requests WHERE foundation_id = $1',
+      [id]
+    );
+    const flowRuns = await pool.query(
+      'SELECT COUNT(*) as count FROM flow_runs WHERE foundation_id = $1',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      foundation: foundation.rows[0],
+      impact: {
+        approval_requests: parseInt(approvals.rows[0].count),
+        flow_runs: parseInt(flowRuns.rows[0].count),
+        total: parseInt(approvals.rows[0].count) + parseInt(flowRuns.rows[0].count)
+      }
+    });
+  } catch (error) {
+    console.error(`[${SERVICE_NAME}] Impact analysis error:`, error);
+    res.status(500).json({ success: false, error: 'Failed to analyze impact' });
+  }
+});
+
+// ============================================================================
 // Health Check
 // ============================================================================
 app.get('/health', async (req: Request, res: Response) => {

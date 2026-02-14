@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Foundations | FlowGrid</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --secondary: #64748b;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --bg-input: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #475569;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; }
+    .header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .header h1 span { color: var(--primary); }
+    .header-actions { display: flex; gap: 0.75rem; }
+    .header-actions a, .header-actions button { padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; cursor: pointer; text-decoration: none; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); transition: all 0.2s; }
+    .header-actions a:hover, .header-actions button:hover { background: var(--primary); border-color: var(--primary); }
+    .main { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .section-title { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s; }
+    .card:hover { border-color: var(--primary); }
+    .card.archived { opacity: 0.7; }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+    .card-name { font-size: 1.1rem; font-weight: 600; }
+    .card-name input { background: var(--bg-input); border: 1px solid var(--primary); color: var(--text-primary); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 1rem; width: 100%; }
+    .card-desc { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.75rem; min-height: 1.2rem; }
+    .card-desc textarea { background: var(--bg-input); border: 1px solid var(--primary); color: var(--text-primary); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; width: 100%; resize: vertical; min-height: 40px; }
+    .card-meta { display: flex; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); }
+    .card-meta .stat { display: flex; align-items: center; gap: 0.25rem; }
+    .card-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .card-actions button { padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .card-actions button:hover { background: var(--primary); border-color: var(--primary); }
+    .card-actions button.btn-danger:hover { background: var(--danger); border-color: var(--danger); }
+    .card-actions button.btn-warning:hover { background: var(--warning); border-color: var(--warning); color: #000; }
+    .card-actions button.btn-success:hover { background: var(--success); border-color: var(--success); }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+    .badge-archived { background: var(--warning); color: #000; }
+    .empty { text-align: center; color: var(--text-secondary); padding: 3rem 1rem; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; max-width: 480px; width: 90%; }
+    .modal h3 { margin-bottom: 1rem; }
+    .modal p { color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem; }
+    .modal .impact-warning { background: rgba(239,68,68,0.1); border: 1px solid var(--danger); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .modal .impact-warning .count { font-size: 1.5rem; font-weight: bold; color: var(--danger); }
+    .modal input[type="text"] { width: 100%; padding: 0.5rem; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); margin-bottom: 1rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+    .modal-actions button { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; }
+    .btn-cancel { background: var(--bg-input); color: var(--text-primary); }
+    .btn-delete { background: var(--danger); color: white; }
+    .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏗️ <span>Foundation</span> Management</h1>
+    <div class="header-actions">
+      <a href="/discovery/">+ New Foundation</a>
+      <a href="/wizard.html">Design Wizard</a>
+      <a href="/">Dashboard</a>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="section-title">📚 Active Foundations</div>
+    <div id="activeCards" class="cards"></div>
+
+    <div id="archivedSection" style="display:none;">
+      <div class="section-title">📦 Archived Foundations</div>
+      <div id="archivedCards" class="cards"></div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <h3>⚠️ Delete Foundation</h3>
+      <div class="impact-warning">
+        <p>This foundation has dependencies:</p>
+        <div style="display:flex;gap:1.5rem;margin-top:0.5rem;">
+          <div><span class="count" id="impactApprovals">0</span><br><small>Approval Requests</small></div>
+          <div><span class="count" id="impactFlowRuns">0</span><br><small>Flow Runs</small></div>
+        </div>
+      </div>
+      <p>Type <strong id="deleteFoundationName"></strong> to confirm permanent deletion:</p>
+      <input type="text" id="deleteConfirmInput" placeholder="Type foundation name..." oninput="checkDeleteConfirm()">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn-delete" id="deleteConfirmBtn" disabled onclick="confirmDelete()">Delete Forever</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('flowgrid_access_token') || sessionStorage.getItem('flowgrid_access_token');
+    if (!token) window.location.href = '/login.html';
+
+    let foundations = [];
+    let editingId = null;
+    let deletingFoundation = null;
+
+    const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+    async function loadFoundations() {
+      try {
+        const res = await fetch('/api/design/foundations?includeArchived=true', { headers });
+        if (res.status === 401) { window.location.href = '/login.html'; return; }
+        const data = await res.json();
+        foundations = data.foundations || [];
+        render();
+      } catch (e) { console.error('Failed to load foundations:', e); }
+    }
+
+    function render() {
+      const active = foundations.filter(f => !f.is_archived);
+      const archived = foundations.filter(f => f.is_archived);
+
+      document.getElementById('activeCards').innerHTML = active.length === 0
+        ? '<div class="empty">No foundations yet. <a href="/discovery/" style="color:var(--primary)">Create one</a></div>'
+        : active.map(cardHtml).join('');
+
+      const archSection = document.getElementById('archivedSection');
+      if (archived.length > 0) {
+        archSection.style.display = 'block';
+        document.getElementById('archivedCards').innerHTML = archived.map(f => cardHtml(f, true)).join('');
+      } else {
+        archSection.style.display = 'none';
+      }
+    }
+
+    function cardHtml(f, isArchived = false) {
+      const date = new Date(f.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const isEditing = editingId === f.id;
+
+      const nameHtml = isEditing
+        ? `<input type="text" id="editName-${f.id}" value="${esc(f.name)}" />`
+        : `${esc(f.name)}`;
+
+      const descHtml = isEditing
+        ? `<textarea id="editDesc-${f.id}">${esc(f.description || '')}</textarea>`
+        : esc(f.description || 'No description');
+
+      const actions = isArchived
+        ? `<button class="btn-success" onclick="restoreFoundation('${f.id}')">♻️ Restore</button>
+           <button class="btn-danger" onclick="startDelete('${f.id}')">🗑️ Delete</button>`
+        : isEditing
+        ? `<button class="btn-success" onclick="saveEdit('${f.id}')">💾 Save</button>
+           <button onclick="cancelEdit()">Cancel</button>`
+        : `<button onclick="startEdit('${f.id}')">✏️ Edit</button>
+           <button class="btn-warning" onclick="archiveFoundation('${f.id}')">📦 Archive</button>
+           <button class="btn-danger" onclick="startDelete('${f.id}')">🗑️ Delete</button>`;
+
+      return `
+        <div class="card ${isArchived ? 'archived' : ''}">
+          <div class="card-header">
+            <div class="card-name">${nameHtml} ${isArchived ? '<span class="badge badge-archived">Archived</span>' : ''}</div>
+          </div>
+          <div class="card-desc">${descHtml}</div>
+          <div class="card-meta">
+            <div class="stat">📅 ${date}</div>
+            <div class="stat">🧩 ${f.capability_count || 0} capabilities</div>
+            <div class="stat">⚙️ ${f.process_count || 0} processes</div>
+          </div>
+          <div class="card-actions">${actions}</div>
+        </div>`;
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // Edit
+    function startEdit(id) { editingId = id; render(); }
+    function cancelEdit() { editingId = null; render(); }
+    async function saveEdit(id) {
+      const name = document.getElementById(`editName-${id}`).value.trim();
+      const description = document.getElementById(`editDesc-${id}`).value.trim();
+      if (!name) { alert('Name is required'); return; }
+      try {
+        await fetch(`/api/design/foundations/${id}`, { method: 'PUT', headers, body: JSON.stringify({ name, description }) });
+        editingId = null;
+        await loadFoundations();
+      } catch (e) { alert('Failed to save: ' + e.message); }
+    }
+
+    // Archive
+    async function archiveFoundation(id) {
+      if (!confirm('Archive this foundation? It will be hidden from selection lists.')) return;
+      try {
+        await fetch(`/api/design/foundations/${id}`, { method: 'DELETE', headers });
+        await loadFoundations();
+      } catch (e) { alert('Failed to archive: ' + e.message); }
+    }
+
+    // Restore
+    async function restoreFoundation(id) {
+      try {
+        await fetch(`/api/design/foundations/${id}/restore`, { method: 'POST', headers });
+        await loadFoundations();
+      } catch (e) { alert('Failed to restore: ' + e.message); }
+    }
+
+    // Delete
+    async function startDelete(id) {
+      const f = foundations.find(x => x.id === id);
+      if (!f) return;
+      deletingFoundation = f;
+
+      // Get impact
+      try {
+        const res = await fetch(`/api/design/foundations/${id}/impact`, { headers });
+        const data = await res.json();
+        document.getElementById('impactApprovals').textContent = data.impact?.approval_requests || 0;
+        document.getElementById('impactFlowRuns').textContent = data.impact?.flow_runs || 0;
+      } catch (e) {
+        document.getElementById('impactApprovals').textContent = '?';
+        document.getElementById('impactFlowRuns').textContent = '?';
+      }
+
+      document.getElementById('deleteFoundationName').textContent = f.name;
+      document.getElementById('deleteConfirmInput').value = '';
+      document.getElementById('deleteConfirmBtn').disabled = true;
+      document.getElementById('deleteModal').classList.add('active');
+    }
+
+    function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('active'); deletingFoundation = null; }
+
+    function checkDeleteConfirm() {
+      const input = document.getElementById('deleteConfirmInput').value.trim();
+      document.getElementById('deleteConfirmBtn').disabled = input !== deletingFoundation?.name;
+    }
+
+    async function confirmDelete() {
+      if (!deletingFoundation) return;
+      try {
+        await fetch(`/api/design/foundations/${deletingFoundation.id}?force=true`, { method: 'DELETE', headers });
+        closeDeleteModal();
+        await loadFoundations();
+      } catch (e) { alert('Failed to delete: ' + e.message); }
+    }
+
+    loadFoundations();
+  </script>
+</body>
+</html>
