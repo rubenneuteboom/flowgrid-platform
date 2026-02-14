@@ -1402,7 +1402,55 @@
             </div>
           </div>
           
-          <!-- Quick Actions removed -->
+          <!-- Human-in-the-Loop -->
+          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+              <h4 style="color: #f59e0b; font-size: 0.85rem; margin:0;">👤 Human-in-the-Loop</h4>
+              <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span style="font-size:0.75rem; color:#94a3b8;">Require Approval</span>
+                <label style="position:relative;display:inline-block;width:36px;height:20px;margin:0;">
+                  <input type="checkbox" id="overview-hitl-enabled" onchange="toggleOverviewHitl()" style="opacity:0;width:0;height:0;">
+                  <span class="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#475569;border-radius:20px;transition:.2s;"></span>
+                </label>
+              </div>
+            </div>
+            <div id="overview-hitl-fields" style="display:none; background:#1e293b; border-radius:8px; padding:1rem;">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div>
+                  <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">Approver</label>
+                  <input type="email" id="overview-hitl-approver" placeholder="approver@company.com" style="width:100%; padding:0.4rem 0.6rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#e2e8f0; font-size:0.85rem;">
+                </div>
+                <div>
+                  <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">Approval Scope</label>
+                  <select id="overview-hitl-scope" style="width:100%; padding:0.4rem 0.6rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#e2e8f0; font-size:0.85rem;">
+                    <option value="all-actions" selected>All actions</option>
+                    <option value="high-risk">High-risk actions only</option>
+                    <option value="external">External actions only</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">Timeout</label>
+                  <select id="overview-hitl-timeout" style="width:100%; padding:0.4rem 0.6rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#e2e8f0; font-size:0.85rem;">
+                    <option value="1h">1 hour</option>
+                    <option value="4h">4 hours</option>
+                    <option value="24h" selected>24 hours</option>
+                    <option value="48h">48 hours</option>
+                    <option value="72h">72 hours</option>
+                    <option value="none">No timeout</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">On Timeout</label>
+                  <select id="overview-hitl-timeout-action" style="width:100%; padding:0.4rem 0.6rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#e2e8f0; font-size:0.85rem;">
+                    <option value="reject" selected>Reject</option>
+                    <option value="approve">Auto-approve</option>
+                    <option value="escalate">Escalate</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn btn-primary" style="margin-top:0.75rem; font-size:0.8rem;" onclick="saveHitlConfig()">💾 Save HITL Settings</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -3487,6 +3535,67 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       setDetailMode(detailSaved);
     })();
 
+    function getCurrentUserEmail() {
+      try {
+        const token = getAccessToken();
+        if (!token) return '';
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.email || '';
+      } catch (_) { return ''; }
+    }
+
+    function toggleOverviewHitl() {
+      const enabled = document.getElementById('overview-hitl-enabled').checked;
+      document.getElementById('overview-hitl-fields').style.display = enabled ? 'block' : 'none';
+      if (enabled && !document.getElementById('overview-hitl-approver').value) {
+        document.getElementById('overview-hitl-approver').value = getCurrentUserEmail();
+      }
+    }
+
+    function loadHitlConfig(agent) {
+      const hitl = agent.config?.hitl || {};
+      document.getElementById('overview-hitl-enabled').checked = !!hitl.enabled;
+      document.getElementById('overview-hitl-fields').style.display = hitl.enabled ? 'block' : 'none';
+      document.getElementById('overview-hitl-approver').value = hitl.approver || '';
+      document.getElementById('overview-hitl-scope').value = hitl.scope || 'all-actions';
+      document.getElementById('overview-hitl-timeout').value = hitl.timeout || '24h';
+      document.getElementById('overview-hitl-timeout-action').value = hitl.timeoutAction || 'reject';
+    }
+
+    async function saveHitlConfig() {
+      if (!selectedAgentId) return;
+      const agent = agents.find(a => a.id === selectedAgentId);
+      if (!agent) return;
+      const config = { ...(agent.config || {}), hitl: {
+        enabled: document.getElementById('overview-hitl-enabled').checked,
+        approver: document.getElementById('overview-hitl-approver').value,
+        scope: document.getElementById('overview-hitl-scope').value,
+        timeout: document.getElementById('overview-hitl-timeout').value,
+        timeoutAction: document.getElementById('overview-hitl-timeout-action').value,
+      }};
+      try {
+        const res = await fetch(`${API_BASE}/${selectedAgentId}`, {
+          method: 'PUT',
+          headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config }),
+        });
+        if (res.ok) {
+          agent.config = config;
+          const btn = document.querySelector('#overview-hitl-fields .btn-primary');
+          if (btn) {
+            btn.textContent = '✅ Saved';
+            btn.disabled = true;
+            setTimeout(() => { btn.textContent = '💾 Save HITL Settings'; btn.disabled = false; }, 1500);
+          }
+        } else {
+          showToast('Failed to save HITL settings', 'error');
+        }
+      } catch (err) {
+        console.error('Failed to save HITL config:', err);
+        showToast('Failed to save HITL settings', 'error');
+      }
+    }
+
     function showWorkspaceTab(tabName) {
       document.querySelectorAll('.workspace-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tab === tabName);
@@ -3564,6 +3673,9 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       document.getElementById('overview-autonomy').textContent = config.autonomyLevel || '—';
       document.getElementById('overview-decision').textContent = config.decisionAuthority || '—';
       document.getElementById('overview-interaction').textContent = config.interactionPattern || '—';
+      
+      // HITL config
+      loadHitlConfig(agent);
       
       // Skills preview (show first 3)
       const skillsPreview = document.getElementById('overview-skills-preview');
