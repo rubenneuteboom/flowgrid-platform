@@ -1794,7 +1794,7 @@
         // INITIALIZATION
         // ==========================================
         document.addEventListener('DOMContentLoaded', async () => {
-            window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: true });
+            window.FlowgridAuthUI.initPage({ requireAuth: true, showSignOut: false });
             checkConsent();
             await fetchCsrfToken();
             await loadFoundations();
