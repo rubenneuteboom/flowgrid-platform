@@ -2555,6 +2555,12 @@
         renderElementList();
         // Re-populate subprocess filter now that agents are loaded
         populateSubprocessFilter(selectedProcessFilter);
+
+        // If database is empty, redirect to Foundation Wizard
+        if (agents.length === 0 && !window.location.search.includes('skipWizard')) {
+          window.location.href = '/discovery/';
+          return;
+        }
       } catch (error) {
         console.error('[loadAgents] Error:', error);
         agents = [];
