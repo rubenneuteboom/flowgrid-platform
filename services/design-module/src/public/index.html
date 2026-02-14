@@ -4267,6 +4267,9 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
         console.warn('[design-studio] auth-ui.js not loaded; continuing with local token fallback');
       }
 
+      // Load integration catalog after auth is initialized
+      setTimeout(() => loadIntegrationCatalog(), 250);
+
       // Detail panel resize
       const detailHandle = document.getElementById('detail-resize');
       const detailPanel = document.querySelector('.detail-panel');
@@ -5449,8 +5452,7 @@ ${gatewayShapes}
       }
     }
     
-    // Load catalog on startup
-    loadIntegrationCatalog();
+    // Catalog is loaded after auth init — see DOMContentLoaded
 
     // ==========================================
     // Right Panel Save Functions
