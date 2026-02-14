@@ -701,6 +701,7 @@
     #explore-mode-toggle:checked + .toggle-slider { background: #3b82f6; }
     #explore-mode-toggle:checked + .toggle-slider::before { transform: translateX(16px); }
     .mode-standard .expert-only { display: none !important; }
+    .detail-mode-standard .detail-expert-only { display: none !important; }
     .detail-tab { 
       padding: 0.4rem 0.6rem; 
       background: transparent; 
@@ -1401,16 +1402,7 @@
             </div>
           </div>
           
-          <!-- Quick Actions -->
-          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155;">
-            <h4 style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.75rem;">Quick Actions</h4>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-secondary" style="font-size: 0.85rem;" onclick="showDetailTab('description')">✏️ Edit Description</button>
-              <button class="btn btn-secondary" style="font-size: 0.85rem;" onclick="showWorkspaceTab('skills'); generateSkillsWithAI();">🤖 Generate Skills</button>
-              <button class="btn btn-secondary" style="font-size: 0.85rem;" onclick="showWorkspaceTab('a2a-card')">📄 View A2A Card</button>
-              <button class="btn btn-primary" style="font-size: 0.85rem;" onclick="showDetailTab('code')">💻 Generate Code</button>
-            </div>
-          </div>
+          <!-- Quick Actions removed -->
         </div>
       </section>
 
@@ -1629,7 +1621,17 @@
       <div class="resize-handle" id="detail-resize"></div>
       <div id="detail-empty" style="display: none;"></div>
       <div id="detail-content" style="display: none;">
-        <h2 id="detail-name">Agent Name</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 id="detail-name" style="margin:0;">Agent Name</h2>
+          <div class="mode-toggle" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:#94a3b8;">
+            <span id="detail-mode-label-standard" style="cursor:pointer;" onclick="setDetailMode('standard')">Standard</span>
+            <label style="position:relative;display:inline-block;width:32px;height:18px;margin:0;">
+              <input type="checkbox" id="detail-mode-toggle" onchange="setDetailMode(this.checked ? 'expert' : 'standard')" style="opacity:0;width:0;height:0;">
+              <span class="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#475569;border-radius:18px;transition:.2s;"></span>
+            </label>
+            <span id="detail-mode-label-expert" style="cursor:pointer;" onclick="setDetailMode('expert')">Expert</span>
+          </div>
+        </div>
         <div class="agent-type" id="detail-type">🤖 Agent • Specialist</div>
         
         <!-- Legacy-style tabs: Description, Design, Configure, Verify, Code, Deploy -->
@@ -1638,8 +1640,8 @@
           <button class="detail-tab" data-tab="design" onclick="showDetailTab('design')">🎨 Design</button>
           <button class="detail-tab" data-tab="configure" onclick="showDetailTab('configure')">⚙️ Configure</button>
           <button class="detail-tab" data-tab="verify" onclick="showDetailTab('verify')">✅ Verify</button>
-          <button class="detail-tab" data-tab="code" onclick="showDetailTab('code')">💻 Code</button>
-          <button class="detail-tab" data-tab="deploy" onclick="showDetailTab('deploy')">🚀 Deploy</button>
+          <button class="detail-tab detail-expert-only" data-tab="code" onclick="showDetailTab('code')">💻 Code</button>
+          <button class="detail-tab detail-expert-only" data-tab="deploy" onclick="showDetailTab('deploy')">🚀 Deploy</button>
         </div>
 
         <!-- Description Tab -->
@@ -2678,6 +2680,17 @@
         filteredAgents = filteredAgents.filter(a => a.config?.subProcessName === selectedSubprocessFilter);
       }
       
+      // Filter to only agents with direct relationship to selected agent
+      if (selectedAgentId) {
+        const relatedIds = new Set();
+        relatedIds.add(selectedAgentId);
+        relationships.forEach(r => {
+          if (r.sourceId === selectedAgentId) relatedIds.add(r.targetId);
+          if (r.targetId === selectedAgentId) relatedIds.add(r.sourceId);
+        });
+        filteredAgents = filteredAgents.filter(a => relatedIds.has(a.id));
+      }
+
       // Then apply type visibility filter
       const visibleAgents = filteredAgents.filter(a => !hiddenTypes.has(a.elementType || a.type));
       if (visibleAgents.length === 0) {
@@ -3448,10 +3461,30 @@ ${(agent.integrations || []).map(i => `- ${i.name} (${i.type})`).join('\n') || '
       }
     }
 
-    // Restore mode on load
+    function setDetailMode(mode) {
+      const panel = document.getElementById('detail-content') || document.getElementById('detail-panel');
+      const toggle = document.getElementById('detail-mode-toggle');
+      const isExpert = mode === 'expert';
+      panel.classList.toggle('detail-mode-standard', !isExpert);
+      panel.classList.toggle('detail-mode-expert', isExpert);
+      toggle.checked = isExpert;
+      document.getElementById('detail-mode-label-standard').style.color = isExpert ? '#94a3b8' : '#e2e8f0';
+      document.getElementById('detail-mode-label-expert').style.color = isExpert ? '#e2e8f0' : '#94a3b8';
+      localStorage.setItem('flowgrid_detail_mode', mode);
+      if (!isExpert) {
+        const activeTab = document.querySelector('.detail-tab.active');
+        if (activeTab && activeTab.classList.contains('detail-expert-only')) {
+          showDetailTab('description');
+        }
+      }
+    }
+
+    // Restore modes on load
     (function() {
       const saved = localStorage.getItem('flowgrid_explore_mode') || 'standard';
       setExploreMode(saved);
+      const detailSaved = localStorage.getItem('flowgrid_detail_mode') || 'standard';
+      setDetailMode(detailSaved);
     })();
 
     function showWorkspaceTab(tabName) {
@@ -5103,6 +5136,8 @@ ${gatewayShapes}
       
       // LLM Config
       document.getElementById('config-agent-model').value = config.llm?.defaultModel || '';
+      document.getElementById('config-agent-temperature').value = config.llm?.temperature ?? '';
+      document.getElementById('config-agent-max-tokens').value = config.llm?.maxTokens ?? '';
       
       // Show modal
       document.getElementById('agent-config-modal').style.display = 'block';
@@ -5141,7 +5176,9 @@ ${gatewayShapes}
           outputs: document.getElementById('config-agent-outputs').value.split(',').map(s => s.trim()).filter(s => s),
           escalationPath: document.getElementById('config-agent-escalation').value || null,
           llm: {
-            defaultModel: document.getElementById('config-agent-model').value || null
+            defaultModel: document.getElementById('config-agent-model').value || null,
+            temperature: document.getElementById('config-agent-temperature').value ? parseFloat(document.getElementById('config-agent-temperature').value) : null,
+            maxTokens: document.getElementById('config-agent-max-tokens').value ? parseInt(document.getElementById('config-agent-max-tokens').value) : null
           }
         };
         
@@ -6504,17 +6541,28 @@ ${agent.config.generatedCode ? `--- src/index.js ---\n${agent.config.generatedCo
         <input type="text" id="config-agent-escalation" placeholder="IT Manager, Service Owner">
       </div>
 
-      <!-- LLM Configuration hidden - all agents use same model for now -->
-      <div class="modal-section" style="display: none;">
-        <h4>🤖 LLM Model Configuration</h4>
+      <div class="modal-section">
+        <h4>🤖 LLM Configuration</h4>
         <label>Default Model</label>
         <select id="config-agent-model">
           <option value="">-- Select --</option>
           <option value="claude-sonnet">Claude Sonnet</option>
+          <option value="claude-opus">Claude Opus</option>
           <option value="gpt-4o">GPT-4o</option>
           <option value="gpt-4o-mini">GPT-4o Mini</option>
+          <option value="gemini-flash">Gemini Flash</option>
           <option value="gemini-pro">Gemini Pro</option>
         </select>
+        <div class="form-row">
+          <div>
+            <label>Temperature</label>
+            <input type="number" id="config-agent-temperature" min="0" max="2" step="0.1" placeholder="0.7">
+          </div>
+          <div>
+            <label>Max Tokens</label>
+            <input type="number" id="config-agent-max-tokens" min="1" max="128000" step="100" placeholder="4096">
+          </div>
+        </div>
       </div>
 
       <div class="modal-footer">
