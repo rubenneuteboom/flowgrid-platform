@@ -1131,13 +1131,18 @@
     }
 
     /* Integration Catalog */
-    .integration-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
-    .integration-card { background: #0f172a; padding: 0.75rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; text-align: center; }
-    .integration-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
-    .integration-card.added { border-color: #10b981; background: #0f172a; opacity: 0.6; cursor: default; }
-    .integration-card .icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
-    .integration-card .name { font-weight: 600; color: #f1f5f9; font-size: 0.8rem; }
-    .integration-card .type { font-size: 0.65rem; color: #60a5fa; margin-top: 0.2rem; }
+    .integration-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .integration-card { background: #0f172a; padding: 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s; border: 1px solid #334155; text-align: left; min-height: 120px; display: flex; flex-direction: column; }
+    .integration-card:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.15); }
+    .integration-card.added { border-color: #10b981; opacity: 0.6; cursor: default; }
+    .integration-card .icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .integration-card .type { font-size: 0.7rem; color: #60a5fa; margin-bottom: 0.25rem; font-weight: 500; }
+    .integration-card .name { font-weight: 700; color: #f1f5f9; font-size: 0.9rem; margin-bottom: 0.25rem; }
+    .integration-card .desc { font-size: 0.75rem; color: #94a3b8; line-height: 1.3; }
+    .integration-card.custom-card { border: 2px dashed #475569; background: transparent; }
+    .integration-card.custom-card:hover { border-color: #60a5fa; background: rgba(99,102,241,0.05); }
+    .integration-card.custom-card .type { color: #60a5fa; }
+    .integration-card.custom-card .name { color: #e2e8f0; }
     .current-integrations { margin-top: 1.5rem; }
     .current-integrations h4 { color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.75rem; }
     .current-integration { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #1e293b; border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid #8b5cf6; cursor: pointer; transition: all 0.2s; }
@@ -1547,11 +1552,10 @@
           </div>
         </div>
 
-        <div class="info-card">
-          <h4>🔧 Suggested Tools</h4>
-          <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">Click to add a tool/integration to this agent</p>
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.75rem;">🔧 Available Tools</h4>
           <div id="suggested-integrations" class="integration-grid">
-            <p style="color: #64748b;">Select an agent to see suggestions</p>
+            <p style="color: #64748b;">Select an agent to see available tools</p>
           </div>
         </div>
         <div class="current-integrations">
@@ -5396,23 +5400,31 @@ ${gatewayShapes}
         const existing = data.existing || [];
         
         // Render suggestion cards
-        if (suggestions.length > 0) {
-          container.innerHTML = suggestions.map(int => {
-            const isAdded = existing.includes(int.name);
-            return `
-              <div class="integration-card ${isAdded ? 'added' : ''}" 
-                   onclick="${isAdded ? '' : `addIntegration('${agentId}', '${int.name}')`}"
-                   title="${int.description || int.name}">
-                <div class="icon">${int.icon || '🔌'}</div>
-                <div class="name">${int.name}</div>
-                <div class="type">${int.type}</div>
-                ${isAdded ? '<div style="font-size:0.65rem;color:#10b981;margin-top:0.25rem;">✓ Added</div>' : ''}
-              </div>
-            `;
-          }).join('');
-        } else {
-          container.innerHTML = '<p style="color: #64748b;">No suggestions available</p>';
-        }
+        const cards = suggestions.map(int => {
+          const isAdded = existing.includes(int.name);
+          return `
+            <div class="integration-card ${isAdded ? 'added' : ''}" 
+                 onclick="${isAdded ? '' : `addIntegration('${agentId}', '${int.name}')`}">
+              <div class="icon">${int.icon || '🔌'}</div>
+              <div class="type">${int.type || 'Integration'}</div>
+              <div class="name">${int.name}</div>
+              <div class="desc">${int.description || ''}</div>
+              ${isAdded ? '<div style="font-size:0.65rem;color:#10b981;margin-top:auto;padding-top:0.5rem;">✓ Added</div>' : ''}
+            </div>
+          `;
+        }).join('');
+        
+        // Add Custom card
+        const customCard = `
+          <div class="integration-card custom-card" onclick="showAddCustomToolModal('${agentId}')">
+            <div class="icon">🔧</div>
+            <div class="type">Custom</div>
+            <div class="name">+ Add Custom</div>
+            <div class="desc">Add any external API, webhook, or service</div>
+          </div>
+        `;
+        
+        container.innerHTML = cards + customCard;
         
         // Load current integrations
         const agent = agents.find(a => a.id === agentId);
@@ -5449,6 +5461,14 @@ ${gatewayShapes}
     }
     
     // Open modal for NEW integration (agentId, integrationName, no integrationId)
+    function showAddCustomToolModal(agentId) {
+      const name = prompt('Tool name:');
+      if (!name) return;
+      const type = prompt('Category (e.g. API, Webhook, Database, Service):') || 'Custom';
+      const endpoint = prompt('Endpoint URL (optional):') || '';
+      addIntegration(agentId, name, { type, endpoint, custom: true });
+    }
+
     async function addIntegration(agentId, integrationName) {
       openIntegrationModal(agentId, integrationName, null);
     }
