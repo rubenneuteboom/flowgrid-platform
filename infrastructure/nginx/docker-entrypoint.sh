@@ -21,6 +21,7 @@ if [ -n "$CONTAINER_APP_ENV_DNS_SUFFIX" ]; then
   sed -i "s/wizard-service;/wizard-service.${INTERNAL_DOMAIN};/g" /etc/nginx/conf.d/default.conf
   sed -i "s/integration-service;/integration-service.${INTERNAL_DOMAIN};/g" /etc/nginx/conf.d/default.conf
   sed -i "s/design-module;/design-module.${INTERNAL_DOMAIN};/g" /etc/nginx/conf.d/default.conf
+  sed -i "s/runtime-service;/runtime-service.${INTERNAL_DOMAIN};/g" /etc/nginx/conf.d/default.conf
 else
   # Fallback: keep short names and let resolver handle it
   echo "No CONTAINER_APP_ENV_DNS_SUFFIX found, using short service names"

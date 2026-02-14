@@ -2495,20 +2495,15 @@
     async function loadRelationships() {
       try {
         const cacheBuster = `_t=${Date.now()}`;
-        const [relationshipsRes, interactionsRes] = await Promise.all([
-          fetch(`${API_BASE}/relationships?${cacheBuster}`, { headers: getAuthHeaders(), cache: 'no-store' }),
-          fetch(`/api/agent-interactions?${cacheBuster}`, { headers: getAuthHeaders(), cache: 'no-store' }),
-        ]);
+        const relationshipsRes = await fetch(`${API_BASE}/relationships?${cacheBuster}`, { 
+          headers: getAuthHeaders(), 
+          cache: 'no-store' 
+        });
 
         const allRaw = [];
 
         if (relationshipsRes.ok) {
           const payload = await relationshipsRes.json();
-          allRaw.push(...(Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])));
-        }
-
-        if (interactionsRes.ok) {
-          const payload = await interactionsRes.json();
           allRaw.push(...(Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])));
         }
 
