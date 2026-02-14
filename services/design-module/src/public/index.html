@@ -1299,9 +1299,16 @@
     <main class="main-content">
       <div class="agent-explore-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h2>🔎 Agent Explore</h2>
-        <button class="btn btn-secondary" onclick="openAgentConfigModal(selectedAgentId)" style="font-size: 0.85rem;">⚙️ Configure</button>
-        <!-- Standard / Expert mode toggle -->
-        <div class="mode-toggle" style="display:inline-flex;align-items:center;gap:0.4rem;margin-left:auto;font-size:0.8rem;color:#94a3b8;">
+      </div>
+      <div class="detail-tabs" style="margin-bottom:0.75rem; align-items:center;">
+        <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
+        <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
+        <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
+        <button class="detail-tab workspace-tab" data-tab="skills" onclick="showWorkspaceTab('skills')">🛠️ Skills</button>
+        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🔧 Tools</button>
+        <button class="detail-tab workspace-tab expert-only" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">🔄 Flow</button>
+        <button class="detail-tab workspace-tab expert-only" data-tab="a2a-card" onclick="showWorkspaceTab('a2a-card')">🤖 A2A Card</button>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:#94a3b8;">
           <span id="mode-label-standard" style="cursor:pointer;" onclick="setExploreMode('standard')">Standard</span>
           <label class="toggle-switch" style="position:relative;display:inline-block;width:36px;height:20px;margin:0;">
             <input type="checkbox" id="explore-mode-toggle" onchange="setExploreMode(this.checked ? 'expert' : 'standard')" style="opacity:0;width:0;height:0;">
@@ -1309,15 +1316,6 @@
           </label>
           <span id="mode-label-expert" style="cursor:pointer;" onclick="setExploreMode('expert')">Expert</span>
         </div>
-      </div>
-      <div class="detail-tabs" style="margin-bottom:0.75rem;">
-        <button class="detail-tab active workspace-tab" data-tab="overview" onclick="showWorkspaceTab('overview')">Overview</button>
-        <button class="detail-tab workspace-tab" data-tab="graph" onclick="showWorkspaceTab('graph')">Graph</button>
-        <button class="detail-tab workspace-tab expert-only" data-tab="bpmn" onclick="showWorkspaceTab('bpmn')">🔄 Flow</button>
-        <button class="detail-tab workspace-tab" data-tab="relationships" onclick="showWorkspaceTab('relationships')">Relationships</button>
-        <button class="detail-tab workspace-tab" data-tab="skills" onclick="showWorkspaceTab('skills')">🛠️ Skills</button>
-        <button class="detail-tab workspace-tab" data-tab="integrations" onclick="showWorkspaceTab('integrations')">🔧 Tools</button>
-        <button class="detail-tab workspace-tab expert-only" data-tab="a2a-card" onclick="showWorkspaceTab('a2a-card')">🤖 A2A Card</button>
       </div>
 
       <!-- Overview Tab - Agent Summary -->
@@ -1341,6 +1339,7 @@
                 <span id="overview-pattern-badge" style="background: #8b5cf6; color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; display: none;">Specialist</span>
               </div>
             </div>
+            <button class="btn btn-secondary" onclick="openAgentConfigModal(selectedAgentId)" style="font-size:0.85rem; align-self:center;">⚙️ Configure</button>
           </div>
           
           <!-- Description -->
